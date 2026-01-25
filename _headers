@@ -1,0 +1,73 @@
+# Cloudflare Pages Headers Configuration
+# Reference: https://developers.cloudflare.com/pages/platform/headers/
+
+# Static assets - cache forever
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+  CDN-Cache-Control: public, max-age=31536000
+
+/*.js
+  Cache-Control: public, max-age=31536000, immutable
+  CDN-Cache-Control: public, max-age=31536000
+
+/*.css
+  Cache-Control: public, max-age=31536000, immutable
+  CDN-Cache-Control: public, max-age=31536000
+
+# Images and fonts
+/*.png
+  Cache-Control: public, max-age=31536000, immutable
+/*.jpg
+  Cache-Control: public, max-age=31536000, immutable
+/*.jpeg
+  Cache-Control: public, max-age=31536000, immutable
+/*.gif
+  Cache-Control: public, max-age=31536000, immutable
+/*.webp
+  Cache-Control: public, max-age=31536000, immutable
+/*.svg
+  Cache-Control: public, max-age=31536000, immutable
+/*.ico
+  Cache-Control: public, max-age=31536000, immutable
+/*.woff
+  Cache-Control: public, max-age=31536000, immutable
+/*.woff2
+  Cache-Control: public, max-age=31536000, immutable
+/*.ttf
+  Cache-Control: public, max-age=31536000, immutable
+/*.eot
+  Cache-Control: public, max-age=31536000, immutable
+
+# HTML - short cache for browser, 1 hour for Cloudflare edge
+/*.html
+  Cache-Control: public, max-age=0, must-revalidate
+  CDN-Cache-Control: public, max-age=3600
+
+# Root HTML
+/
+  Cache-Control: public, max-age=0, must-revalidate
+  CDN-Cache-Control: public, max-age=3600
+
+# API endpoints - no cache
+/api/*
+  Cache-Control: no-store, no-cache, must-revalidate, proxy-revalidate
+  Pragma: no-cache
+  Expires: 0
+
+# Sitemap - cache for 1 day
+/sitemap.xml
+  Cache-Control: public, max-age=86400
+  CDN-Cache-Control: public, max-age=86400
+
+# Robots.txt - cache for 1 day  
+/robots.txt
+  Cache-Control: public, max-age=86400
+  CDN-Cache-Control: public, max-age=86400
+
+# Security headers for all paths
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  X-XSS-Protection: 1; mode=block
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()
