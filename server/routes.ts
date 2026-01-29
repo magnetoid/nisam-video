@@ -1,7 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
-import { db } from "./db";
+import { storage } from "./storage.js";
+import { db } from "./db.js";
 import {
   tags,
   videos,
@@ -9,22 +9,22 @@ import {
   videoViews,
   systemSettings,
   tagImages,
-} from "@shared/schema";
-import { categorizeVideo } from "./ai-service";
+} from "../shared/schema.js";
+import { categorizeVideo } from "./ai-service.js";
 import {
   insertVideoSchema,
   insertPlaylistSchema,
   insertSeoSettingsSchema,
-} from "@shared/schema";
-import { scheduler } from "./scheduler";
+} from "../shared/schema.js";
+import { scheduler } from "./scheduler.js";
 import { z } from "zod";
-import { generateSlug, ensureUniqueSlug } from "./utils";
+import { generateSlug, ensureUniqueSlug } from "./utils.js";
 import { eq, and, sql as sqlOp, inArray } from "drizzle-orm";
-import { kvService } from "./kv-service";
-import { registerObjectStorageRoutes, ObjectStorageService } from "./replit_integrations/object_storage";
+import { kvService } from "./kv-service.js";
+import { registerObjectStorageRoutes, ObjectStorageService } from "./replit_integrations/object_storage/index.js";
 import OpenAI from "openai";
-import { requireAuth } from "./middleware/auth";
-import { registerFeatureRoutes } from "./routes/index";
+import { requireAuth } from "./middleware/auth.js";
+import { registerFeatureRoutes } from "./routes/index.js";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Register object storage routes
@@ -1104,44 +1104,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // System settings routes
   app.get("/api/system/settings", async (req, res) => {
     try {
-      const { systemSettings: settingsTable } = await import("@shared/schema");
-      const [settings] = await db.select().from(settingsTable).limit(1);
-      if (!settings) {
-        const [newSettings] = await db
-          .insert(settingsTable)
-          .values({})
-          .returning();
-        res.json(newSettings);
-      } else {
-        res.json(settings);
-      }
+      const settings = await storage.getSystemSettings();
+      if (settings) return res.json(settings);
+
+      const created = await storage.updateSystemSettings({});
+      return res.json(created);
     } catch (error) {
       console.error("Error fetching system settings:", error);
-      res.status(500).json({ error: "Failed to fetch system settings" });
+      // Return default settings on error to prevent app breakage
+      res.json({
+        id: "default",
+        customHeadCode: "",
+        customBodyStartCode: "",
+        customBodyEndCode: "",
+        siteTitle: "nisam.video",
+        siteDescription: "AI-Powered Video Hub",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
     }
   });
 
   app.patch("/api/system/settings", requireAuth, async (req, res) => {
     try {
-      const { systemSettings: settingsTable } = await import("@shared/schema");
-      const [settings] = await db.select().from(settingsTable).limit(1);
-      if (!settings) {
-        const [newSettings] = await db
-          .insert(settingsTable)
-          .values(req.body)
-          .returning();
-        res.json(newSettings);
-      } else {
-        const [updated] = await db
-          .update(settingsTable)
-          .set({ ...req.body, updatedAt: new Date() })
-          .where(eq(settingsTable.id, settings.id))
-          .returning();
-        res.json(updated);
-      }
+      const updated = await storage.updateSystemSettings(req.body);
+      res.json(updated);
     } catch (error) {
       console.error("Error updating system settings:", error);
       res.status(500).json({ error: "Failed to update system settings" });
+    }
+  });
+
+  // Client Logging Route
+  app.post("/api/client-logs", async (req, res) => {
+    try {
+      // Check if logging is enabled
+      const { systemSettings: settingsTable, activityLogs: logsTable } = await import("@shared/schema");
+      const [settings] = await db.select().from(settingsTable).limit(1);
+      
+      if (!settings || settings.clientErrorLogging !== 1) {
+        return res.json({ success: false, message: "Logging disabled" });
+      }
+
+      const { error, info, url } = req.body;
+      const userIdentifier = getUserIdentifier(req);
+
+      await db.insert(logsTable).values({
+        action: "client_error",
+        entityType: "error",
+        username: userIdentifier,
+        details: JSON.stringify({ error, info, url, userAgent: req.headers["user-agent"] }),
+        ipAddress: req.ip,
+      });
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Client logging error:", error);
+      const message = error instanceof Error ? error.message : String(error);
+      if (
+        message.includes("activity_logs") &&
+        (message.includes("does not exist") || message.includes("relation"))
+      ) {
+        return res.json({ success: false, message: "Logging unavailable" });
+      }
+      res.status(500).json({ error: "Failed to log client error" });
     }
   });
 
@@ -1157,6 +1183,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(logs);
     } catch (error) {
       console.error("Error fetching activity logs:", error);
+      const message = error instanceof Error ? error.message : String(error);
+      if (
+        message.includes("activity_logs") &&
+        (message.includes("does not exist") || message.includes("relation"))
+      ) {
+        return res.json([]);
+      }
       res.status(500).json({ error: "Failed to fetch activity logs" });
     }
   });
@@ -1305,7 +1338,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Cache management routes
   app.get("/api/admin/cache/stats", requireAuth, async (req, res) => {
     try {
-      const { cache: cacheModule } = await import("./cache");
+      const { cache: cacheModule } = await import("./cache.js");
       const stats = cacheModule.getStats();
       res.json(stats);
     } catch (error) {
@@ -1362,7 +1395,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (cacheEnabled !== undefined) {
         updateData.cacheEnabled = cacheEnabled ? 1 : 0;
-        const { cache: cacheModule } = await import("./cache");
+        const { cache: cacheModule } = await import("./cache.js");
         cacheModule.setEnabled(cacheEnabled);
       }
       if (cacheVideosTTL !== undefined)
@@ -1696,9 +1729,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.get("/robots.txt", async (req, res) => {
-    const baseUrl = process.env.REPLIT_DEPLOYMENT
-      ? `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`
-      : req.protocol + "://" + req.get("host");
+    // Use the custom domain if available, otherwise fall back to host header
+    const baseUrl = "https://nisam.video";
 
     const robotsTxt = `# Robots.txt for nisam.video
 User-agent: *

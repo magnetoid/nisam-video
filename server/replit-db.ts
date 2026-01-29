@@ -1,7 +1,49 @@
 import Database from '@replit/database';
 
-// Initialize Replit Key-Value Store
-export const replitDb = new Database();
+// Initialize Replit Key-Value Store or Fallback
+let replitDb: any;
+
+class InMemoryDB {
+  private store = new Map<string, any>();
+
+  async set(key: string, value: any) {
+    this.store.set(key, value);
+    return { ok: true };
+  }
+
+  async get(key: string) {
+    const value = this.store.get(key);
+    if (value === undefined) {
+      return { ok: false, error: { statusCode: 404 } };
+    }
+    return { ok: true, value };
+  }
+
+  async delete(key: string) {
+    this.store.delete(key);
+    return { ok: true };
+  }
+
+  async list(prefix?: string) {
+    let keys = Array.from(this.store.keys());
+    if (prefix) {
+      keys = keys.filter(k => k.startsWith(prefix));
+    }
+    return { ok: true, value: keys };
+  }
+}
+
+try {
+  if (process.env.REPLIT_DB_URL) {
+    replitDb = new Database();
+  } else {
+    console.warn("REPLIT_DB_URL not set. Using in-memory fallback for KV store.");
+    replitDb = new InMemoryDB();
+  }
+} catch (error) {
+  console.warn("Failed to initialize Replit Database. Using in-memory fallback.", error);
+  replitDb = new InMemoryDB();
+}
 
 // Helper functions for common operations
 export const kvStore = {

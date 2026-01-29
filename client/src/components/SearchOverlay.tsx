@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { X, Search } from "lucide-react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -46,6 +46,7 @@ export function SearchOverlay({
         className="max-w-5xl max-h-[90vh] overflow-y-auto p-0 bg-background"
         data-testid="modal-search"
       >
+        <DialogTitle className="sr-only">Search</DialogTitle>
         <div className="sticky top-0 bg-background border-b border-border z-10">
           <div className="p-6 space-y-4">
             <div className="flex items-center gap-4">

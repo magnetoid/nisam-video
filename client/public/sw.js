@@ -1,4 +1,4 @@
-const CACHE_NAME = "nisam-video-v1";
+const CACHE_NAME = "nisam-video-v2";
 const urlsToCache = ["/", "/offline.html"];
 
 self.addEventListener("install", (event) => {
@@ -37,6 +37,28 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
+  if (event.request.mode === "navigate") {
+    event.respondWith(
+      (async () => {
+        try {
+          const response = await fetch(event.request);
+          if (response && response.status === 200 && response.type === "basic") {
+            const cache = await caches.open(CACHE_NAME);
+            await cache.put(event.request, response.clone());
+          }
+          return response;
+        } catch {
+          const cached = await caches.match(event.request);
+          if (cached) return cached;
+          const cachedRoot = await caches.match("/");
+          if (cachedRoot) return cachedRoot;
+          return caches.match("/offline.html");
+        }
+      })(),
+    );
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request).then((response) => {
       if (response) {
@@ -68,7 +90,11 @@ self.addEventListener("fetch", (event) => {
           return response;
         })
         .catch(() => {
-          return caches.match("/offline.html");
+          // Only return offline page for navigation requests (HTML pages)
+          if (event.request.mode === "navigate") {
+            return caches.match("/offline.html");
+          }
+          return null;
         });
     }),
   );

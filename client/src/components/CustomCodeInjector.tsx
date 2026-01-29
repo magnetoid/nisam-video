@@ -6,6 +6,7 @@ export function CustomCodeInjector() {
   const { data: settings } = useQuery<SystemSettings>({
     queryKey: ["/api/system/settings"],
     staleTime: 1000 * 60 * 10, // Cache for 10 minutes
+    meta: { silenceError: true }, // Silence error to prevent toast notifications
   });
 
   useEffect(() => {

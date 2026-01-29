@@ -10,8 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Save, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useEffect, useState } from "react";
+import { queryClient } from "@/lib/queryClient";
 import type { SystemSettings } from "@shared/schema";
 import { Link } from "wouter";
 
@@ -116,18 +116,24 @@ If you like nisam.video, consider supporting us through our donations page. Your
 
 © ${new Date().getFullYear()} nisam.video - Sva prava zadržana / All rights reserved`;
 
+  useEffect(() => {
+    if (isLoading) return;
+    if (content) return;
+
+    if (settings?.aboutPageContent) {
+      setContent(settings.aboutPageContent);
+      return;
+    }
+
+    setContent(defaultContent);
+  }, [content, defaultContent, isLoading, settings?.aboutPageContent]);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
-  }
-
-  if (!content && settings?.aboutPageContent) {
-    setContent(settings.aboutPageContent);
-  } else if (!content && !settings?.aboutPageContent) {
-    setContent(defaultContent);
   }
 
   return (

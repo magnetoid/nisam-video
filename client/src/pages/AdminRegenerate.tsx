@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Header } from "@/components/Header";
 import { AdminSidebar } from "@/components/AdminSidebar";
 import {
@@ -30,6 +31,26 @@ export default function AdminRegenerate() {
   const [result, setResult] = useState<any>(null);
   const { toast } = useToast();
 
+  const { data: aiStatus } = useQuery<{
+    openai: { configured: boolean; model: string; baseUrlConfigured: boolean };
+  }>({
+    queryKey: ["/api/admin/ai-status"],
+  });
+
+  const getErrorMessage = async (response: Response) => {
+    try {
+      const contentType = response.headers.get("content-type") || "";
+      if (contentType.includes("application/json")) {
+        const json = await response.json();
+        if (json?.error) return String(json.error);
+      }
+      const text = await response.text();
+      return text || response.statusText;
+    } catch {
+      return response.statusText;
+    }
+  };
+
   const handleRegenerate = async (type: "all" | "categories" | "tags") => {
     setIsRegenerating(true);
     setProgress(0);
@@ -37,23 +58,61 @@ export default function AdminRegenerate() {
     setResult(null);
 
     try {
-      const response = await fetch(`/api/admin/regenerate?type=${type}`, {
-        method: "POST",
-      });
+      const batchSize = 1;
+      let offset = 0;
+      let total = 0;
+      let processedTotal = 0;
+      let categoriesGeneratedTotal = 0;
+      let tagsGeneratedTotal = 0;
 
-      if (!response.ok) {
-        throw new Error("Regeneration failed");
+      while (true) {
+        const response = await fetch(
+          `/api/admin/regenerate?type=${type}&offset=${offset}&limit=${batchSize}`,
+          {
+            method: "POST",
+          },
+        );
+
+        if (!response.ok) {
+          throw new Error(await getErrorMessage(response));
+        }
+
+        const data = await response.json();
+
+        total = typeof data.total === "number" ? data.total : total;
+        processedTotal += data.processed || 0;
+        categoriesGeneratedTotal += data.categoriesGenerated || 0;
+        tagsGeneratedTotal += data.tagsGenerated || 0;
+
+        offset = typeof data.nextOffset === "number" ? data.nextOffset : offset + batchSize;
+
+        if (total > 0) {
+          const pct = Math.min(100, Math.round((offset / total) * 100));
+          setProgress(pct);
+          const end = Math.min(total, offset);
+          setCurrentStep(`Processing ${end} of ${total} videos...`);
+        } else {
+          setCurrentStep("Processing...");
+        }
+
+        if (data.done) {
+          break;
+        }
       }
-
-      const data = await response.json();
 
       setProgress(100);
       setCurrentStep("Completed!");
-      setResult(data);
+      setResult({
+        success: true,
+        processed: processedTotal,
+        categoriesGenerated: categoriesGeneratedTotal,
+        tagsGenerated: tagsGeneratedTotal,
+        total,
+      });
 
       toast({
         title: "Regeneration Complete",
-        description: `Successfully processed ${data.processed || 0} videos`,
+        description: `Successfully processed ${processedTotal || 0} videos`,
       });
     } catch (error) {
       console.error("Regeneration error:", error);
@@ -75,25 +134,54 @@ export default function AdminRegenerate() {
     setResult(null);
 
     try {
-      const response = await fetch("/api/admin/regenerate-slugs", {
-        method: "POST",
-      });
+      const batchSize = 200;
+      let offset = 0;
+      let total = 0;
+      let processedTotal = 0;
 
-      if (!response.ok) {
-        throw new Error("Slug regeneration failed");
+      while (true) {
+        const response = await fetch(
+          `/api/admin/regenerate-slugs?offset=${offset}&limit=${batchSize}`,
+          {
+            method: "POST",
+          },
+        );
+
+        if (!response.ok) {
+          throw new Error(await getErrorMessage(response));
+        }
+
+        const data = await response.json();
+        total = typeof data.total === "number" ? data.total : total;
+        processedTotal += data.processed || 0;
+        offset = typeof data.nextOffset === "number" ? data.nextOffset : offset + batchSize;
+
+        if (total > 0) {
+          const pct = Math.min(100, Math.round((offset / total) * 100));
+          setProgress(pct);
+          const end = Math.min(total, offset);
+          setCurrentStep(`Updating ${end} of ${total} URLs...`);
+        }
+
+        if (data.done) {
+          setResult({
+            success: true,
+            processed: processedTotal,
+            total,
+            type: "slugs",
+            message: data.message,
+          });
+          break;
+        }
       }
-
-      const data = await response.json();
 
       setProgress(100);
       setCurrentStep("Completed!");
-      setResult({ ...data, type: "slugs" });
 
       toast({
         title: "URL Regeneration Complete",
         description:
-          data.message ||
-          `Successfully regenerated ${data.processed || 0} video URLs`,
+          `Successfully regenerated ${processedTotal || 0} video URLs`,
       });
     } catch (error) {
       console.error("Slug regeneration error:", error);
@@ -123,6 +211,15 @@ export default function AdminRegenerate() {
           <p className="text-sm text-muted-foreground mt-1">
             Use AI to regenerate categories and tags for all videos
           </p>
+          {aiStatus?.openai && (
+            <div className="mt-3 flex items-center gap-2 text-sm">
+              <Badge variant="secondary">AI</Badge>
+              <Badge variant={aiStatus.openai.configured ? "default" : "destructive"}>
+                OpenAI: {aiStatus.openai.configured ? "configured" : "missing key"}
+              </Badge>
+              <span className="text-muted-foreground">Model: {aiStatus.openai.model}</span>
+            </div>
+          )}
         </div>
 
         {isRegenerating && (
@@ -351,7 +448,7 @@ export default function AdminRegenerate() {
                 <p className="font-medium text-foreground">Processing Time</p>
                 <p>
                   The regeneration process may take several minutes. You can
-                  continue working - the process runs in the background
+                  continue using the site while this tab stays open
                 </p>
               </div>
             </div>

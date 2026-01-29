@@ -1,37 +1,50 @@
 import { Router } from "express";
 
-const ADMIN_USERNAME = process.env.ADMIN_USERNAME || "magnetoid";
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "Controlbalanced33101..";
+const ADMIN_USERNAME = process.env.ADMIN_USERNAME;
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+
+function getConfiguredAdmin() {
+  if (process.env.NODE_ENV === "production") {
+    if (!ADMIN_USERNAME || !ADMIN_PASSWORD) {
+      return null;
+    }
+    return { username: ADMIN_USERNAME, password: ADMIN_PASSWORD };
+  }
+
+  return {
+    username: ADMIN_USERNAME || "admin",
+    password: ADMIN_PASSWORD || "admin",
+  };
+}
 
 const router = Router();
 
 router.post("/login", async (req, res) => {
   try {
     const { username, password } = req.body;
-    console.log("[LOGIN] Attempt for username:", username);
 
-    if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
+    const configured = getConfiguredAdmin();
+    if (!configured) {
+      return res
+        .status(500)
+        .json({ error: "Admin credentials are not configured" });
+    }
+
+    if (username === configured.username && password === configured.password) {
       req.session.isAuthenticated = true;
       req.session.username = username;
-      console.log("[LOGIN] Session before save:", req.session);
-      console.log("[LOGIN] Session ID:", req.sessionID);
 
       req.session.save((err) => {
         if (err) {
-          console.error("[LOGIN] Session save error:", err);
           res.status(500).json({ error: "Failed to save session" });
         } else {
-          console.log("[LOGIN] Session saved successfully");
-          console.log("[LOGIN] Cookie settings:", req.session.cookie);
           res.json({ success: true, username });
         }
       });
     } else {
-      console.log("[LOGIN] Invalid credentials");
       res.status(401).json({ error: "Invalid credentials" });
     }
   } catch (error) {
-    console.error("[LOGIN] Login error:", error);
     res.status(500).json({ error: "Login failed" });
   }
 });
@@ -50,14 +63,6 @@ router.post("/logout", async (req, res) => {
 });
 
 router.get("/session", async (req, res) => {
-  console.log("[SESSION] Check - Session ID:", req.sessionID);
-  console.log("[SESSION] Check - Session data:", req.session);
-  console.log(
-    "[SESSION] Check - isAuthenticated:",
-    req.session.isAuthenticated,
-  );
-  console.log("[SESSION] Check - Cookies:", req.headers.cookie);
-
   res.json({
     isAuthenticated: req.session.isAuthenticated || false,
     username: req.session.username || null,

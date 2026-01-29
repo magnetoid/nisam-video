@@ -2,14 +2,25 @@ import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
 import compression from "compression";
 import connectPgSimple from "connect-pg-simple";
-import { pool } from "./db";
-import { registerRoutes } from "./routes";
-import { setupVite, serveStatic, log } from "./vite";
-import { scheduler } from "./scheduler";
-import { cacheMiddleware } from "./cache-middleware";
-import { storage } from "./storage";
+import { pool } from "./db.js";
+import { registerRoutes } from "./routes.js";
+import { scheduler } from "./scheduler.js";
+import { cacheMiddleware } from "./cache-middleware.js";
+import { storage } from "./storage.js";
+import { fileURLToPath } from "url";
 
 const app = express();
+
+function log(message: string, source = "express") {
+  const formattedTime = new Date().toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true,
+  });
+
+  console.log(`${formattedTime} [${source}] ${message}`);
+}
 
 // Enable gzip compression for all responses
 app.use(compression({
@@ -42,18 +53,26 @@ const sessionConfig: session.SessionOptions = {
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: true, // Always use secure cookies for HTTPS
+    secure: process.env.NODE_ENV === "production",
     httpOnly: true,
     maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
     sameSite: "lax",
   },
 };
 
-if (process.env.NODE_ENV === "production") {
+if (process.env.NODE_ENV === "production" && pool) {
   sessionConfig.store = new PgStore({
     pool,
     tableName: "session",
     createTableIfMissing: true,
+  });
+} else {
+  // Fallback to MemoryStore for development or if DB is not available
+  // Note: MemoryStore is not suitable for production scaling (multiple instances)
+  // but ensures the app doesn't crash if DB is missing.
+  const MemoryStore = (await import("memorystore")).default(session);
+  sessionConfig.store = new MemoryStore({
+    checkPeriod: 86400000 // prune expired entries every 24h
   });
 }
 
@@ -143,7 +162,8 @@ app.use((req, res, next) => {
   next();
 });
 
-(async () => {
+// Create startup function
+async function startServer() {
   const server = await registerRoutes(app);
 
   // Initialize scheduler
@@ -170,24 +190,39 @@ app.use((req, res, next) => {
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
   if (app.get("env") === "development") {
+    const { setupVite } = await import("./vite-dev.js");
     await setupVite(app, server);
   } else {
+    const { serveStatic } = await import("./serve-static.js");
     serveStatic(app);
   }
 
-  // ALWAYS serve the app on the port specified in the environment variable PORT
-  // Other ports are firewalled. Default to 5000 if not specified.
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const port = parseInt(process.env.PORT || "5000", 10);
-  server.listen(
-    {
-      port,
-      host: "0.0.0.0",
-      reusePort: true,
-    },
-    () => {
+  return server;
+}
+
+// Check if running directly
+const __filename = fileURLToPath(import.meta.url);
+if (process.argv[1] === __filename) {
+  startServer().then((server) => {
+    // ALWAYS serve the app on the port specified in the environment variable PORT
+    // Other ports are firewalled. Default to 5000 if not specified.
+    // this serves both the API and the client.
+    // It is the only port that is not firewalled.
+    const port = parseInt(process.env.PORT || "5000", 10);
+    const listenOptions =
+      app.get("env") === "development"
+        ? { port }
+        : {
+            port,
+            host: "0.0.0.0",
+            reusePort: true,
+          };
+    server.listen(listenOptions, () => {
       log(`serving on port ${port}`);
-    },
-  );
-})();
+    });
+  });
+}
+
+// Export for Vercel
+export default app;
+export { startServer };

@@ -7,6 +7,8 @@ import {
   integer,
   primaryKey,
   index,
+  json,
+  unique
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
@@ -58,21 +60,43 @@ export const videos = pgTable("videos", {
   videoTypeIdx: index("videos_video_type_idx").on(table.videoType),
 }));
 
-// Categories table - AI-generated or manual categories
+// Base Categories table (multilingual support)
 export const categories = pgTable("categories", {
   id: varchar("id")
     .primaryKey()
     .default(sql`gen_random_uuid()`),
-  name: text("name").notNull().unique(),
-  slug: text("slug").notNull().unique(),
-  description: text("description"),
   videoCount: integer("video_count").notNull().default(0),
   createdAt: timestamp("created_at")
     .notNull()
     .default(sql`now()`),
 });
 
-// Video-Category junction table (many-to-many)
+// Categories translations table
+export const categoryTranslations = pgTable("category_translations", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  categoryId: varchar("category_id")
+    .notNull()
+    .references(() => categories.id, { onDelete: "cascade" }),
+  languageCode: varchar("language_code", { length: 10 }).notNull(), // e.g., 'en', 'sr-Latn'
+  name: text("name").notNull(),
+  slug: text("slug").notNull(),
+  description: text("description"),
+  createdAt: timestamp("created_at")
+    .notNull()
+    .default(sql`now()`),
+  updatedAt: timestamp("updated_at")
+    .notNull()
+    .default(sql`now()`),
+}, (table) => ({
+  categoryLangUnique: unique().on(table.categoryId, table.languageCode),
+  categorySlugUnique: unique().on(table.slug, table.languageCode),
+  categoryIdIdx: index("category_translations_category_id_idx").on(table.categoryId),
+  languageCodeIdx: index("category_translations_language_idx").on(table.languageCode),
+}));
+
+// Video-Category junction table (many-to-many, uses base category ID)
 export const videoCategories = pgTable(
   "video_categories",
   {
@@ -89,7 +113,7 @@ export const videoCategories = pgTable(
   }),
 );
 
-// Tags table - AI-generated tags for videos
+// Base Tags table (multilingual support)
 export const tags = pgTable("tags", {
   id: varchar("id")
     .primaryKey()
@@ -97,8 +121,33 @@ export const tags = pgTable("tags", {
   videoId: varchar("video_id")
     .notNull()
     .references(() => videos.id, { onDelete: "cascade" }),
-  tagName: text("tag_name").notNull(),
+  createdAt: timestamp("created_at")
+    .notNull()
+    .default(sql`now()`),
 });
+
+// Tags translations table
+export const tagTranslations = pgTable("tag_translations", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  tagId: varchar("tag_id")
+    .notNull()
+    .references(() => tags.id, { onDelete: "cascade" }),
+  languageCode: varchar("language_code", { length: 10 }).notNull(), // e.g., 'en', 'sr-Latn'
+  tagName: text("tag_name").notNull(),
+  createdAt: timestamp("created_at")
+    .notNull()
+    .default(sql`now()`),
+  updatedAt: timestamp("updated_at")
+    .notNull()
+    .default(sql`now()`),
+}, (table) => ({
+  tagLangUnique: unique("tag_translations_tag_lang_unique").on(table.tagId, table.languageCode),
+  tagNameUnique: unique("tag_translations_name_lang_unique").on(table.tagName, table.languageCode),
+  tagIdIdx: index("tag_translations_tag_id_idx").on(table.tagId),
+  languageCodeIdx: index("tag_translations_language_idx").on(table.languageCode),
+}));
 
 // Scheduler settings table - Configuration for automated scraping
 export const schedulerSettings = pgTable("scheduler_settings", {
@@ -213,6 +262,30 @@ export const videoViews = pgTable("video_views", {
     .default(sql`now()`),
 });
 
+// Hero Videos table - Configuration for featured hero section videos
+export const heroVideos = pgTable("hero_videos", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  slot: integer("slot").notNull().unique(), // 1 to 5, enforces exactly 5 slots
+  videoId: varchar("video_id")
+    .notNull()
+    .references(() => videos.id, { onDelete: "set null" }), // Set to null if video deleted
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  buttonText: text("button_text").notNull(),
+  buttonLink: text("button_link").notNull(),
+  createdAt: timestamp("created_at")
+    .notNull()
+    .default(sql`now()`),
+  updatedAt: timestamp("updated_at")
+    .notNull()
+    .default(sql`now()`),
+}, (table) => ({
+  slotIdx: index("hero_videos_slot_idx").on(table.slot),
+  videoIdIdx: index("hero_videos_video_id_idx").on(table.videoId),
+}));
+
 // Relations
 export const channelsRelations = relations(channels, ({ many }) => ({
   videos: many(videos),
@@ -225,10 +298,19 @@ export const videosRelations = relations(videos, ({ one, many }) => ({
   }),
   videoCategories: many(videoCategories),
   tags: many(tags),
+  heroVideos: many(heroVideos), // Videos can be featured in hero
 }));
 
 export const categoriesRelations = relations(categories, ({ many }) => ({
   videoCategories: many(videoCategories),
+  translations: many(categoryTranslations),
+}));
+
+export const categoryTranslationsRelations = relations(categoryTranslations, ({ one }) => ({
+  category: one(categories, {
+    fields: [categoryTranslations.categoryId],
+    references: [categories.id],
+  }),
 }));
 
 export const videoCategoriesRelations = relations(
@@ -245,10 +327,18 @@ export const videoCategoriesRelations = relations(
   }),
 );
 
-export const tagsRelations = relations(tags, ({ one }) => ({
+export const tagsRelations = relations(tags, ({ many }) => ({
   video: one(videos, {
     fields: [tags.videoId],
     references: [videos.id],
+  }),
+  translations: many(tagTranslations),
+}));
+
+export const tagTranslationsRelations = relations(tagTranslations, ({ one }) => ({
+  tag: one(tags, {
+    fields: [tagTranslations.tagId],
+    references: [tags.id],
   }),
 }));
 
@@ -281,6 +371,13 @@ export const videoViewsRelations = relations(videoViews, ({ one }) => ({
   }),
 }));
 
+export const heroVideosRelations = relations(heroVideos, ({ one }) => ({
+  video: one(videos, {
+    fields: [heroVideos.videoId],
+    references: [videos.id],
+  }),
+}));
+
 // Insert schemas
 export const insertChannelSchema = createInsertSchema(channels).omit({
   id: true,
@@ -298,14 +395,29 @@ export const insertVideoSchema = createInsertSchema(videos).omit({
   videoType: z.enum(["regular", "youtube_short", "tiktok"]).optional().default("regular"),
 });
 
+// Base insert for categories (no name/slug/desc)
 export const insertCategorySchema = createInsertSchema(categories).omit({
   id: true,
   videoCount: true,
   createdAt: true,
 });
 
+// Translations insert schema
+export const insertCategoryTranslationSchema = createInsertSchema(categoryTranslations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertTagSchema = createInsertSchema(tags).omit({
   id: true,
+  createdAt: true,
+});
+
+export const insertTagTranslationSchema = createInsertSchema(tagTranslations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
 });
 
 // Types
@@ -318,8 +430,15 @@ export type InsertVideo = z.infer<typeof insertVideoSchema>;
 export type Category = typeof categories.$inferSelect;
 export type InsertCategory = z.infer<typeof insertCategorySchema>;
 
+// Translations insert schema
+export type CategoryTranslation = typeof categoryTranslations.$inferSelect;
+export type InsertCategoryTranslation = z.infer<typeof insertCategoryTranslationSchema>;
+
 export type Tag = typeof tags.$inferSelect;
 export type InsertTag = z.infer<typeof insertTagSchema>;
+
+export type TagTranslation = typeof tagTranslations.$inferSelect;
+export type InsertTagTranslation = z.infer<typeof insertTagTranslationSchema>;
 
 export const insertSchedulerSettingsSchema = createInsertSchema(
   schedulerSettings,
@@ -348,6 +467,20 @@ export type VideoWithRelations = Video & {
   channel: Channel;
   tags: Tag[];
   categories: Category[];
+};
+
+// Extended types for localized data
+export type LocalizedCategory = Category & {
+  translations: CategoryTranslation[];
+};
+
+export type LocalizedTag = Tag & {
+  translations: TagTranslation[];
+};
+
+export type VideoWithLocalizedRelations = VideoWithRelations & {
+  categories: LocalizedCategory[];
+  tags: LocalizedTag[];
 };
 
 export type PlaylistWithVideos = Playlist & {
@@ -390,6 +523,7 @@ export const systemSettings = pgTable("system_settings", {
   cacheApiTTL: integer("cache_api_ttl").notNull().default(180), // seconds (3 minutes)
   // PWA settings
   pwaEnabled: integer("pwa_enabled").notNull().default(1), // 0 = disabled, 1 = enabled
+  clientErrorLogging: integer("client_error_logging").notNull().default(1), // 0 = disabled, 1 = enabled
   // About page
   aboutPageContent: text("about_page_content"),
   // Custom code injection for GTM, analytics, etc.
@@ -448,6 +582,15 @@ export const tagImages = pgTable("tag_images", {
     .default(sql`now()`),
 });
 
+// Session table for connect-pg-simple
+export const session = pgTable("session", {
+  sid: varchar("sid").primaryKey(),
+  sess: json("sess").notNull(),
+  expire: timestamp("expire", { precision: 6 }).notNull(),
+}, (table) => ({
+  expireIdx: index("IDX_session_expire").on(table.expire),
+}));
+
 export const insertTagImageSchema = createInsertSchema(tagImages).omit({
   id: true,
   createdAt: true,
@@ -455,3 +598,17 @@ export const insertTagImageSchema = createInsertSchema(tagImages).omit({
 
 export type TagImage = typeof tagImages.$inferSelect;
 export type InsertTagImage = z.infer<typeof insertTagImageSchema>;
+
+// Hero Videos insert schema
+export const insertHeroVideoSchema = createInsertSchema(heroVideos).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type HeroVideo = typeof heroVideos.$inferSelect;
+export type InsertHeroVideo = z.infer<typeof insertHeroVideoSchema>;
+
+export type HeroVideoWithVideo = HeroVideo & {
+  video: Video;
+};

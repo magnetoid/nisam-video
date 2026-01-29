@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { X, Sparkles, ListVideo } from "lucide-react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -79,6 +79,7 @@ export function VideoDetailModal({
         className="max-w-6xl max-h-[90vh] overflow-y-auto p-0 bg-background border-border"
         data-testid="modal-video-detail"
       >
+        <DialogTitle className="sr-only">{video.title}</DialogTitle>
         <div className="relative">
           <Button
             size="icon"

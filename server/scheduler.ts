@@ -1,13 +1,10 @@
 import * as cron from "node-cron";
 import pRetry from "p-retry";
 import { CronExpressionParser } from "cron-parser";
-import { db } from "./db";
-import { schedulerSettings } from "@shared/schema";
-import { eq } from "drizzle-orm";
-import { scrapeYouTubeChannel } from "./scraper";
-import { scrapeTikTokProfile } from "./tiktok-scraper";
-import { storage } from "./storage";
-import { processScrapedVideos } from "./video-ingestion";
+import { scrapeYouTubeChannel } from "./scraper.js";
+import { scrapeTikTokProfile } from "./tiktok-scraper.js";
+import { storage } from "./storage.js";
+import { processScrapedVideos } from "./video-ingestion.js";
 
 class SchedulerService {
   private task: cron.ScheduledTask | null = null;
@@ -17,7 +14,7 @@ class SchedulerService {
     // Ensure scheduler settings exist
     const settings = await this.getSettings();
     if (!settings) {
-      await db.insert(schedulerSettings).values({
+      await storage.updateSchedulerSettings({
         isEnabled: 0,
         intervalHours: 6,
       });
@@ -28,34 +25,11 @@ class SchedulerService {
   }
 
   async getSettings() {
-    const [settings] = await db.select().from(schedulerSettings).limit(1);
-    return settings || null;
+    return storage.getSchedulerSettings();
   }
 
   async updateSettings(data: { isEnabled?: number; intervalHours?: number }) {
-    const [settings] = await db.select().from(schedulerSettings).limit(1);
-
-    if (!settings) {
-      const [newSettings] = await db
-        .insert(schedulerSettings)
-        .values({
-          isEnabled: data.isEnabled ?? 0,
-          intervalHours: data.intervalHours ?? 6,
-        })
-        .returning();
-      return newSettings;
-    }
-
-    const [updated] = await db
-      .update(schedulerSettings)
-      .set({
-        ...data,
-        updatedAt: new Date(),
-      })
-      .where(eq(schedulerSettings.id, settings.id))
-      .returning();
-
-    return updated;
+    return storage.updateSchedulerSettings(data);
   }
 
   async start() {
@@ -88,13 +62,7 @@ class SchedulerService {
     }
 
     // Clear next run time when stopping
-    const [settings] = await db.select().from(schedulerSettings).limit(1);
-    if (settings) {
-      await db
-        .update(schedulerSettings)
-        .set({ isEnabled: 0, nextRun: null })
-        .where(eq(schedulerSettings.id, settings.id));
-    }
+    await storage.updateSchedulerSettings({ isEnabled: 0, nextRun: null });
 
     console.log("[Scheduler] Stopped");
   }
@@ -200,17 +168,11 @@ class SchedulerService {
   }
 
   private async updateLastRunTime() {
-    const [settings] = await db.select().from(schedulerSettings).limit(1);
-    if (settings) {
-      await db
-        .update(schedulerSettings)
-        .set({ lastRun: new Date() })
-        .where(eq(schedulerSettings.id, settings.id));
-    }
+    await storage.updateSchedulerSettings({ lastRun: new Date() });
   }
 
   private async updateNextRunTime() {
-    const [settings] = await db.select().from(schedulerSettings).limit(1);
+    const settings = await this.getSettings();
     if (settings) {
       try {
         // Calculate actual next cron fire time
@@ -218,19 +180,13 @@ class SchedulerService {
         const interval = CronExpressionParser.parse(cronExpression);
         const nextRun = interval.next().toDate();
 
-        await db
-          .update(schedulerSettings)
-          .set({ nextRun })
-          .where(eq(schedulerSettings.id, settings.id));
+        await storage.updateSchedulerSettings({ nextRun });
       } catch (error) {
         console.error("[Scheduler] Error calculating next run time:", error);
         // Fallback to simple calculation
         const nextRun = new Date();
         nextRun.setHours(nextRun.getHours() + settings.intervalHours);
-        await db
-          .update(schedulerSettings)
-          .set({ nextRun })
-          .where(eq(schedulerSettings.id, settings.id));
+        await storage.updateSchedulerSettings({ nextRun });
       }
     }
   }

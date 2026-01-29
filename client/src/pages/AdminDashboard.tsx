@@ -25,35 +25,22 @@ import type {
   VideoWithRelations,
   Channel,
   Category,
-  ActivityLog,
 } from "@shared/schema";
 
-interface DashboardStats {
-  channels: number;
-  videos: number;
-  categories: number;
-  tags: number;
-  recentVideos: VideoWithRelations[];
-  recentActivity: ActivityLog[];
-  topChannels: Array<{ id: string; name: string; videoCount: number }>;
-}
-
 export default function AdminDashboard() {
-  const { data: stats, isLoading } = useQuery<DashboardStats>({
-    queryKey: ["/api/admin/dashboard"],
-  });
-
-  const { data: channels = [] } = useQuery<Channel[]>({
+  const { data: channels = [], isLoading: channelsLoading } = useQuery<Channel[]>({
     queryKey: ["/api/channels"],
   });
 
-  const { data: videos = [] } = useQuery<VideoWithRelations[]>({
+  const { data: videos = [], isLoading: videosLoading } = useQuery<VideoWithRelations[]>({
     queryKey: ["/api/videos"],
   });
 
-  const { data: categories = [] } = useQuery<Category[]>({
+  const { data: categories = [], isLoading: categoriesLoading } = useQuery<Category[]>({
     queryKey: ["/api/categories"],
   });
+
+  const isLoading = channelsLoading || videosLoading || categoriesLoading;
 
   if (isLoading) {
     return (

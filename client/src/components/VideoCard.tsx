@@ -4,6 +4,8 @@ import { Play } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { LikeButton } from "./LikeButton";
 import type { VideoWithRelations } from "@shared/schema";
+import { formatViewCount } from "@/lib/formatters";
+import { getOptimizedThumbnail } from "@/lib/video";
 
 interface VideoCardProps {
   video: VideoWithRelations;
@@ -11,22 +13,15 @@ interface VideoCardProps {
   variant?: "carousel" | "grid";
 }
 
-const getOptimizedThumbnail = (thumbnailUrl: string): string => {
-  // Convert hqdefault.jpg (480x360) to mqdefault.jpg (320x180) for smaller cards
-  if (thumbnailUrl.includes('i.ytimg.com')) {
-    return thumbnailUrl.replace(/\/(hqdefault|maxresdefault|sddefault)\.jpg$/, '/mqdefault.jpg');
-  }
-  return thumbnailUrl;
-};
-
 export const VideoCard = memo(function VideoCard({ video, onClick, variant = "carousel" }: VideoCardProps) {
   const [isHovered, setIsHovered] = useState(false);
+  const [imgError, setImgError] = useState(false);
 
   const widthClass = variant === "grid" 
     ? "w-full" 
     : "w-40 sm:w-56 md:w-64 lg:w-80 flex-shrink-0 snap-start";
 
-  const optimizedThumbnail = getOptimizedThumbnail(video.thumbnailUrl);
+  const optimizedThumbnail = imgError ? video.thumbnailUrl : getOptimizedThumbnail(video.thumbnailUrl);
 
   const content = (
     <div
@@ -47,6 +42,7 @@ export const VideoCard = memo(function VideoCard({ video, onClick, variant = "ca
           className="w-full h-full object-cover"
           loading="lazy"
           data-testid="img-thumbnail"
+          onError={() => setImgError(true)}
         />
 
         <div
@@ -67,7 +63,7 @@ export const VideoCard = memo(function VideoCard({ video, onClick, variant = "ca
               {video.viewCount && (
                 <>
                   <span>•</span>
-                  <span data-testid="text-view-count">{video.viewCount}</span>
+                  <span data-testid="text-view-count">{formatViewCount(video.viewCount)}</span>
                 </>
               )}
             </div>

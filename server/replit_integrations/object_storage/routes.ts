@@ -1,5 +1,6 @@
 import type { Express } from "express";
-import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
+import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage.js";
+import { requireAuth } from "../../middleware/auth.js";
 
 /**
  * Register object storage routes for file uploads.
@@ -35,7 +36,7 @@ export function registerObjectStorageRoutes(app: Express): void {
    * IMPORTANT: The client should NOT send the file to this endpoint.
    * Send JSON metadata only, then upload the file directly to uploadURL.
    */
-  app.post("/api/uploads/request-url", async (req, res) => {
+  app.post("/api/uploads/request-url", requireAuth, async (req, res) => {
     try {
       const { name, size, contentType } = req.body;
 
@@ -58,6 +59,10 @@ export function registerObjectStorageRoutes(app: Express): void {
       });
     } catch (error) {
       console.error("Error generating upload URL:", error);
+      const message = error instanceof Error ? error.message : String(error);
+      if (message.includes("PRIVATE_OBJECT_DIR") || message.includes("PUBLIC_OBJECT_SEARCH_PATHS")) {
+        return res.status(501).json({ error: "Uploads are not configured for this deployment" });
+      }
       res.status(500).json({ error: "Failed to generate upload URL" });
     }
   });
@@ -83,4 +88,3 @@ export function registerObjectStorageRoutes(app: Express): void {
     }
   });
 }
-

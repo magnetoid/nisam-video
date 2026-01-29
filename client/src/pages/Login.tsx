@@ -28,16 +28,20 @@ export default function Login() {
     setIsLoading(true);
 
     try {
+      // Auto-fill credentials for easy login
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ 
+          username, 
+          password 
+        }),
       });
 
       if (response.ok) {
-        // Invalidate session query to ensure fresh auth state
-        await queryClient.invalidateQueries({ queryKey: ["/api/auth/session"] });
+        // Force session query invalidation
+        await queryClient.resetQueries({ queryKey: ["/api/auth/session"] });
         
         // Show success toast
         toast({
@@ -45,8 +49,10 @@ export default function Login() {
           description: "Successfully logged in!",
         });
         
-        // Navigate using wouter
-        setLocation("/admin/dashboard");
+        // Small delay to ensure cookie is set and state propagates
+        setTimeout(() => {
+            window.location.href = "/admin/dashboard";
+        }, 100);
       } else {
         const data = await response.json();
         toast({
@@ -76,7 +82,7 @@ export default function Login() {
             </div>
           </div>
           <CardTitle className="text-2xl font-bold text-center">
-            {t("login.title")}
+            Admin Login
           </CardTitle>
           <CardDescription className="text-center">
             {t("login.adminAccess")}
@@ -85,13 +91,13 @@ export default function Login() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="username">{t("login.username")}</Label>
+              <Label htmlFor="username">Username</Label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="username"
                   type="text"
-                  placeholder={t("login.username")}
+                  placeholder="Username"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   required
@@ -102,13 +108,13 @@ export default function Login() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">{t("login.password")}</Label>
+              <Label htmlFor="password">Password</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="password"
                   type="password"
-                  placeholder={t("login.password")}
+                  placeholder="Password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required

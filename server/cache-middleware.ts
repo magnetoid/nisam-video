@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction } from "express";
-import { cache } from "./cache";
+import { cache } from "./cache.js";
 import crypto from "crypto";
 
 interface CacheMiddlewareOptions {

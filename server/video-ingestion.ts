@@ -1,9 +1,7 @@
-import { db } from "./db";
-import { videos, type InsertVideo, type Video } from "@shared/schema";
-import { eq } from "drizzle-orm";
-import { storage } from "./storage";
-import { generateSlug } from "./utils";
-import { categorizeVideo as aiCategorizeVideo } from "./ai-service";
+import { videos, type InsertVideo, type Video } from "../shared/schema.js";
+import { storage } from "./storage.js";
+import { generateSlug } from "./utils.js";
+import { categorizeVideo as aiCategorizeVideo } from "./ai-service.js";
 
 interface ScrapedVideo {
   videoId: string;
@@ -38,13 +36,9 @@ export async function generateUniqueSlug(title: string): Promise<string> {
   let counter = 1;
 
   while (true) {
-    const existing = await db
-      .select({ id: videos.id })
-      .from(videos)
-      .where(eq(videos.slug, slug))
-      .limit(1);
+    const existing = await storage.getVideoBySlug(slug);
 
-    if (existing.length === 0) break;
+    if (!existing) break;
     slug = `${baseSlug}-${counter}`;
     counter++;
   }

@@ -1,11 +1,11 @@
 import { Router } from "express";
-import { requireAuth } from "../middleware/auth";
-import { storage } from "../storage";
-import { scrapeYouTubeChannel } from "../scraper";
-import { categorizeVideo } from "../ai-service";
-import { insertChannelSchema, videos } from "@shared/schema";
-import { generateSlug } from "../utils";
-import { db } from "../db";
+import { requireAuth } from "../middleware/auth.js";
+import { storage } from "../storage.js";
+import { scrapeYouTubeChannel } from "../scraper.js";
+import { categorizeVideo } from "../ai-service.js";
+import { insertChannelSchema, videos } from "../../shared/schema.js";
+import { generateSlug } from "../utils.js";
+import { db } from "../db.js";
 import { eq } from "drizzle-orm";
 
 const router = Router();

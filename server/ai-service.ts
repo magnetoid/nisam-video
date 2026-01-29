@@ -3,11 +3,43 @@ import OpenAI from "openai";
 import pLimit from "p-limit";
 import pRetry, { AbortError } from "p-retry";
 
-// This is using Replit's AI Integrations service, which provides OpenAI-compatible API access without requiring your own OpenAI API key.
-const openai = new OpenAI({
-  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
-  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-});
+// Initialize OpenAI or Mock
+export let openai: OpenAI;
+
+const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY;
+
+if (apiKey) {
+  openai = new OpenAI({
+    baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+    apiKey: apiKey,
+  });
+} else {
+  console.warn("OPENAI_API_KEY not set. Using Mock OpenAI service.");
+  // Mock OpenAI client
+  openai = {
+    chat: {
+      completions: {
+        create: async () => ({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  categories: ["Uncategorized"],
+                  tags: ["demo", "mock"],
+                }),
+              },
+            },
+          ],
+        }),
+      },
+    },
+    images: {
+        generate: async () => ({
+            data: [{ url: "https://placehold.co/1792x1024" }]
+        })
+    }
+  } as unknown as OpenAI;
+}
 
 // Helper function to check if error is rate limit or quota violation
 function isRateLimitError(error: any): boolean {
@@ -109,4 +141,109 @@ export async function batchCategorizeVideos(
   );
 
   return await Promise.all(categorizationPromises);
+}
+
+export async function generateVideoSummary(
+  title: string,
+  description: string,
+): Promise<string> {
+  const limit = pLimit(1);
+
+  return limit(() =>
+    pRetry(
+      async () => {
+        try {
+          const prompt = `Summarize this video content in a concise, engaging paragraph (max 150 words).
+
+Title: ${title}
+Description: ${description || "No description"}
+
+Summary:`;
+
+          const response = await openai.chat.completions.create({
+            model: "gpt-5",
+            messages: [{ role: "user", content: prompt }],
+            max_completion_tokens: 250,
+          });
+
+          return response.choices[0]?.message?.content || "No summary available.";
+        } catch (error: any) {
+          if (isRateLimitError(error)) {
+            throw error;
+          }
+          // Fallback for mock/error
+          return `Summary for "${title}": This video covers interesting topics related to its title. (AI summary unavailable)`;
+        }
+      },
+      {
+        retries: 3,
+        minTimeout: 2000,
+        factor: 2,
+      },
+    ),
+  );
+}
+
+export interface SeoMetadataResult {
+  title: string;
+  description: string;
+  keywords: string[];
+}
+
+export async function generateSeoMetadata(
+  title: string,
+  description: string,
+): Promise<SeoMetadataResult> {
+  const limit = pLimit(1);
+
+  return limit(() =>
+    pRetry(
+      async () => {
+        try {
+          const prompt = `Generate SEO metadata for this video.
+
+Title: ${title}
+Description: ${description || "No description"}
+
+Return a JSON object with:
+- title: SEO-optimized title (max 60 chars)
+- description: SEO-optimized description (max 160 chars)
+- keywords: array of 5-10 relevant keywords
+
+Return only valid JSON.`;
+
+          const response = await openai.chat.completions.create({
+            model: "gpt-5",
+            messages: [{ role: "user", content: prompt }],
+            response_format: { type: "json_object" },
+            max_completion_tokens: 1000,
+          });
+
+          const content = response.choices[0]?.message?.content || "{}";
+          const result = JSON.parse(content);
+
+          return {
+            title: result.title || title.substring(0, 60),
+            description: result.description || description.substring(0, 160),
+            keywords: Array.isArray(result.keywords) ? result.keywords : [],
+          };
+        } catch (error: any) {
+          if (isRateLimitError(error)) {
+            throw error;
+          }
+          // Fallback
+          return {
+            title: title.substring(0, 60),
+            description: description.substring(0, 160),
+            keywords: ["video", "content"],
+          };
+        }
+      },
+      {
+        retries: 3,
+        minTimeout: 2000,
+        factor: 2,
+      },
+    ),
+  );
 }

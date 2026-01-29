@@ -1,10 +1,10 @@
 import { Router, Request } from "express";
-import { storage } from "../storage";
-import { db } from "../db";
-import { videos, videoLikes, videoViews, tags } from "@shared/schema";
-import { categorizeVideo } from "../ai-service";
-import { requireAuth } from "../middleware/auth";
-import { kvService } from "../kv-service";
+import { storage } from "../storage.js";
+import { db } from "../db.js";
+import { videos, videoLikes, videoViews, tags } from "../../shared/schema.js";
+import { categorizeVideo } from "../ai-service.js";
+import { requireAuth } from "../middleware/auth.js";
+import { kvService } from "../kv-service.js";
 import { eq, and, sql as sqlOp, inArray } from "drizzle-orm";
 
 const router = Router();
@@ -406,7 +406,7 @@ router.post("/batch/like-status", async (req, res) => {
     const result: Record<string, { isLiked: boolean; likesCount: number }> = {};
     for (const video of videosData) {
       result[video.id] = {
-        isLiked: userLikes.some((like) => like.videoId === video.id),
+        isLiked: userLikes.some((like: any) => like.videoId === video.id),
         likesCount: video.likesCount || 0,
       };
     }

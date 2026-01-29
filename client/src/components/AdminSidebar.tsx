@@ -12,9 +12,12 @@ import {
   LayoutDashboard,
   Tag,
   Activity,
+  Bug,
   Sliders,
+  Star,
   Download,
   RefreshCw,
+  Zap,
   Database,
   FileText,
 } from "lucide-react";
@@ -61,6 +64,12 @@ export function AdminSidebar() {
       testId: "link-dashboard",
     },
     {
+      icon: Star,
+      label: "Hero Management",
+      path: "/admin/hero",
+      testId: "link-hero",
+    },
+    {
       icon: Youtube,
       label: t("admin.channels"),
       path: "/admin/channels",
@@ -104,8 +113,8 @@ export function AdminSidebar() {
       testId: "link-analytics",
     },
     {
-      icon: RefreshCw,
-      label: "Regenerate",
+      icon: Zap,
+      label: "AI Regenerate",
       path: "/admin/regenerate",
       testId: "link-regenerate",
     },
@@ -144,6 +153,12 @@ export function AdminSidebar() {
       label: "Activity Logs",
       path: "/admin/logs",
       testId: "link-logs",
+    },
+    {
+      icon: Bug,
+      label: "Client Errors",
+      path: "/admin/client-logs",
+      testId: "link-client-logs",
     },
   ];
 

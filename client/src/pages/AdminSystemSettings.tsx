@@ -85,6 +85,7 @@ export default function AdminSystemSettings() {
         allowRegistration: settings.allowRegistration,
         itemsPerPage: settings.itemsPerPage,
         pwaEnabled: settings.pwaEnabled,
+        clientErrorLogging: settings.clientErrorLogging,
         customHeadCode: settings.customHeadCode || "",
         customBodyStartCode: settings.customBodyStartCode || "",
         customBodyEndCode: settings.customBodyEndCode || "",

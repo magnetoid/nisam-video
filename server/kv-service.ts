@@ -1,7 +1,5 @@
-import { kvStore } from './replit-db';
-import { db } from './db';
-import { videos, videoViews } from '@shared/schema';
-import { eq, sql as sqlOp } from 'drizzle-orm';
+import { kvStore } from './replit-db.js';
+import { storage } from './storage.js';
 
 /**
  * KV Store Service for nisam.video
@@ -123,10 +121,7 @@ export const kvService = {
   async syncViewBuffer(videoId: string, count: number): Promise<void> {
     try {
       // Increment views count in database
-      await db
-        .update(videos)
-        .set({ internalViewsCount: sqlOp`${videos.internalViewsCount} + ${count}` })
-        .where(eq(videos.id, videoId));
+      await storage.incrementVideoViews(videoId, count);
     } catch (error) {
       console.error(`Failed to sync view buffer for video ${videoId}:`, error);
       throw error;

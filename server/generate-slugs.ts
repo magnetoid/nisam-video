@@ -1,7 +1,7 @@
-import { db } from "./db";
-import { videos } from "@shared/schema";
+import { db } from "./db.js";
+import { videos } from "../shared/schema.js";
 import { sql } from "drizzle-orm";
-import { generateSlug } from "./utils";
+import { generateSlug } from "./utils.js";
 
 async function generateSlugsForExistingVideos() {
   console.log("Fetching all videos without slugs...");
