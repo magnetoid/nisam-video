@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
+import { useTranslation } from "react-i18next";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { SEO } from "@/components/SEO";
 import { Button } from "@/components/ui/button";
-import type { VideoWithRelations } from "@shared/schema";
+import type { VideoWithLocalizedRelations } from "@shared/schema";
 import { Play, Smartphone, Film } from "lucide-react";
 import { SiYoutube, SiTiktok } from "react-icons/si";
 
@@ -14,12 +15,13 @@ type FilterType = "all" | "youtube_short" | "tiktok";
 export default function Shorts() {
   const [, setLocation] = useLocation();
   const [filter, setFilter] = useState<FilterType>("all");
+  const { i18n } = useTranslation();
 
   const queryUrl = filter === "all" 
-    ? "/api/shorts?limit=100" 
-    : `/api/shorts?type=${filter}&limit=100`;
+    ? `/api/shorts?limit=100&lang=${i18n.language}`
+    : `/api/shorts?type=${filter}&limit=100&lang=${i18n.language}`;
 
-  const { data: shorts = [], isLoading } = useQuery<VideoWithRelations[]>({
+  const { data: shorts = [], isLoading } = useQuery<VideoWithLocalizedRelations[]>({
     queryKey: [queryUrl],
   });
 
@@ -120,7 +122,7 @@ export default function Shorts() {
 }
 
 interface ShortCardProps {
-  video: VideoWithRelations;
+  video: VideoWithLocalizedRelations;
   onClick: () => void;
 }
 

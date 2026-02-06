@@ -1,52 +1,69 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
+import { useTranslation } from "react-i18next";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { VideoGrid } from "@/components/VideoGrid";
 import { SEO } from "@/components/SEO";
-import type { Category, VideoWithRelations } from "@shared/schema";
+import type { LocalizedCategory, VideoWithLocalizedRelations } from "@shared/schema";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function Categories() {
   const [, setLocation] = useLocation();
+  const { i18n } = useTranslation();
   const [selectedCategory, setSelectedCategory] = useState<string | "others" | null>(null);
 
-  const { data: categories = [] } = useQuery<Category[]>({
-    queryKey: ["/api/categories"],
+  const { data: categories = [] } = useQuery<LocalizedCategory[]>({
+    queryKey: ["/api/categories", i18n.language],
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/categories?lang=${i18n.language}`);
+      return res.json();
+    },
   });
 
-  const { data: videos = [] } = useQuery<VideoWithRelations[]>({
-    queryKey: ["/api/videos"],
-  });
+  const categoriesWithCounts = useMemo(() => {
+    return categories
+      .map((category) => ({ category, count: category.videoCount || 0 }))
+      .filter((g) => g.count > 0)
+      .sort((a, b) => b.count - a.count);
+  }, [categories]);
 
-  // Count videos for each category
-  const categoriesWithCounts = categories
-    .map((category) => ({
-      category,
-      count: videos.filter((v) =>
-        v.categories?.some((c) => c.id === category.id),
-      ).length,
-    }))
-    .filter((g) => g.count > 0)
-    .sort((a, b) => b.count - a.count);
-
-  // Top 20 categories by video count
   const top20Categories = categoriesWithCounts.slice(0, 20);
-  
-  // Categories outside top 20
   const otherCategories = categoriesWithCounts.slice(20);
-  
-  // Videos in "others" (not in top 20)
-  const otherCategoryIds = new Set(otherCategories.map(c => c.category.id));
-  const othersVideos = videos.filter((v) =>
-    v.categories?.some((c) => otherCategoryIds.has(c.id))
-  );
+  const othersCount = otherCategories.reduce((sum, g) => sum + g.count, 0);
+  const totalVideosCount = categoriesWithCounts.reduce((sum, g) => sum + g.count, 0);
 
-  // Featured category (first one with most videos)
-  const featuredGroup = top20Categories[0];
-  const featuredVideo = featuredGroup ? videos.find((v) =>
-    v.categories?.some((c) => c.id === featuredGroup.category.id)
-  ) : null;
+  const featuredCategory = top20Categories[0]?.category || null;
+
+  const { data: featuredVideos = [] } = useQuery<VideoWithLocalizedRelations[]>({
+    queryKey: ["/api/videos", "featured-category", featuredCategory?.id, i18n.language],
+    enabled: !!featuredCategory?.id,
+    queryFn: async () => {
+      const res = await apiRequest(
+        "GET",
+        `/api/videos?categoryId=${featuredCategory!.id}&limit=1&lang=${i18n.language}`,
+      );
+      return res.json();
+    },
+  });
+
+  const featuredVideo = featuredVideos[0] || null;
+
+  const { data: gridVideos = [] } = useQuery<VideoWithLocalizedRelations[]>({
+    queryKey: ["/api/videos", "category-grid", selectedCategory, i18n.language],
+    queryFn: async () => {
+      if (!selectedCategory || selectedCategory === "others") {
+        const res = await apiRequest("GET", `/api/videos?limit=60&lang=${i18n.language}`);
+        return res.json();
+      }
+      const res = await apiRequest(
+        "GET",
+        `/api/videos?categoryId=${selectedCategory}&limit=60&lang=${i18n.language}`,
+      );
+      return res.json();
+    },
+  });
 
   const currentUrl = `${window.location.origin}/categories`;
   const hreflangLinks = [
@@ -81,7 +98,7 @@ export default function Categories() {
       <div className="h-16" />
 
       {/* Hero Section */}
-      {featuredVideo && featuredGroup && (
+      {featuredVideo && featuredCategory && (
         <div className="relative h-[40vh] md:h-[70vh]">
           <div className="absolute inset-0">
             <img
@@ -102,7 +119,7 @@ export default function Categories() {
                 </span>
                 <span className="text-muted-foreground">•</span>
                 <span className="text-sm text-muted-foreground">
-                  {featuredGroup.category.name}
+                  {featuredCategory.translations?.[0]?.name || featuredCategory.id}
                 </span>
               </div>
 
@@ -148,7 +165,7 @@ export default function Categories() {
             }`}
             data-testid="button-filter-all"
           >
-            All Categories ({videos.length})
+            Latest Videos ({totalVideosCount})
           </button>
           {top20Categories.map(({ category, count }) => (
             <button
@@ -159,9 +176,9 @@ export default function Categories() {
                   ? "bg-primary text-primary-foreground"
                   : "bg-card text-card-foreground hover-elevate"
               }`}
-              data-testid={`button-filter-${category.slug}`}
+              data-testid={`button-filter-${category.id}`}
             >
-              {category.name} ({count})
+              {(category.translations?.[0]?.name || category.id)} ({count})
             </button>
           ))}
           {otherCategories.length > 0 && (
@@ -174,7 +191,7 @@ export default function Categories() {
               }`}
               data-testid="button-filter-others"
             >
-              Others ({othersVideos.length})
+              Others ({othersCount})
             </button>
           )}
         </div>
@@ -182,19 +199,19 @@ export default function Categories() {
 
       {/* Videos Grid */}
       <div className="px-4 sm:px-8 md:px-16 space-y-12 pb-16">
-        {selectedCategory === null ? (
-          // Show all videos
-          <VideoGrid videos={videos} title="All Videos" />
-        ) : selectedCategory === "others" ? (
-          // Show videos from other categories
-          <VideoGrid videos={othersVideos} title="Other Categories" />
+        {selectedCategory === "others" ? (
+          <div className="text-muted-foreground">
+            Select a category to view videos. “Others” groups long-tail categories for browsing.
+          </div>
         ) : (
-          // Show videos from selected category
           <VideoGrid
-            videos={videos.filter((v) =>
-              v.categories?.some((c) => c.id === selectedCategory)
-            )}
-            title={top20Categories.find((g) => g.category.id === selectedCategory)?.category.name}
+            videos={gridVideos}
+            title={
+              selectedCategory
+                ? (top20Categories.find((g) => g.category.id === selectedCategory)?.category.translations?.[0]?.name ||
+                    "Category Videos")
+                : "Latest Videos"
+            }
           />
         )}
       </div>

@@ -1,4 +1,4 @@
-import { useState, memo } from "react";
+import { useState, memo, useRef, useEffect } from "react";
 import { Link } from "wouter";
 import { Play } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +16,7 @@ interface VideoCardProps {
 export const VideoCard = memo(function VideoCard({ video, onClick, variant = "carousel" }: VideoCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [imgError, setImgError] = useState(false);
+  const hoverTimeoutRef = useRef<NodeJS.Timeout>();
 
   const widthClass = variant === "grid" 
     ? "w-full" 
@@ -23,15 +24,31 @@ export const VideoCard = memo(function VideoCard({ video, onClick, variant = "ca
 
   const optimizedThumbnail = imgError ? video.thumbnailUrl : getOptimizedThumbnail(video.thumbnailUrl);
 
+  const handleMouseEnter = () => {
+    // Clear any existing timeout
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+    }
+    // Immediate response with 0ms delay
+    setIsHovered(true);
+  };
+
+  const handleMouseLeave = () => {
+    // Add slight delay for smoother leave transition
+    hoverTimeoutRef.current = setTimeout(() => {
+      setIsHovered(false);
+    }, 50);
+  };
+
   const content = (
     <div
-      className={`group relative ${widthClass} cursor-pointer transition-transform duration-300 ease-out`}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      className={`group relative ${widthClass} cursor-pointer transition-all duration-200 ease-out will-change-transform`}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
       onClick={onClick}
       data-testid={`card-video-${video.id}`}
       style={{
-        transform: isHovered ? "scale(1.05)" : "scale(1)",
+        transform: isHovered ? "scale(1.03)" : "scale(1)",
         zIndex: isHovered ? 10 : 1,
       }}
     >
@@ -46,7 +63,7 @@ export const VideoCard = memo(function VideoCard({ video, onClick, variant = "ca
         />
 
         <div
-          className={`absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent transition-opacity duration-300 ${
+          className={`absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent transition-all duration-200 ease-out ${
             isHovered ? "opacity-100" : "opacity-0"
           }`}
         >
@@ -85,13 +102,15 @@ export const VideoCard = memo(function VideoCard({ video, onClick, variant = "ca
           </div>
         </div>
 
-        {isHovered && (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="bg-background/80 backdrop-blur-sm rounded-full p-3">
-              <Play className="h-8 w-8 text-foreground fill-current" />
-            </div>
+        <div
+          className={`absolute inset-0 flex items-center justify-center transition-all duration-200 ease-out ${
+            isHovered ? "opacity-100 scale-100" : "opacity-0 scale-95"
+          }`}
+        >
+          <div className="bg-background/80 backdrop-blur-sm rounded-full p-3 shadow-lg">
+            <Play className="h-8 w-8 text-foreground fill-current" />
           </div>
-        )}
+        </div>
 
         {video.duration && (
           <div className="absolute bottom-2 right-2 bg-black/90 px-2 py-1 rounded text-xs font-medium">
@@ -130,6 +149,15 @@ export const VideoCard = memo(function VideoCard({ video, onClick, variant = "ca
   if (onClick) {
     return content;
   }
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+      }
+    };
+  }, []);
 
   return <Link href={`/video/${video.slug || video.id}`}>{content}</Link>;
 });

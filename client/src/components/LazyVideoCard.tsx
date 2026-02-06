@@ -1,9 +1,9 @@
 import { useRef, useState, useEffect, memo } from "react";
 import { VideoCard } from "./VideoCard";
-import type { VideoWithRelations } from "@shared/schema";
+import type { VideoWithLocalizedRelations } from "@shared/schema";
 
 interface LazyVideoCardProps {
-  video: VideoWithRelations;
+  video: VideoWithLocalizedRelations;
   variant?: "carousel" | "grid";
 }
 
@@ -29,7 +29,10 @@ export const LazyVideoCard = memo(function LazyVideoCard({ video, variant = "car
 
   if (!isVisible) {
     return (
-      <div ref={ref} className={`${widthClass} aspect-video bg-muted rounded-md animate-pulse`} />
+      <div 
+        ref={ref} 
+        className={`${widthClass} aspect-video bg-gradient-to-br from-muted/50 to-muted rounded-md animate-pulse shadow-sm`} 
+      />
     );
   }
 

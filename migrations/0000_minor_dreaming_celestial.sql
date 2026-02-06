@@ -9,15 +9,34 @@ CREATE TABLE "activity_logs" (
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE "analytics_events" (
+	"id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"event_name" text NOT NULL,
+	"trigger_type" text NOT NULL,
+	"selector" text,
+	"parameters" json,
+	"is_active" integer DEFAULT 1 NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE "categories" (
 	"id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"video_count" integer DEFAULT 0 NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "category_translations" (
+	"id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"category_id" varchar NOT NULL,
+	"language_code" varchar(10) NOT NULL,
 	"name" text NOT NULL,
 	"slug" text NOT NULL,
 	"description" text,
-	"video_count" integer DEFAULT 0 NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
-	CONSTRAINT "categories_name_unique" UNIQUE("name"),
-	CONSTRAINT "categories_slug_unique" UNIQUE("slug")
+	"updated_at" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "category_translations_category_id_language_code_unique" UNIQUE("category_id","language_code"),
+	CONSTRAINT "category_translations_slug_language_code_unique" UNIQUE("slug","language_code")
 );
 --> statement-breakpoint
 CREATE TABLE "channels" (
@@ -35,15 +54,20 @@ CREATE TABLE "channels" (
 --> statement-breakpoint
 CREATE TABLE "hero_videos" (
 	"id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"slot" integer NOT NULL,
-	"video_id" varchar NOT NULL,
+	"display_order" integer DEFAULT 0 NOT NULL,
+	"video_id" varchar,
 	"title" text NOT NULL,
 	"description" text NOT NULL,
 	"button_text" text NOT NULL,
 	"button_link" text NOT NULL,
+	"thumbnail_url" text,
+	"video_url" text,
+	"duration" integer,
+	"start_date" timestamp,
+	"end_date" timestamp,
+	"is_active" integer DEFAULT 1 NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
-	"updated_at" timestamp DEFAULT now() NOT NULL,
-	CONSTRAINT "hero_videos_slot_unique" UNIQUE("slot")
+	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "playlist_videos" (
@@ -112,6 +136,8 @@ CREATE TABLE "system_settings" (
 	"pwa_enabled" integer DEFAULT 1 NOT NULL,
 	"client_error_logging" integer DEFAULT 1 NOT NULL,
 	"about_page_content" text,
+	"gtm_id" text,
+	"ga4_id" text,
 	"custom_head_code" text,
 	"custom_body_start_code" text,
 	"custom_body_end_code" text,
@@ -127,10 +153,21 @@ CREATE TABLE "tag_images" (
 	CONSTRAINT "tag_images_tag_name_unique" UNIQUE("tag_name")
 );
 --> statement-breakpoint
+CREATE TABLE "tag_translations" (
+	"id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"tag_id" varchar NOT NULL,
+	"language_code" varchar(10) NOT NULL,
+	"tag_name" text NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "tag_translations_tag_lang_unique" UNIQUE("tag_id","language_code"),
+	CONSTRAINT "tag_translations_name_lang_unique" UNIQUE("tag_name","language_code")
+);
+--> statement-breakpoint
 CREATE TABLE "tags" (
 	"id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"video_id" varchar NOT NULL,
-	"tag_name" text NOT NULL
+	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "video_categories" (
@@ -173,18 +210,24 @@ CREATE TABLE "videos" (
 	CONSTRAINT "videos_slug_unique" UNIQUE("slug")
 );
 --> statement-breakpoint
+ALTER TABLE "category_translations" ADD CONSTRAINT "category_translations_category_id_categories_id_fk" FOREIGN KEY ("category_id") REFERENCES "public"."categories"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "hero_videos" ADD CONSTRAINT "hero_videos_video_id_videos_id_fk" FOREIGN KEY ("video_id") REFERENCES "public"."videos"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "playlist_videos" ADD CONSTRAINT "playlist_videos_playlist_id_playlists_id_fk" FOREIGN KEY ("playlist_id") REFERENCES "public"."playlists"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "playlist_videos" ADD CONSTRAINT "playlist_videos_video_id_videos_id_fk" FOREIGN KEY ("video_id") REFERENCES "public"."videos"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "tag_translations" ADD CONSTRAINT "tag_translations_tag_id_tags_id_fk" FOREIGN KEY ("tag_id") REFERENCES "public"."tags"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "tags" ADD CONSTRAINT "tags_video_id_videos_id_fk" FOREIGN KEY ("video_id") REFERENCES "public"."videos"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "video_categories" ADD CONSTRAINT "video_categories_video_id_videos_id_fk" FOREIGN KEY ("video_id") REFERENCES "public"."videos"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "video_categories" ADD CONSTRAINT "video_categories_category_id_categories_id_fk" FOREIGN KEY ("category_id") REFERENCES "public"."categories"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "video_likes" ADD CONSTRAINT "video_likes_video_id_videos_id_fk" FOREIGN KEY ("video_id") REFERENCES "public"."videos"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "video_views" ADD CONSTRAINT "video_views_video_id_videos_id_fk" FOREIGN KEY ("video_id") REFERENCES "public"."videos"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "videos" ADD CONSTRAINT "videos_channel_id_channels_id_fk" FOREIGN KEY ("channel_id") REFERENCES "public"."channels"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-CREATE INDEX "hero_videos_slot_idx" ON "hero_videos" USING btree ("slot");--> statement-breakpoint
+CREATE INDEX "category_translations_category_id_idx" ON "category_translations" USING btree ("category_id");--> statement-breakpoint
+CREATE INDEX "category_translations_language_idx" ON "category_translations" USING btree ("language_code");--> statement-breakpoint
+CREATE INDEX "hero_videos_display_order_idx" ON "hero_videos" USING btree ("display_order");--> statement-breakpoint
 CREATE INDEX "hero_videos_video_id_idx" ON "hero_videos" USING btree ("video_id");--> statement-breakpoint
 CREATE INDEX "IDX_session_expire" ON "session" USING btree ("expire");--> statement-breakpoint
+CREATE INDEX "tag_translations_tag_id_idx" ON "tag_translations" USING btree ("tag_id");--> statement-breakpoint
+CREATE INDEX "tag_translations_language_idx" ON "tag_translations" USING btree ("language_code");--> statement-breakpoint
 CREATE INDEX "video_categories_category_id_idx" ON "video_categories" USING btree ("category_id");--> statement-breakpoint
 CREATE INDEX "videos_publish_date_idx" ON "videos" USING btree ("publish_date");--> statement-breakpoint
 CREATE INDEX "videos_channel_id_idx" ON "videos" USING btree ("channel_id");--> statement-breakpoint

@@ -1,30 +1,28 @@
-// Reference: javascript_database blueprint
-import { Pool, neonConfig } from "@neondatabase/serverless";
-import { drizzle } from "drizzle-orm/neon-serverless";
-import ws from "ws";
+import { Pool } from "pg";
+import { drizzle } from "drizzle-orm/node-postgres";
 import * as schema from "../shared/schema.js";
-
-// Configure WebSocket for Neon serverless
-// Always use ws package for WebSocket connections in Node.js environment
-neonConfig.webSocketConstructor = ws;
-neonConfig.useSecureWebSocket = true;
-neonConfig.pipelineConnect = "password";
 
 export const dbUrl = process.env.DATABASE_URL;
 
-// Configure connection pool for Cloudflare edge compatibility
-// Cloudflare has strict connection limits
 export let pool: Pool | null = null;
 export let db: ReturnType<typeof drizzle> | any = null;
 
 if (dbUrl) {
   pool = new Pool({
     connectionString: dbUrl,
-    max: 1, // Cloudflare edge: use minimal connections (1 per worker)
+    ssl: { rejectUnauthorized: false }, // Allow self-signed certs (Supabase pooler)
+    max: process.env.NODE_ENV === "production" ? 1 : 10, // Use single connection per lambda in production
     idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 10000,
+    connectionTimeoutMillis: 5000, // Reduced from 10s to fail faster
   });
-  db = drizzle({ client: pool, schema });
+
+  // Prevent crashes on idle client errors
+  pool.on('error', (err) => {
+    console.error('Unexpected error on idle client', err);
+    // process.exit(-1); // Do not exit, let it recover
+  });
+
+  db = drizzle(pool, { schema });
 } else {
   console.warn("DATABASE_URL is not set. Running in in-memory mode. Database features will be simulated.");
   
@@ -72,7 +70,14 @@ if (dbUrl) {
           return {
               where: () => Promise.resolve({ rowCount: 1 })
           };
+      },
+      execute: (query: any) => {
+          return Promise.resolve({ rows: [] });
       }
   };
   db = mockDb;
+}
+
+export function isDbReady() {
+  return !!pool && !!db;
 }

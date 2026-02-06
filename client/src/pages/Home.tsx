@@ -2,46 +2,76 @@ import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
-import { HeroBillboard } from "@/components/HeroBillboard";
 import { CarouselRow } from "@/components/CarouselRow";
 import { SearchOverlay } from "@/components/SearchOverlay";
 import { SEO } from "@/components/SEO";
 import { LikeStatusBatchProvider } from "@/components/LikeButton";
-import type { VideoWithRelations, Category } from "@shared/schema";
+import type { LocalizedCategory, VideoWithLocalizedRelations } from "@shared/schema";
+import { useTranslation } from "react-i18next";
+import { apiRequest } from "@/lib/queryClient";
+import HeroImageSlider from '@/components/HeroImageSlider';
 
 interface CarouselData {
-  hero: VideoWithRelations | null;
-  recent: VideoWithRelations[];
-  trending: VideoWithRelations[];
-  byCategory: Record<string, VideoWithRelations[]>;
+  hero: VideoWithLocalizedRelations[];
+  recent: VideoWithLocalizedRelations[];
+  trending: VideoWithLocalizedRelations[];
+  byCategory: Record<string, VideoWithLocalizedRelations[]>;
 }
 
 export default function Home() {
   const [showSearch, setShowSearch] = useState(false);
+  const { t, i18n } = useTranslation();
 
   const {
     data: carouselData,
     isLoading: carouselsLoading,
   } = useQuery<CarouselData>({
-    queryKey: ["/api/videos/carousels"],
+    queryKey: ["/api/videos/carousels", i18n.language],
+    staleTime: 60 * 1000,
+    refetchOnWindowFocus: true,
+    queryFn: async () => {
+        const res = await apiRequest("GET", `/api/videos/carousels?lang=${i18n.language}`);
+        return res.json();
+    }
   });
 
-  const { data: categories = [] } = useQuery<Category[]>({
-    queryKey: ["/api/categories"],
+  const { data: categories = [] } = useQuery<LocalizedCategory[]>({
+    queryKey: ["/api/categories", i18n.language],
+    staleTime: 5 * 60 * 1000,
+    queryFn: async () => {
+        const res = await apiRequest("GET", `/api/categories?lang=${i18n.language}`);
+        return res.json();
+    }
   });
 
-  const { data: searchVideos = [] } = useQuery<VideoWithRelations[]>({
-    queryKey: ["/api/videos?limit=100"],
+  const { data: searchVideos = [] } = useQuery<VideoWithLocalizedRelations[]>({
+    queryKey: ["/api/videos?limit=100", i18n.language],
     enabled: showSearch,
+    staleTime: 30 * 1000,
+    refetchOnWindowFocus: true,
+    queryFn: async () => {
+        const res = await apiRequest("GET", `/api/videos?limit=100&lang=${i18n.language}`);
+        return res.json();
+    }
   });
 
-  const featuredVideo = carouselData?.hero ?? undefined;
+  const featuredVideos = carouselData?.hero ?? [];
   const recentVideos = carouselData?.recent ?? [];
   const trendingVideos = carouselData?.trending ?? [];
   const videosByCategory = carouselData?.byCategory ?? {};
 
+  const heroItems = useMemo(() => {
+    const primary = featuredVideos.length > 0 ? featuredVideos : recentVideos;
+    return primary.slice(0, 5).map((v) => ({
+      id: v.id,
+      title: v.title,
+      imageUrl: v.thumbnailUrl || null,
+    }));
+  }, [featuredVideos, recentVideos]);
+
   const allVideoIds = useMemo(() => {
     const ids: string[] = [];
+    featuredVideos.forEach(v => ids.push(v.id));
     recentVideos.forEach(v => ids.push(v.id));
     trendingVideos.forEach(v => ids.push(v.id));
     // Only include first 6 categories
@@ -86,10 +116,10 @@ export default function Home() {
       <Header onSearchClick={() => setShowSearch(true)} />
 
       <main className="pt-16">
-        <HeroBillboard video={featuredVideo} />
-
         <LikeStatusBatchProvider videoIds={allVideoIds}>
           <div className="space-y-0">
+            <HeroImageSlider items={heroItems} />
+
             {recentVideos.length > 0 && (
               <CarouselRow title="Recently Added" videos={recentVideos} />
             )}

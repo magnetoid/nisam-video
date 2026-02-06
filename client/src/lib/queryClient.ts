@@ -1,5 +1,6 @@
 import { QueryClient, QueryFunction, QueryCache, MutationCache } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
+import { reportClientError } from "@/lib/errorReporting";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
@@ -91,6 +92,17 @@ export const queryClient = new QueryClient({
         description: displayMessage,
         details: stack || String(error)
       });
+
+      reportClientError({
+        level: "error",
+        type: "api_query_error",
+        message: errorMessage,
+        stack,
+        module: "react-query",
+        context: {
+          queryKey: query.queryKey,
+        },
+      });
     }
   }),
   mutationCache: new MutationCache({
@@ -118,6 +130,17 @@ export const queryClient = new QueryClient({
          description: displayMessage,
          details: stack || String(error)
        });
+
+       reportClientError({
+         level: "error",
+         type: "api_mutation_error",
+         message: errorMessage,
+         stack,
+         module: "react-query",
+         context: {
+           mutationKey: mutation.options.mutationKey,
+         },
+       });
     }
   }),
   defaultOptions: {
@@ -127,7 +150,22 @@ export const queryClient = new QueryClient({
       refetchOnWindowFocus: false,
       staleTime: 10 * 60 * 1000, // 10 minutes - increased for better performance
       gcTime: 30 * 60 * 1000, // 30 minutes - keep in memory longer for faster navigation
-      retry: false,
+      retry: (failureCount, error) => {
+        if (error instanceof Error) {
+           // Parse status code from error message "STATUS: Detail"
+           const statusMatch = error.message.match(/^(\d{3}):/);
+           if (statusMatch) {
+               const status = parseInt(statusMatch[1], 10);
+               // Retry on 5xx server errors and 429 Too Many Requests
+               if (status >= 500 || status === 429) return failureCount < 3;
+               // Don't retry on other 4xx client errors
+               if (status >= 400 && status < 500) return false;
+           }
+        }
+        // Default retry for network errors or unknown errors
+        return failureCount < 3;
+      },
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff: 1s, 2s, 4s... max 30s
     },
     mutations: {
       retry: false,

@@ -23,12 +23,15 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 
 export default function AdminRegenerate() {
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [progress, setProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState("");
   const [result, setResult] = useState<any>(null);
+  const [regenerationMode, setRegenerationMode] = useState<"all" | "missing">("missing");
   const { toast } = useToast();
 
   const { data: aiStatus } = useQuery<{
@@ -67,7 +70,7 @@ export default function AdminRegenerate() {
 
       while (true) {
         const response = await fetch(
-          `/api/admin/regenerate?type=${type}&offset=${offset}&limit=${batchSize}`,
+          `/api/admin/regenerate?type=${type}&offset=${offset}&limit=${batchSize}&mode=${regenerationMode}`,
           {
             method: "POST",
           },
@@ -141,7 +144,7 @@ export default function AdminRegenerate() {
 
       while (true) {
         const response = await fetch(
-          `/api/admin/regenerate-slugs?offset=${offset}&limit=${batchSize}`,
+          `/api/admin/regenerate-slugs?offset=${offset}&limit=${batchSize}&mode=${regenerationMode}`,
           {
             method: "POST",
           },
@@ -220,6 +223,40 @@ export default function AdminRegenerate() {
               <span className="text-muted-foreground">Model: {aiStatus.openai.model}</span>
             </div>
           )}
+
+          <Card className="mt-6">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Regeneration Mode</CardTitle>
+              <CardDescription>Choose how videos should be processed</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <RadioGroup
+                defaultValue="missing"
+                value={regenerationMode}
+                onValueChange={(v) => setRegenerationMode(v as "all" | "missing")}
+                className="flex flex-col gap-4 sm:flex-row sm:gap-8"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="missing" id="missing" />
+                  <Label htmlFor="missing" className="cursor-pointer">
+                    <span className="font-medium">Missing Metadata Only</span>
+                    <p className="text-xs text-muted-foreground">
+                      Only process videos without categories/tags/slugs
+                    </p>
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="all" id="all" />
+                  <Label htmlFor="all" className="cursor-pointer">
+                    <span className="font-medium">All Videos</span>
+                    <p className="text-xs text-muted-foreground">
+                      Reprocess everything (slower)
+                    </p>
+                  </Label>
+                </div>
+              </RadioGroup>
+            </CardContent>
+          </Card>
         </div>
 
         {isRegenerating && (

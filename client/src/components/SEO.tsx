@@ -16,84 +16,60 @@ interface SEOProps {
 }
 
 export function SEO({
-  title: pageTitle,
-  description: pageDescription,
-  image: pageImage,
-  path = "",
+  title,
+  description,
+  image,
   type = "website",
-  structuredData,
-  canonical,
-  hreflang = [],
   publishedTime,
   modifiedTime,
 }: SEOProps) {
-  const { data: settings } = useQuery<SeoSettings>({
-    queryKey: ["/api/seo/settings"],
+  const { t } = useTranslation();
+  const settings = useSeoSettings();
+  const router = useRouter();
+  const currentPath = router.asPath;
+  const fullTitle = title ? `${title} | ${settings?.siteName || "nisam.video"}` : settings?.siteName || "nisam.video";
+  const url = `https://nisam.video${currentPath}`;
+
+  const { data: seoMeta } = useQuery({
+    queryKey: ['seo-meta', currentPath],
+    queryFn: () => apiRequest('GET', `/api/seo/meta-tags?pageUrl=${encodeURIComponent(currentPath)}`),
+    staleTime: 5 * 60 * 1000, // 5min
   });
 
   useEffect(() => {
-    if (!settings) return;
-
-    // Construct full title
-    const fullTitle = pageTitle
-      ? `${pageTitle} | ${settings.siteName}`
-      : settings.siteName;
-
-    // Use page description or fallback to site description
-    const description = pageDescription || settings.siteDescription;
-
-    // Use page image or fallback to OG image
-    const image = pageImage || settings.ogImage || "";
-
-    // Full URL
-    const url = `${window.location.origin}${path}`;
-
-    // Update document title
-    document.title = fullTitle;
-
-    // Update or create meta tags, or remove if content is empty
-    const updateMetaTag = (
-      name: string,
-      content: string,
-      isProperty = false,
-    ) => {
-      const attr = isProperty ? "property" : "name";
-      let element = document.querySelector(`meta[${attr}="${name}"]`);
-
-      if (!content) {
-        // Remove tag if content is empty
-        if (element) {
-          element.remove();
-        }
-        return;
-      }
-
-      if (!element) {
-        element = document.createElement("meta");
-        element.setAttribute(attr, name);
-        document.head.appendChild(element);
-      }
-
-      element.setAttribute("content", content);
-    };
+    const meta = seoMeta?.[0] || {};
+    const effectiveTitle = meta.title || title || settings?.siteName || "nisam.video";
+    const effectiveDesc = meta.description || description;
+    const effectiveImage = meta.ogImage || image;
 
     // Standard meta tags
-    updateMetaTag("description", description);
-    updateMetaTag("keywords", settings.metaKeywords || "");
+    updateMetaTag("description", effectiveDesc);
+    updateMetaTag("keywords", meta.keywords || settings?.metaKeywords || "");
 
     // Open Graph tags
-    updateMetaTag("og:title", fullTitle, true);
-    updateMetaTag("og:description", description, true);
+    updateMetaTag("og:title", meta.ogTitle || effectiveTitle, true);
+    updateMetaTag("og:description", meta.ogDescription || effectiveDesc, true);
     updateMetaTag("og:type", type, true);
     updateMetaTag("og:url", url, true);
-    updateMetaTag("og:site_name", settings.siteName, true);
-    updateMetaTag("og:image", image, true);
+    updateMetaTag("og:site_name", settings?.siteName, true);
+    updateMetaTag("og:image", effectiveImage, true);
 
     // Twitter Card tags
-    updateMetaTag("twitter:card", image ? "summary_large_image" : "");
-    updateMetaTag("twitter:title", fullTitle);
-    updateMetaTag("twitter:description", description);
-    updateMetaTag("twitter:image", image);
+    updateMetaTag("twitter:card", effectiveImage ? "summary_large_image" : "");
+    updateMetaTag("twitter:title", meta.twitterTitle || effectiveTitle);
+    updateMetaTag("twitter:description", meta.twitterDescription || effectiveDesc);
+    updateMetaTag("twitter:image", meta.twitterImage || effectiveImage);
+
+    // Canonical
+    if (meta.canonicalUrl) updateMetaTag("link[rel='canonical']", meta.canonicalUrl, true, 'href');
+
+    // Schema markup
+    if (meta.schemaMarkup) {
+      const script = document.createElement('script');
+      script.type = 'application/ld+json';
+      script.text = JSON.stringify(meta.schemaMarkup);
+      document.head.appendChild(script);
+    }
 
     // Article meta tags (for videos and blog-like content)
     if (publishedTime) {
@@ -102,72 +78,7 @@ export function SEO({
     if (modifiedTime) {
       updateMetaTag("article:modified_time", modifiedTime, true);
     }
-
-    // Canonical URL
-    const updateLinkTag = (rel: string, href: string) => {
-      let element = document.querySelector(`link[rel="${rel}"]`);
-
-      if (!href) {
-        if (element) element.remove();
-        return;
-      }
-
-      if (!element) {
-        element = document.createElement("link");
-        element.setAttribute("rel", rel);
-        document.head.appendChild(element);
-      }
-
-      element.setAttribute("href", href);
-    };
-
-    const canonicalUrl = canonical || url;
-    updateLinkTag("canonical", canonicalUrl);
-
-    // Hreflang tags for multi-language support
-    // Remove existing hreflang tags
-    document
-      .querySelectorAll('link[rel="alternate"][hreflang]')
-      .forEach((el) => el.remove());
-
-    // Add new hreflang tags
-    hreflang.forEach(({ lang, url: langUrl }) => {
-      const linkEl = document.createElement("link");
-      linkEl.setAttribute("rel", "alternate");
-      linkEl.setAttribute("hreflang", lang);
-      linkEl.setAttribute("href", langUrl);
-      document.head.appendChild(linkEl);
-    });
-
-    // Structured Data (JSON-LD)
-    const removeStructuredData = () => {
-      const existing = document.querySelector(
-        'script[type="application/ld+json"]',
-      );
-      if (existing) existing.remove();
-    };
-
-    removeStructuredData();
-
-    if (structuredData) {
-      const script = document.createElement("script");
-      script.type = "application/ld+json";
-      script.text = JSON.stringify(structuredData);
-      document.head.appendChild(script);
-    }
-  }, [
-    settings,
-    pageTitle,
-    pageDescription,
-    pageImage,
-    path,
-    type,
-    structuredData,
-    canonical,
-    hreflang,
-    publishedTime,
-    modifiedTime,
-  ]);
+  }, [title, description, image, type, publishedTime, modifiedTime, settings, currentPath, seoMeta]);
 
   return null;
 }

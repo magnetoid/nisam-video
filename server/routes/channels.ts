@@ -110,19 +110,21 @@ router.post("/:id/scrape", requireAuth, async (req, res) => {
         const result = await categorizeVideo(
           video.title,
           video.description || "",
+          { timeoutMs: 20000 },
         );
 
         for (const categoryName of result.categories) {
           const categorySlug = categoryName
             .toLowerCase()
             .replace(/[^a-z0-9]+/g, "-");
-          let category = await storage.getCategoryBySlug(categorySlug);
+          let category = await storage.getLocalizedCategoryBySlug(categorySlug, 'en');
 
           if (!category) {
-            category = await storage.createCategory({
+            category = await storage.createCategory({}, [{
+              languageCode: 'en',
               name: categoryName,
               slug: categorySlug,
-            });
+            }]);
           }
 
           await storage.addVideoCategory(video.id, category.id);
@@ -131,8 +133,10 @@ router.post("/:id/scrape", requireAuth, async (req, res) => {
         for (const tagName of result.tags) {
           await storage.createTag({
             videoId: video.id,
-            tagName,
-          });
+          }, [{
+              languageCode: 'en',
+              tagName
+          }]);
         }
 
         console.log(`[channels] Categorized: ${video.title}`);
@@ -141,7 +145,7 @@ router.post("/:id/scrape", requireAuth, async (req, res) => {
       }
     }
 
-    const allCategories = await storage.getAllCategories();
+    const allCategories = await storage.getAllLocalizedCategories('en');
     for (const category of allCategories) {
       const categoryVideos = await storage.getAllVideos({
         categoryId: category.id,

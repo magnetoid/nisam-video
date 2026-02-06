@@ -1,37 +1,33 @@
 import { Router, Request } from "express";
-import { storage } from "../storage.js";
+import { storage } from "../storage/index.js";
 import { db } from "../db.js";
 import { videos, videoLikes, videoViews, tags } from "../../shared/schema.js";
 import { categorizeVideo } from "../ai-service.js";
 import { requireAuth } from "../middleware/auth.js";
 import { kvService } from "../kv-service.js";
 import { eq, and, sql as sqlOp, inArray } from "drizzle-orm";
+import { getUserIdentifier } from "../utils.js";
 
 const router = Router();
 
-function getUserIdentifier(req: Request): string {
-  return req.sessionID || req.ip || "anonymous";
-}
-
 router.get("/", async (req, res) => {
   try {
-    const { channelId, categoryId, search, limit, offset } = req.query;
+    const { channelId, categoryId, search, limit, offset, lang, tagName } = req.query;
+    const limitNum = limit ? parseInt(limit as string, 10) || 20 : undefined;
+    const offsetNum = offset ? parseInt(offset as string, 10) || 0 : undefined;
     const filters = {
       channelId: channelId as string | undefined,
       categoryId: categoryId as string | undefined,
       search: search as string | undefined,
+      tagName: tagName as string | undefined,
+      lang: lang as string | undefined,
+      limit: limitNum,
+      offset: limitNum ? offsetNum : undefined,
     };
-    let videosList = await storage.getAllVideos(filters);
-    
-    if (limit) {
-      const limitNum = parseInt(limit as string, 10) || 20;
-      const offsetNum = parseInt(offset as string, 10) || 0;
-      videosList = videosList.slice(offsetNum, offsetNum + limitNum);
-    }
-    
+    const videosList = await storage.getAllVideos(filters);
     res.json(videosList);
   } catch (error) {
-    console.error("Get videos error:", error);
+    console.error(`Get videos error [params=${JSON.stringify(req.query)}]:`, error);
     res.status(500).json({ error: "Failed to fetch videos" });
   }
 });
@@ -48,32 +44,71 @@ router.get("/hero", async (req, res) => {
 
 router.get("/carousels", async (req, res) => {
   try {
+    const lang = req.query.lang as string || 'en';
     const videosPerCategory = parseInt(req.query.limit as string, 10) || 10;
     
-    const [hero, recent, trending, allCategories] = await Promise.all([
-      storage.getHeroVideo(),
-      storage.getRecentVideos(videosPerCategory),
-      storage.getTrendingVideos(videosPerCategory),
-      storage.getAllCategories(),
+    // Wrap each storage call in individual try-catch to prevent cascading failures
+    const [heroResult, recentResult, trendingResult, categoriesResult] = await Promise.allSettled([
+      storage.getHomeHeroVideos(4, lang),
+      storage.getRecentVideos(videosPerCategory, lang),
+      storage.getTrendingVideos(videosPerCategory, lang),
+      storage.getAllLocalizedCategories(lang),
     ]);
 
-    const categoryPromises = allCategories.map(async (category) => ({
-      name: category.name,
-      videos: await storage.getVideosByCategory(category.id, videosPerCategory),
-    }));
-    const categoryResults = await Promise.all(categoryPromises);
-    
-    const byCategory: Record<string, any[]> = {};
-    for (const result of categoryResults) {
-      if (result.videos.length > 0) {
-        byCategory[result.name] = result.videos;
+    // Extract results with fallbacks
+    const hero = heroResult.status === 'fulfilled' ? heroResult.value : [];
+    const recent = recentResult.status === 'fulfilled' ? recentResult.value : [];
+    const trending = trendingResult.status === 'fulfilled' ? trendingResult.value : [];
+    const allCategories = categoriesResult.status === 'fulfilled' ? categoriesResult.value : [];
+
+    // Log individual failures for debugging
+    if (heroResult.status === 'rejected') {
+      console.warn(`[carousels] Hero video fetch failed:`, heroResult.reason);
+    }
+    if (recentResult.status === 'rejected') {
+      console.warn(`[carousels] Recent videos fetch failed:`, recentResult.reason);
+    }
+    if (trendingResult.status === 'rejected') {
+      console.warn(`[carousels] Trending videos fetch failed:`, trendingResult.reason);
+    }
+    if (categoriesResult.status === 'rejected') {
+      console.warn(`[carousels] Categories fetch failed:`, categoriesResult.reason);
+    }
+
+    // Process categories with individual error handling
+    const limitedCategories = allCategories.slice(0, 10);
+    const categoryPromises = limitedCategories.map(async (category) => {
+      try {
+        const videos = await storage.getVideosByCategory(category.id, videosPerCategory, lang);
+        return {
+          name: category.translations[0]?.name || 'Unnamed',
+          videos: videos || [],
+        };
+      } catch (error) {
+        console.warn(`[carousels] Failed to fetch videos for category ${category.id}:`, error);
+        return {
+          name: category.translations[0]?.name || 'Unnamed',
+          videos: [],
+        };
       }
+    });
+    
+    const categoryResults = await Promise.allSettled(categoryPromises);
+    const successfulCategories = categoryResults
+      .filter(result => result.status === 'fulfilled')
+      .map(result => result.value)
+      .filter(result => result.videos.length > 0);
+
+    const byCategory: Record<string, any[]> = {};
+    for (const result of successfulCategories) {
+      byCategory[result.name] = result.videos;
     }
 
     res.json({ hero, recent, trending, byCategory });
   } catch (error) {
-    console.error("Get carousels error:", error);
-    res.status(500).json({ error: "Failed to fetch carousel data" });
+    console.error(`[carousels] Critical error [params=${JSON.stringify(req.query)}]:`, error);
+    // Even in case of critical error, return empty data instead of 500
+    res.json({ hero: [], recent: [], trending: [], byCategory: {} });
   }
 });
 
@@ -121,7 +156,10 @@ router.patch("/:id", requireAuth, async (req, res) => {
     if (tagNames !== undefined) {
       await storage.deleteTagsByVideoId(req.params.id);
       for (const tagName of tagNames) {
-        await storage.createTag({ videoId: req.params.id, tagName });
+        await storage.createTag(
+          { videoId: req.params.id },
+          [{ languageCode: "en", tagName }]
+        );
       }
     }
 
@@ -156,19 +194,23 @@ router.post("/:id/categorize", requireAuth, async (req, res) => {
 
     for (const categoryName of result.categories) {
       const slug = categoryName.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-      let category = await storage.getCategoryBySlug(slug);
+      let category = await storage.getLocalizedCategoryBySlug(slug, "en");
 
       if (!category) {
-        category = await storage.createCategory({ name: categoryName, slug });
+        category = await storage.createCategory(
+          { videoCount: 0 },
+          [{ languageCode: "en", name: categoryName, slug, description: "" }]
+        );
       }
 
       await storage.addVideoCategory(video.id, category.id);
-      const categoryVideos = await storage.getAllVideos({ categoryId: category.id });
-      await storage.updateCategory(category.id, { videoCount: categoryVideos.length });
     }
 
     for (const tagName of result.tags) {
-      await storage.createTag({ videoId: video.id, tagName });
+      await storage.createTag(
+        { videoId: video.id },
+        [{ languageCode: "en", tagName }]
+      );
     }
 
     res.json({ success: true, result });
@@ -202,15 +244,21 @@ router.post("/bulk/categorize", requireAuth, async (req, res) => {
 
         for (const categoryName of result.categories) {
           const slug = categoryName.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-          let category = await storage.getCategoryBySlug(slug);
+          let category = await storage.getLocalizedCategoryBySlug(slug, "en");
           if (!category) {
-            category = await storage.createCategory({ name: categoryName, slug });
+            category = await storage.createCategory(
+              { videoCount: 0 },
+              [{ languageCode: "en", name: categoryName, slug, description: "" }]
+            );
           }
           await storage.addVideoCategory(video.id, category.id);
         }
 
         for (const tagName of result.tags) {
-          await storage.createTag({ videoId: video.id, tagName });
+          await storage.createTag(
+            { videoId: video.id },
+            [{ languageCode: "en", tagName }]
+          );
         }
 
         results.successful++;
@@ -249,7 +297,10 @@ router.post("/bulk/tag", requireAuth, async (req, res) => {
         }
 
         for (const tagName of tagNames) {
-          await storage.createTag({ videoId: video.id, tagName });
+          await storage.createTag(
+            { videoId: video.id },
+            [{ languageCode: "en", tagName }]
+          );
         }
 
         results.successful++;

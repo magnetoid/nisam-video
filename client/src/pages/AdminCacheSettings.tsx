@@ -24,6 +24,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
 interface CacheSettings {
@@ -44,6 +45,23 @@ interface CacheStats {
   newestEntry: number | null;
 }
 
+interface PerfRouteStat {
+  route: string;
+  count: number;
+  errorCount: number;
+  avgMs: number;
+  p50Ms: number;
+  p95Ms: number;
+  maxMs: number;
+  lastSeen: string;
+}
+
+interface PerformanceSummary {
+  routeCount: number;
+  slowestByP95: PerfRouteStat[];
+  slowestByAvg: PerfRouteStat[];
+}
+
 export default function AdminCacheSettings() {
   const { toast } = useToast();
   const [formData, setFormData] = useState<CacheSettings>({
@@ -62,6 +80,11 @@ export default function AdminCacheSettings() {
   const { data: stats, refetch: refetchStats } = useQuery<CacheStats>({
     queryKey: ["/api/admin/cache/stats"],
     refetchInterval: 5000,
+  });
+
+  const { data: perfSummary } = useQuery<PerformanceSummary>({
+    queryKey: ["/api/admin/performance/summary"],
+    refetchInterval: 10000,
   });
 
   useEffect(() => {
@@ -261,6 +284,50 @@ export default function AdminCacheSettings() {
               </div>
             ) : (
               <p className="text-muted-foreground">Loading statistics...</p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5" />
+              API Performance
+            </CardTitle>
+            <CardDescription>Rolling p50/p95 timings by route</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {!perfSummary ? (
+              <p className="text-muted-foreground">Loading performance metrics...</p>
+            ) : perfSummary.slowestByP95.length === 0 ? (
+              <p className="text-muted-foreground">No routes recorded yet.</p>
+            ) : (
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Route</TableHead>
+                      <TableHead className="text-right">Count</TableHead>
+                      <TableHead className="text-right">p50</TableHead>
+                      <TableHead className="text-right">p95</TableHead>
+                      <TableHead className="text-right">Max</TableHead>
+                      <TableHead className="text-right">5xx</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {perfSummary.slowestByP95.map((r) => (
+                      <TableRow key={r.route}>
+                        <TableCell className="font-mono text-xs">{r.route}</TableCell>
+                        <TableCell className="text-right">{r.count}</TableCell>
+                        <TableCell className="text-right">{r.p50Ms}ms</TableCell>
+                        <TableCell className="text-right">{r.p95Ms}ms</TableCell>
+                        <TableCell className="text-right">{r.maxMs}ms</TableCell>
+                        <TableCell className="text-right">{r.errorCount}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             )}
           </CardContent>
         </Card>

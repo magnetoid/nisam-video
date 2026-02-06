@@ -153,13 +153,15 @@ async function categorizeNewVideos(videoIds: string[]): Promise<void> {
         const categorySlug = categoryName
           .toLowerCase()
           .replace(/[^a-z0-9]+/g, "-");
-        let category = await storage.getCategoryBySlug(categorySlug);
+        let category = await storage.getLocalizedCategoryBySlug(categorySlug, 'en');
 
         if (!category) {
-          category = await storage.createCategory({
+          category = await storage.createCategory({}, [{
+            languageCode: 'en',
             name: categoryName,
             slug: categorySlug,
-          });
+            description: null
+          }]);
         }
 
         await storage.addVideoCategory(video.id, category.id);
@@ -167,10 +169,10 @@ async function categorizeNewVideos(videoIds: string[]): Promise<void> {
 
       // Create tags (same pattern as routes.ts)
       for (const tagName of categorizationResult.tags) {
-        await storage.createTag({
-          videoId: video.id,
-          tagName,
-        });
+        await storage.createTag({ videoId: video.id }, [{
+          languageCode: 'en',
+          tagName
+        }]);
       }
 
       console.log(`[video-ingestion] Categorized: ${video.title}`);

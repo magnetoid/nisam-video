@@ -1,0 +1,119 @@
+/**
+ * Common constants used throughout the application
+ */
+
+// Database constants
+export const DATABASE_CONSTANTS = {
+  DEFAULT_PAGE_SIZE: 20,
+  MAX_PAGE_SIZE: 200,
+  DEFAULT_CACHE_TTL: 300000, // 5 minutes
+  SETTINGS_CACHE_TTL: 60000, // 1 minute
+  LONG_CACHE_TTL: 3600000, // 1 hour
+} as const;
+
+// API constants
+export const API_CONSTANTS = {
+  DEFAULT_TIMEOUT: 30000, // 30 seconds
+  RETRY_ATTEMPTS: 3,
+  RETRY_DELAY: 1000, // 1 second
+  MAX_FILE_SIZE: 50 * 1024 * 1024, // 50MB
+  ALLOWED_IMAGE_TYPES: ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
+  ALLOWED_VIDEO_TYPES: ['video/mp4', 'video/webm', 'video/ogg'],
+} as const;
+
+// Validation constants
+export const VALIDATION_CONSTANTS = {
+  MIN_USERNAME_LENGTH: 3,
+  MAX_USERNAME_LENGTH: 50,
+  MIN_PASSWORD_LENGTH: 8,
+  MAX_PASSWORD_LENGTH: 128,
+  MAX_TITLE_LENGTH: 255,
+  MAX_DESCRIPTION_LENGTH: 5000,
+  MAX_SLUG_LENGTH: 100,
+} as const;
+
+// Cache constants
+export const CACHE_CONSTANTS = {
+  VIDEO_CACHE_KEY: 'videos',
+  CHANNEL_CACHE_KEY: 'channels',
+  CATEGORY_CACHE_KEY: 'categories',
+  TAG_CACHE_KEY: 'tags',
+  PLAYLIST_CACHE_KEY: 'playlists',
+  HERO_CACHE_KEY: 'hero',
+  SEO_CACHE_KEY: 'seo',
+  SYSTEM_CACHE_KEY: 'system',
+} as const;
+
+// Error codes
+export const ERROR_CODES = {
+  // Authentication errors
+  INVALID_CREDENTIALS: 'INVALID_CREDENTIALS',
+  TOKEN_EXPIRED: 'TOKEN_EXPIRED',
+  INSUFFICIENT_PERMISSIONS: 'INSUFFICIENT_PERMISSIONS',
+  
+  // Validation errors
+  INVALID_INPUT: 'INVALID_INPUT',
+  MISSING_REQUIRED_FIELD: 'MISSING_REQUIRED_FIELD',
+  INVALID_FORMAT: 'INVALID_FORMAT',
+  
+  // Database errors
+  DUPLICATE_ENTRY: 'DUPLICATE_ENTRY',
+  FOREIGN_KEY_VIOLATION: 'FOREIGN_KEY_VIOLATION',
+  CONSTRAINT_VIOLATION: 'CONSTRAINT_VIOLATION',
+  
+  // Business logic errors
+  RESOURCE_NOT_FOUND: 'RESOURCE_NOT_FOUND',
+  RESOURCE_ALREADY_EXISTS: 'RESOURCE_ALREADY_EXISTS',
+  OPERATION_NOT_ALLOWED: 'OPERATION_NOT_ALLOWED',
+  
+  // External service errors
+  EXTERNAL_SERVICE_UNAVAILABLE: 'EXTERNAL_SERVICE_UNAVAILABLE',
+  RATE_LIMIT_EXCEEDED: 'RATE_LIMIT_EXCEEDED',
+  
+  // System errors
+  INTERNAL_SERVER_ERROR: 'INTERNAL_SERVER_ERROR',
+  SERVICE_UNAVAILABLE: 'SERVICE_UNAVAILABLE',
+  MAINTENANCE_MODE: 'MAINTENANCE_MODE',
+} as const;
+
+// HTTP status codes mapping
+export const HTTP_STATUS_CODES = {
+  OK: 200,
+  CREATED: 201,
+  ACCEPTED: 202,
+  NO_CONTENT: 204,
+  BAD_REQUEST: 400,
+  UNAUTHORIZED: 401,
+  FORBIDDEN: 403,
+  NOT_FOUND: 404,
+  METHOD_NOT_ALLOWED: 405,
+  CONFLICT: 409,
+  UNPROCESSABLE_ENTITY: 422,
+  TOO_MANY_REQUESTS: 429,
+  INTERNAL_SERVER_ERROR: 500,
+  BAD_GATEWAY: 502,
+  SERVICE_UNAVAILABLE: 503,
+} as const;
+
+// SEO constants
+export const SEO_CONSTANTS = {
+  DEFAULT_TITLE: 'Nisam Video - Curated Video Content',
+  DEFAULT_DESCRIPTION: 'Discover curated video content from various channels and creators.',
+  MAX_META_DESCRIPTION_LENGTH: 160,
+  MAX_TITLE_LENGTH: 60,
+  SITEMAP_MAX_URLS: 50000,
+  SITEMAP_MAX_SIZE: 50 * 1024 * 1024, // 50MB
+} as const;
+
+// Hero management constants
+export const HERO_CONSTANTS = {
+  DEFAULT_ROTATION_INTERVAL: 4000, // 4 seconds
+  MIN_ROTATION_INTERVAL: 1000, // 1 second
+  MAX_ROTATION_INTERVAL: 10000, // 10 seconds
+  DEFAULT_ANIMATION_TYPE: 'fade',
+  SUPPORTED_ANIMATION_TYPES: ['fade', 'slide'] as const,
+  MAX_FALLBACK_IMAGES: 10,
+  MAX_HERO_IMAGES: 20,
+  DEFAULT_ASPECT_RATIO: '16:9',
+  SUPPORTED_ASPECT_RATIOS: ['16:9', '4:3', '1:1', '21:9'] as const,
+} as const;

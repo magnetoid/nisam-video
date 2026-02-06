@@ -10,10 +10,11 @@ import { VideoCard } from "@/components/VideoCard";
 import { LikeButton } from "@/components/LikeButton";
 import { useTranslation } from "react-i18next";
 import { useEffect } from "react";
-import type { VideoWithRelations } from "@shared/schema";
+import type { VideoWithLocalizedRelations } from "@shared/schema";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function VideoPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [, params] = useRoute("/video/:slug");
   const videoSlug = params?.slug;
 
@@ -21,23 +22,24 @@ export default function VideoPage() {
     data: video,
     isLoading: videoLoading,
     error: videoError,
-  } = useQuery<VideoWithRelations>({
-    queryKey: ["/api/videos", videoSlug],
+  } = useQuery<VideoWithLocalizedRelations>({
+    queryKey: ["/api/videos", videoSlug, i18n.language],
     queryFn: async () => {
       if (!videoSlug) throw new Error("Video slug is required");
-      const response = await fetch(`/api/videos/${videoSlug}`);
-      if (!response.ok) {
-        if (response.status === 404) throw new Error("Video not found");
-        throw new Error("Failed to fetch video");
-      }
-      return response.json();
+      // Use apiRequest or fetch with lang param
+      const res = await apiRequest("GET", `/api/videos/${videoSlug}?lang=${i18n.language}`);
+      return res.json();
     },
     enabled: !!videoSlug,
     retry: 2,
   });
 
-  const { data: allVideos = [] } = useQuery<VideoWithRelations[]>({
-    queryKey: ["/api/videos"],
+  const { data: allVideos = [] } = useQuery<VideoWithLocalizedRelations[]>({
+    queryKey: ["/api/videos", i18n.language],
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/videos?lang=${i18n.language}`);
+      return res.json();
+    },
   });
 
   // Track view when video is loaded

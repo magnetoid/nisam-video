@@ -14,11 +14,11 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import type { VideoWithRelations, Category } from "@shared/schema";
+import type { VideoWithLocalizedRelations, LocalizedCategory } from "@shared/schema";
 
 interface EditVideoDialogProps {
-  video: VideoWithRelations | null;
-  categories: Category[];
+  video: VideoWithLocalizedRelations | null;
+  categories: LocalizedCategory[];
   open: boolean;
   onClose: () => void;
   onSave: (data: {

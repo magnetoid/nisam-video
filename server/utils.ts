@@ -1,3 +1,16 @@
+import { Request } from "express";
+
+/**
+ * Get a unique identifier for the user (user ID or IP address)
+ */
+export function getUserIdentifier(req: Request): string {
+  const user = (req as any).user;
+  if (user) {
+    return `user:${user.id}`;
+  }
+  return `ip:${req.ip}`;
+}
+
 /**
  * Generate a URL-friendly slug from a string
  * Handles special characters, Serbian Latin/Cyrillic, and ensures uniqueness

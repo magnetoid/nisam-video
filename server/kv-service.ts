@@ -1,9 +1,10 @@
-import { kvStore } from './replit-db.js';
+import { kvStorage as kvStore } from './storage/kv.js';
 import { storage } from './storage.js';
 
 /**
  * KV Store Service for nisam.video
  * Handles rate limiting, view buffering, session tracking
+ * Now backed by Postgres (Drizzle) instead of Replit DB
  */
 
 // Rate limiting configuration

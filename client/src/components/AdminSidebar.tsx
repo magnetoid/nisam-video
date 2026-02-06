@@ -1,4 +1,5 @@
 import { Link, useLocation } from "wouter";
+import { useEffect } from "react";
 import {
   Home,
   Youtube,
@@ -20,6 +21,7 @@ import {
   Zap,
   Database,
   FileText,
+  Bot,
 } from "lucide-react";
 import { SiTiktok } from "react-icons/si";
 import { useTranslation } from "react-i18next";
@@ -31,6 +33,26 @@ export function AdminSidebar() {
   const [location, setLocation] = useLocation();
   const { t } = useTranslation();
   const { toast } = useToast();
+
+  useEffect(() => {
+    const common = [
+      "/api/admin/categories",
+      "/api/admin/tags",
+      "/api/admin/cache/settings",
+      "/api/admin/cache/stats",
+      "/api/admin/hero/config",
+      "/api/admin/hero/images",
+    ];
+
+    common.forEach((key) => {
+      queryClient.prefetchQuery({
+        queryKey: [key],
+        staleTime: 30 * 1000,
+        gcTime: 10 * 60 * 1000,
+        meta: { silenceError: true },
+      });
+    });
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -101,10 +123,16 @@ export function AdminSidebar() {
       testId: "link-playlists",
     },
     {
-      icon: Clock,
-      label: t("admin.scheduler"),
-      path: "/admin/scheduler",
-      testId: "link-scheduler",
+      icon: Activity,
+      label: "Automation",
+      path: "/admin/automation",
+      testId: "link-automation",
+    },
+    {
+      icon: Bot,
+      label: "AI Settings",
+      path: "/admin/ai-settings",
+      testId: "link-ai-settings",
     },
     {
       icon: BarChart3,
@@ -113,10 +141,10 @@ export function AdminSidebar() {
       testId: "link-analytics",
     },
     {
-      icon: Zap,
-      label: "AI Regenerate",
-      path: "/admin/regenerate",
-      testId: "link-regenerate",
+      icon: Settings,
+      label: "Analytics Config",
+      path: "/admin/analytics/config",
+      testId: "link-analytics-config",
     },
     {
       icon: Download,
@@ -141,6 +169,12 @@ export function AdminSidebar() {
       label: t("admin.seo"),
       path: "/admin/seo",
       testId: "link-seo",
+    },
+    {
+      icon: Star,
+      label: "SEO Enhanced",
+      path: "/admin/seo/enhanced",
+      testId: "link-seo-enhanced",
     },
     {
       icon: Sliders,

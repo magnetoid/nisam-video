@@ -1,18 +1,25 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
+import { useTranslation } from "react-i18next";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { CarouselRow } from "@/components/CarouselRow";
 import { SEO } from "@/components/SEO";
-import type { VideoWithRelations } from "@shared/schema";
+import type { VideoWithLocalizedRelations } from "@shared/schema";
 import { TrendingUp, Eye } from "lucide-react";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function Popular() {
   const [, setLocation] = useLocation();
+  const { i18n } = useTranslation();
 
-  const { data: videos = [] } = useQuery<VideoWithRelations[]>({
-    queryKey: ["/api/videos"],
+  const { data: videos = [] } = useQuery<VideoWithLocalizedRelations[]>({
+    queryKey: ["/api/videos?limit=500", i18n.language],
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/videos?limit=500&lang=${i18n.language}`);
+      return res.json();
+    },
   });
 
   const { sortedVideos, mega, high, medium, rising, topVideo } = useMemo(() => {
@@ -23,7 +30,7 @@ export default function Popular() {
       return parseInt(match[0].replace(/,/g, ""), 10);
     };
 
-    const calculatePopularityScore = (video: VideoWithRelations): number => {
+    const calculatePopularityScore = (video: VideoWithLocalizedRelations): number => {
       const externalViews = parseViewCount(video.viewCount);
       const internalViews = video.internalViewsCount || 0;
       const likes = video.likesCount || 0;

@@ -5,6 +5,11 @@ import { scrapeYouTubeChannel } from "./scraper.js";
 import { scrapeTikTokProfile } from "./tiktok-scraper.js";
 import { storage } from "./storage.js";
 import { processScrapedVideos } from "./video-ingestion.js";
+import { appendScrapeJobLog } from "./scrape-job-logs.js";
+
+function sleep(ms: number) {
+  return new Promise<void>((resolve) => setTimeout(resolve, ms));
+}
 
 class SchedulerService {
   private task: cron.ScheduledTask | null = null;
@@ -42,16 +47,17 @@ class SchedulerService {
 
     // Calculate cron expression based on interval
     const cronExpression = this.getCronExpression(settings.intervalHours);
+    const timezone = settings.timezone || 'UTC';
 
     this.task = cron.schedule(cronExpression, async () => {
       await this.runScrapeJob();
-    });
+    }, { timezone });
 
     await this.updateSettings({ isEnabled: 1 });
     await this.updateNextRunTime();
 
     console.log(
-      `[Scheduler] Started with interval: ${settings.intervalHours} hours`,
+      `[Scheduler] Started with interval: ${settings.intervalHours} hours (TZ: ${timezone})`,
     );
   }
 
@@ -80,14 +86,103 @@ class SchedulerService {
       // Update last run time
       await this.updateLastRunTime();
 
-      // Get all channels
+      const settings = await this.getSettings();
+      const intervalHours = settings?.intervalHours || 6;
+      const cutoffMs = Date.now() - intervalHours * 60 * 60 * 1000;
+      const maxBatchSize = process.env.VERCEL === "1" ? 2 : 50;
+      const batchSize = Math.max(
+        1,
+        Math.min(maxBatchSize, parseInt(process.env.SCRAPE_BATCH_SIZE || "10", 10) || 10),
+      );
+
+      // Get all channels, then process incrementally based on lastScraped
       const allChannels = await storage.getAllChannels();
+      const channelsNeedingScrape = allChannels
+        .filter((channel) => {
+          const last = channel.lastScraped ? new Date(channel.lastScraped).getTime() : 0;
+          return !last || last < cutoffMs;
+        })
+        .sort((a, b) => {
+          const aLast = a.lastScraped ? new Date(a.lastScraped).getTime() : 0;
+          const bLast = b.lastScraped ? new Date(b.lastScraped).getTime() : 0;
+          return aLast - bLast;
+        });
+
+      const batch = channelsNeedingScrape.slice(0, batchSize);
+      console.log(
+        `[Scheduler] Incremental batch: ${batch.length}/${channelsNeedingScrape.length} channels due (total channels: ${allChannels.length}, cutoff: ${intervalHours}h)`,
+      );
+
+      const job = await storage.createScrapeJob({
+        type: "scheduler_incremental",
+        isIncremental: true,
+        status: "running",
+        transitioning: true,
+        progress: 0,
+        totalItems: batch.length,
+        processedItems: 0,
+        failedItems: 0,
+        totalChannels: batch.length,
+        processedChannels: 0,
+        currentChannelName: batch[0]?.name || null,
+        videosAdded: 0,
+        errorMessage: null,
+        completedAt: null,
+      });
+      try {
+        await appendScrapeJobLog(job.id, {
+          level: "info",
+          message: "Scheduler incremental job started",
+          data: { totalChannels: batch.length, intervalHours },
+        });
+      } catch {}
 
       let scrapedCount = 0;
       let errorCount = 0;
+      let attemptedCount = 0;
+      let videosAddedTotal = 0;
+      const baseDelayMs = Math.max(
+        0,
+        Math.min(10000, parseInt(process.env.SCRAPE_DELAY_MS || "300", 10) || 0),
+      );
+      const maxDelayMs = Math.max(
+        baseDelayMs,
+        Math.min(20000, parseInt(process.env.SCRAPE_DELAY_MAX_MS || "3000", 10) || 3000),
+      );
 
-      for (const channel of allChannels) {
+      for (const channel of batch) {
+        await storage.updateScrapeJob(job.id, {
+        status: "running",
+        transitioning: true,
+        currentChannelName: channel.name,
+        processedChannels: attemptedCount,
+        processedItems: attemptedCount,
+        totalItems: batch.length,
+        failedItems: errorCount,
+        progress:
+          batch.length > 0 ? Math.min(100, Math.round((attemptedCount / batch.length) * 100)) : 0,
+        videosAdded: videosAddedTotal,
+        errorMessage: errorCount > 0 ? `errors:${errorCount}` : null,
+      });
         try {
+          await appendScrapeJobLog(job.id, {
+            level: "info",
+            message: "Channel scrape started",
+            channelId: channel.id,
+            channelName: channel.name,
+            data: { platform: channel.platform || "youtube" },
+          });
+        } catch {}
+
+        try {
+          const platform = channel.platform === "tiktok" ? "tiktok" : "youtube";
+          const existingVideoIdsList = await storage.getVideoIdsByChannel(channel.id);
+          const existingVideoIds =
+            platform === "youtube"
+              ? new Set(existingVideoIdsList)
+              : undefined;
+          const existingVideoCount = existingVideoIdsList.length;
+
           await pRetry(
             async () => {
               console.log(`[Scheduler] Scraping ${channel.platform || 'youtube'} channel: ${channel.name}`);
@@ -97,13 +192,22 @@ class SchedulerService {
 
               // Use shared video ingestion utility for both platforms
               let scrapedVideos: any[];
-              const platform = channel.platform === "tiktok" ? "tiktok" : "youtube";
 
               if (platform === "tiktok") {
                 const result = await scrapeTikTokProfile(channel.url);
                 scrapedVideos = result.videos;
               } else {
-                const { videos: ytVideos } = await scrapeYouTubeChannel(channel.url);
+                const { videos: ytVideos } = await scrapeYouTubeChannel(channel.url, {
+                  existingVideoIds,
+                  incremental: true,
+                  knownStreakLimit: Math.max(
+                    1,
+                    Math.min(
+                      50,
+                      parseInt(process.env.SCRAPE_KNOWN_STREAK_LIMIT || "12", 10) || 12,
+                    ),
+                  ),
+                });
                 scrapedVideos = ytVideos;
               }
 
@@ -117,12 +221,10 @@ class SchedulerService {
               });
 
               savedCount = ingestionResult.savedCount;
+              videosAddedTotal += savedCount;
 
-              const allChannelVideos = await storage.getAllVideos({
-                channelId: channel.id,
-              });
               await storage.updateChannel(channel.id, {
-                videoCount: allChannelVideos.length,
+                videoCount: existingVideoCount + savedCount,
                 lastScraped: new Date(),
               });
 
@@ -130,6 +232,15 @@ class SchedulerService {
               console.log(
                 `[Scheduler] Channel ${channel.name}: found ${videosFound}, saved ${savedCount} new videos`,
               );
+              try {
+                await appendScrapeJobLog(job.id, {
+                  level: "info",
+                  message: "Channel scrape completed",
+                  channelId: channel.id,
+                  channelName: channel.name,
+                  data: { platform, videosFound, videosSaved: savedCount },
+                });
+              } catch {}
             },
             {
               retries: 3,
@@ -148,20 +259,87 @@ class SchedulerService {
             `[Scheduler] Failed to scrape channel ${channel.name} after retries:`,
             error,
           );
+          try {
+            await appendScrapeJobLog(job.id, {
+              level: "error",
+              message: "Channel scrape failed",
+              channelId: channel.id,
+              channelName: channel.name,
+              data: { error: (error as any)?.message || String(error) },
+            });
+          } catch {}
+        } finally {
+          attemptedCount += 1;
+          await storage.updateScrapeJob(job.id, {
+            status: "running",
+            currentChannelName: channel.name,
+            processedChannels: attemptedCount,
+            processedItems: attemptedCount,
+            totalItems: batch.length,
+            failedItems: errorCount,
+            progress:
+              batch.length > 0 ? Math.min(100, Math.round((attemptedCount / batch.length) * 100)) : 0,
+            videosAdded: videosAddedTotal,
+            errorMessage: errorCount > 0 ? `errors:${errorCount}` : null,
+          });
+          if (baseDelayMs > 0) {
+            const errorRatio = errorCount / Math.max(1, attemptedCount);
+            const adaptive = Math.min(maxDelayMs, Math.round(baseDelayMs * (1 + errorRatio * 2)));
+            const jitter = Math.round(adaptive * (0.85 + Math.random() * 0.3));
+            await sleep(jitter);
+          }
         }
       }
 
       console.log(
-        `[Scheduler] Scrape job completed. Scraped ${scrapedCount}/${allChannels.length} channels. Errors: ${errorCount}`,
+        `[Scheduler] Scrape job completed. Scraped ${scrapedCount}/${batch.length} channels in batch. Errors: ${errorCount}. Remaining due: ${Math.max(0, channelsNeedingScrape.length - batch.length)}`,
       );
 
+      await storage.updateScrapeJob(job.id, {
+        status: errorCount === batch.length && batch.length > 0 ? "failed" : "completed",
+        transitioning: false,
+        processedChannels: attemptedCount,
+        processedItems: attemptedCount,
+        totalItems: batch.length,
+        failedItems: errorCount,
+        progress: 100,
+        currentChannelName: null,
+        videosAdded: videosAddedTotal,
+        errorMessage: errorCount > 0 ? `errors:${errorCount}` : null,
+        completedAt: new Date(),
+      });
+      try {
+        await appendScrapeJobLog(job.id, {
+          level: "info",
+          message: "Scheduler incremental job finished",
+          data: {
+            totalChannels: batch.length,
+            channelsAttempted: attemptedCount,
+            channelsSucceeded: scrapedCount,
+            channelsFailed: errorCount,
+            videosAdded: videosAddedTotal,
+          },
+        });
+      } catch {}
+
       // Update next run time only if scheduler is still enabled
-      const settings = await this.getSettings();
-      if (settings && settings.isEnabled) {
+      const settingsAfter = await this.getSettings();
+      if (settingsAfter && settingsAfter.isEnabled) {
         await this.updateNextRunTime();
       }
     } catch (error) {
       console.error("[Scheduler] Scrape job failed:", error);
+      try {
+        const activeJob = await storage.getActiveScrapeJob();
+        if (activeJob) {
+          await storage.updateScrapeJob(activeJob.id, {
+            status: "failed",
+            transitioning: false,
+            errorMessage: (error as any)?.message || "failed",
+            completedAt: new Date(),
+          });
+        }
+      } catch {}
     } finally {
       this.isRunning = false;
     }

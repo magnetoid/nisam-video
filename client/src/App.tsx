@@ -6,7 +6,9 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { CustomCodeInjector } from "@/components/CustomCodeInjector";
+import { AnalyticsTracker } from "@/components/AnalyticsTracker";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { ErrorReporter } from "@/components/ErrorReporter";
 import Home from "@/pages/Home";
 import VideoPage from "@/pages/VideoPage";
 import Categories from "@/pages/Categories";
@@ -16,7 +18,11 @@ import Shorts from "@/pages/Shorts";
 import Donate from "@/pages/Donate";
 import Login from "@/pages/Login";
 import About from "@/pages/About";
+import PublicLog from "@/pages/PublicLog";
+import PublicErrorLogs from "@/pages/PublicErrorLogs";
 import NotFound from "@/pages/not-found";
+import CategoryPage from "@/pages/CategoryPage";
+import TagPage from "@/pages/TagPage";
 import "./i18n/config";
 
 const adminPages = {
@@ -25,12 +31,13 @@ const adminPages = {
   videos: lazy(() => import("@/pages/AdminVideos")),
   categories: lazy(() => import("@/pages/AdminCategories")),
   tags: lazy(() => import("@/pages/AdminTags")),
-  scheduler: lazy(() => import("@/pages/AdminScheduler")),
+  automation: lazy(() => import("@/pages/AdminAutomation")),
   analytics: lazy(() => import("@/pages/AdminAnalytics")),
+  analyticsConfig: lazy(() => import("@/pages/AdminAnalyticsConfig")),
   playlists: lazy(() => import("@/pages/AdminPlaylists")),
   seo: lazy(() => import("@/pages/AdminSEO")),
+  seoEnhanced: lazy(() => import("@/pages/AdminSEOEnhanced")),
   export: lazy(() => import("@/pages/AdminDataExport")),
-  regenerate: lazy(() => import("@/pages/AdminRegenerate")),
   settings: lazy(() => import("@/pages/AdminSystemSettings")),
   logs: lazy(() => import("@/pages/AdminActivityLogs")),
   cache: lazy(() => import("@/pages/AdminCacheSettings")),
@@ -38,6 +45,7 @@ const adminPages = {
   tiktok: lazy(() => import("@/pages/AdminTikTok")),
   hero: lazy(() => import("@/pages/AdminHeroManagement")),
   clientLogs: lazy(() => import("@/pages/ClientLogs")),
+  aiSettings: lazy(() => import("@/pages/AdminAISettings")),
 };
 
 type AdminPageKey = keyof typeof adminPages;
@@ -51,13 +59,14 @@ const adminRoutes: AdminRouteConfig[] = [
   { path: "/admin/channels", page: "channels" },
   { path: "/admin/videos", page: "videos" },
   { path: "/admin/categories", page: "categories" },
-  { path: "/admin/scheduler", page: "scheduler" },
+  { path: "/admin/automation", page: "automation" },
   { path: "/admin/analytics", page: "analytics" },
+  { path: "/admin/analytics/config", page: "analyticsConfig" },
   { path: "/admin/playlists", page: "playlists" },
   { path: "/admin/seo", page: "seo" },
+  { path: "/admin/seo/enhanced", page: "seoEnhanced" },
   { path: "/admin/export", page: "export" },
   { path: "/admin/hero", page: "hero" },
-  { path: "/admin/regenerate", page: "regenerate" },
   { path: "/admin/dashboard", page: "dashboard" },
   { path: "/admin/tags", page: "tags" },
   { path: "/admin/settings", page: "settings" },
@@ -67,6 +76,7 @@ const adminRoutes: AdminRouteConfig[] = [
   { path: "/admin/tiktok", page: "tiktok" },
   { path: "/admin/hero", page: "hero" },
   { path: "/admin/client-logs", page: "clientLogs" },
+  { path: "/admin/ai-settings", page: "aiSettings" },
   { path: "/admin", page: "dashboard" },
 ];
 
@@ -164,15 +174,19 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/public/log" component={PublicLog} />
       <Route path="/video/:slug" component={VideoPage} />
       <Route path="/categories" component={Categories} />
+      <Route path="/category/:slug" component={CategoryPage} />
       <Route path="/tags" component={Tags} />
+      <Route path="/tag/:slug" component={TagPage} />
       <Route path="/popular" component={Popular} />
       <Route path="/shorts" component={Shorts} />
       <Route path="/about" component={About} />
       <Route path="/donate" component={Donate} />
       <Route path="/login" component={Login} />
       <Route path="/admin/login" component={Login} />
+      <Route path="/public/error-logs" component={PublicErrorLogs} />
       {adminRoutes.map(({ path, page }) => (
         <Route key={path} path={path}>
           <AdminRoute component={adminPages[page]} />
@@ -193,8 +207,11 @@ function App() {
       <ThemeProvider defaultTheme="dark">
         <TooltipProvider>
           <CustomCodeInjector />
-          <Toaster />
-          <Router />
+          <ErrorReporter />
+          <AnalyticsTracker>
+            <Toaster />
+            <Router />
+          </AnalyticsTracker>
         </TooltipProvider>
       </ThemeProvider>
     </QueryClientProvider>

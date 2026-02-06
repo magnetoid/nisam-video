@@ -1,6 +1,7 @@
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./index.css";
+import { initPerformanceMonitoring } from "./lib/performanceMonitoring";
 
 // Only register service worker in production
 if (import.meta.env.PROD && "serviceWorker" in navigator) {
@@ -21,3 +22,5 @@ if (import.meta.env.PROD && "serviceWorker" in navigator) {
 }
 
 createRoot(document.getElementById("root")!).render(<App />);
+
+initPerformanceMonitoring();

@@ -1,17 +1,14 @@
 import { Router } from "express";
-import { storage } from "../storage.js";
-import { eq } from "drizzle-orm";
+import { storage } from "../storage/index.js";
+import { requireAuth } from "../middleware/auth.js";
+import { insertCategoryTranslationSchema } from "../../shared/schema.js";
 
 const router = Router();
 
-function getLang(req: any): string {
-  return req.query.lang || 'en';
-}
-
-// Categories
+// Category routes
 router.get("/", async (req, res) => {
   try {
-    const lang = getLang(req);
+    const lang = (req.query.lang as string) || "en";
     const categories = await storage.getAllLocalizedCategories(lang);
     res.json(categories);
   } catch (error) {
@@ -20,71 +17,94 @@ router.get("/", async (req, res) => {
   }
 });
 
-router.get("/:id", async (req, res) => {
+router.get("/admin/all", requireAuth, async (req, res) => {
   try {
-    const lang = getLang(req);
-    const category = await storage.getLocalizedCategory(req.params.id, lang);
-    if (!category) {
-      return res.status(404).json({ error: "Category not found" });
+    const categories = await storage.getAllCategoriesWithTranslations();
+    res.json(categories);
+  } catch (error) {
+    console.error("Get admin categories error:", error);
+    res.status(500).json({ error: "Failed to fetch admin categories" });
+  }
+});
+
+router.post("/", requireAuth, async (req, res) => {
+  try {
+    const { name, description, translations } = req.body;
+    
+    // Handle backward compatibility or simplified input
+    let transList = translations;
+    if (!transList && name) {
+      const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+      transList = [{ 
+        languageCode: 'en', 
+        name, 
+        slug, 
+        description: description || null 
+      }];
     }
+
+    if (!transList || !Array.isArray(transList) || transList.length === 0) {
+      return res.status(400).json({ error: "Valid translations or name required" });
+    }
+
+    // Validate translations
+    try {
+      transList = transList.map((t: any) => insertCategoryTranslationSchema.parse(t));
+    } catch (e) {
+      return res.status(400).json({ error: "Invalid translation data", details: e });
+    }
+
+    // Check if slug exists for the first translation (simple check)
+    const firstTrans = transList[0];
+    const existingCategory = await storage.getLocalizedCategoryBySlug(firstTrans.slug, firstTrans.languageCode);
+    if (existingCategory) {
+      return res
+        .status(400)
+        .json({ error: "Category with this name/slug already exists" });
+    }
+
+    const category = await storage.createCategory({}, transList);
     res.json(category);
   } catch (error) {
-    console.error("Get category error:", error);
-    res.status(500).json({ error: "Failed to fetch category" });
+    console.error("Create category error:", error);
+    res.status(500).json({ error: "Failed to create category" });
   }
 });
 
-router.get("/slug/:slug", async (req, res) => {
+router.put("/:id", requireAuth, async (req, res) => {
   try {
-    const lang = getLang(req);
-    const category = await storage.getLocalizedCategoryBySlug(req.params.slug, lang);
-    if (!category) {
-      return res.status(404).json({ error: "Category not found" });
+    const { id } = req.params;
+    const { name, description, languageCode } = req.body;
+    const lang = languageCode || 'en';
+
+    const updateData: any = {};
+    if (name) {
+      updateData.name = name;
+      updateData.slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
     }
-    res.json(category);
-  } catch (error) {
-    console.error("Get category by slug error:", error);
-    res.status(500).json({ error: "Failed to fetch category" });
-  }
-});
-
-// Tags
-router.get("/tags", async (req, res) => {
-  try {
-    const lang = getLang(req);
-    const tags = await storage.getAllLocalizedTags(lang);
-    res.json(tags);
-  } catch (error) {
-    console.error("Get tags error:", error);
-    res.status(500).json({ error: "Failed to fetch tags" });
-  }
-});
-
-router.get("/tags/:id", async (req, res) => {
-  try {
-    const lang = getLang(req);
-    const tag = await storage.getLocalizedTag(req.params.id, lang);
-    if (!tag) {
-      return res.status(404).json({ error: "Tag not found" });
+    if (description !== undefined) {
+      updateData.description = description;
     }
-    res.json(tag);
+
+    const updated = await storage.updateLocalizedCategory(id, lang, updateData);
+    if (!updated) {
+      return res.status(404).json({ error: "Category translation not found" });
+    }
+    res.json(updated);
   } catch (error) {
-    console.error("Get tag error:", error);
-    res.status(500).json({ error: "Failed to fetch tag" });
+    console.error("Update category error:", error);
+    res.status(500).json({ error: "Failed to update category" });
   }
 });
 
-router.get("/tags/name/:name", async (req, res) => {
+router.delete("/:id", requireAuth, async (req, res) => {
   try {
-    const lang = getLang(req);
-    const tag = await storage.getLocalizedTagByName(req.params.name, lang);
-    if (!tag) {
-      return res.status(404).json({ error: "Tag not found" });
-    }
-    res.json(tag);
+    const { id } = req.params;
+    await storage.deleteCategory(id);
+    res.json({ success: true });
   } catch (error) {
-    console.error("Get tag by name error:", error);
-    res.status(500).json({ error: "Failed to fetch tag" });
+    console.error("Delete category error:", error);
+    res.status(500).json({ error: "Failed to delete category" });
   }
 });
 

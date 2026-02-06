@@ -1,7 +1,4 @@
-import puppeteer from "puppeteer-extra";
-import StealthPlugin from "puppeteer-extra-plugin-stealth";
-
-puppeteer.use(StealthPlugin());
+import { recordError } from "./error-log-service.js";
 
 export interface ScrapedTikTokVideo {
   videoId: string;
@@ -27,8 +24,25 @@ export async function scrapeTikTokProfile(profileUrl: string): Promise<{
   profileInfo: ScrapedTikTokProfile;
   videos: ScrapedTikTokVideo[];
 }> {
+  if (process.env.VERCEL === '1') {
+    const error = new Error("TikTok scraping is not supported in Vercel serverless environment due to browser dependencies.");
+    await recordError({
+      level: "warn",
+      type: "tiktok_scraper_skipped",
+      message: error.message,
+      module: "tiktok-scraper",
+      url: profileUrl
+    });
+    throw error;
+  }
+
   let browser;
   try {
+    const { default: puppeteer } = await import("puppeteer-extra");
+    const { default: StealthPlugin } = await import("puppeteer-extra-plugin-stealth");
+    
+    puppeteer.use(StealthPlugin());
+
     const username = extractUsername(profileUrl);
     if (!username) {
       throw new Error("Invalid TikTok profile URL");
@@ -158,6 +172,14 @@ export async function scrapeTikTokProfile(profileUrl: string): Promise<{
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     console.error("[tiktok-scraper] Scraping error:", errorMessage);
+    await recordError({
+      level: "error",
+      type: "tiktok_scraper_failed",
+      message: errorMessage,
+      stack: error instanceof Error ? error.stack : undefined,
+      module: "tiktok-scraper",
+      url: profileUrl
+    });
     throw new Error(`Failed to scrape TikTok profile: ${errorMessage}`);
   } finally {
     if (browser) {

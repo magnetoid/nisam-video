@@ -1,16 +1,23 @@
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { VideoGrid } from "@/components/VideoGrid";
 import { SEO } from "@/components/SEO";
-import type { Tag, VideoWithRelations, TagImage } from "@shared/schema";
+import type { VideoWithLocalizedRelations, TagImage, LocalizedTag } from "@shared/schema";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function Tags() {
   const [selectedTag, setSelectedTag] = useState<string | "others" | null>(null);
+  const { i18n } = useTranslation();
 
-  const { data: videos = [] } = useQuery<VideoWithRelations[]>({
-    queryKey: ["/api/videos"],
+  const { data: localizedTags = [] } = useQuery<LocalizedTag[]>({
+      queryKey: ["/api/tags", i18n.language],
+      queryFn: async () => {
+          const res = await apiRequest("GET", `/api/tags?lang=${i18n.language}`);
+          return res.json();
+      }
   });
 
   const { data: tagImages = [] } = useQuery<TagImage[]>({
@@ -24,35 +31,36 @@ export default function Tags() {
     }, {} as Record<string, TagImage>);
   }, [tagImages]);
 
-  const allTags = videos.reduce((acc, video) => {
-    video.tags?.forEach((tag) => {
-      if (!acc.find((t) => t.id === tag.id)) {
-        acc.push(tag);
+  const sortedTags = useMemo(() => {
+    return [...localizedTags].sort((a, b) => (a.tagName || "").localeCompare(b.tagName || ""));
+  }, [localizedTags]);
+
+  const top20Tags = sortedTags.slice(0, 20);
+  const otherTags = sortedTags.slice(20);
+
+  const selectedTagData =
+    selectedTag && selectedTag !== "others" ? sortedTags.find((t) => t.id === selectedTag) : null;
+
+  const selectedTagName = selectedTagData?.tagName || null;
+
+  const { data: videos = [] } = useQuery<VideoWithLocalizedRelations[]>({
+    queryKey: ["/api/videos", "tag-grid", selectedTagName, selectedTag, i18n.language],
+    queryFn: async () => {
+      if (!selectedTag || selectedTag === "others" || !selectedTagName) {
+        const res = await apiRequest("GET", `/api/videos?limit=60&lang=${i18n.language}`);
+        return res.json();
       }
-    });
-    return acc;
-  }, [] as Tag[]);
+      const res = await apiRequest(
+        "GET",
+        `/api/videos?tagName=${encodeURIComponent(selectedTagName)}&limit=60&lang=${i18n.language}`,
+      );
+      return res.json();
+    },
+  });
 
-  const tagCounts = allTags
-    .map((tag) => ({
-      tag,
-      count: videos.filter((v) => v.tags?.some((t) => t.id === tag.id)).length,
-    }))
-    .sort((a, b) => b.count - a.count);
-
-  const top20Tags = tagCounts.slice(0, 20);
-  const otherTags = tagCounts.slice(20);
-  const otherTagIds = new Set(otherTags.map(t => t.tag.id));
-  const othersVideos = videos.filter((v) =>
-    v.tags?.some((t) => otherTagIds.has(t.id))
-  );
-
-  const selectedTagData = selectedTag && selectedTag !== "others" 
-    ? top20Tags.find((g) => g.tag.id === selectedTag) 
-    : null;
-  const heroImage = selectedTagData ? tagImageMap[selectedTagData.tag.tagName]?.imageUrl : null;
-  const featuredTagWithImage = top20Tags.find(t => tagImageMap[t.tag.tagName]?.imageUrl);
-  const defaultHeroImage = featuredTagWithImage ? tagImageMap[featuredTagWithImage.tag.tagName]?.imageUrl : null;
+  const heroImage = selectedTagName ? tagImageMap[selectedTagName]?.imageUrl : null;
+  const featuredTagWithImage = top20Tags.find((t) => t.tagName && tagImageMap[t.tagName]?.imageUrl);
+  const defaultHeroImage = featuredTagWithImage?.tagName ? tagImageMap[featuredTagWithImage.tagName]?.imageUrl : null;
   const displayHeroImage = heroImage || defaultHeroImage;
 
   const currentUrl = `${window.location.origin}/tags`;
@@ -68,7 +76,7 @@ export default function Tags() {
     name: "Explore by Tags",
     description: "Discover videos through AI-generated tags",
     url: currentUrl,
-    numberOfItems: allTags.length,
+    numberOfItems: localizedTags.length,
   };
 
   return (
@@ -108,13 +116,12 @@ export default function Tags() {
             className="text-5xl md:text-7xl font-bold mb-4 text-foreground"
             data-testid="text-page-title"
           >
-            {selectedTagData ? selectedTagData.tag.tagName : "Explore by Tags"}
+            {selectedTagName || "Explore by Tags"}
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground max-w-2xl">
-            {selectedTagData 
-              ? `${selectedTagData.count} videos with this tag`
-              : "Discover videos through AI-generated tags. Click any tag to see related content."
-            }
+            {selectedTagName
+              ? `Showing ${videos.length} videos for this tag`
+              : "Discover videos through AI-generated tags. Click any tag to see related content."}
           </p>
         </div>
       </div>
@@ -131,10 +138,10 @@ export default function Tags() {
             }`}
             data-testid="button-filter-all"
           >
-            All Tags ({videos.length})
+            All Tags ({localizedTags.length})
           </button>
-          {top20Tags.map(({ tag, count }) => {
-            const hasImage = !!tagImageMap[tag.tagName];
+          {top20Tags.map((tag) => {
+            const hasImage = !!(tag.tagName && tagImageMap[tag.tagName]);
             return (
               <button
                 key={tag.id}
@@ -150,7 +157,7 @@ export default function Tags() {
                   <span className="absolute left-2 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-primary/60" />
                 )}
                 <span className={hasImage && selectedTag !== tag.id ? "ml-3" : ""}>
-                  {tag.tagName} ({count})
+                  {tag.tagName}
                 </span>
               </button>
             );
@@ -165,27 +172,22 @@ export default function Tags() {
               }`}
               data-testid="button-filter-others"
             >
-              Others ({othersVideos.length})
+              Others ({otherTags.length})
             </button>
           )}
         </div>
       </div>
 
       <div className="px-4 sm:px-8 md:px-16 space-y-12 pb-16">
-        {selectedTag === null ? (
-          <VideoGrid videos={videos} title="All Videos" />
-        ) : selectedTag === "others" ? (
-          <VideoGrid videos={othersVideos} title="Other Tags" />
+        {selectedTag === "others" ? (
+          <div className="text-muted-foreground">
+            Select a tag from the list. “Others” contains the remaining {otherTags.length} tags.
+          </div>
         ) : (
-          <VideoGrid
-            videos={videos.filter((v) =>
-              v.tags?.some((t) => t.id === selectedTag)
-            )}
-            title={`Videos tagged "${selectedTagData?.tag.tagName}"`}
-          />
+          <VideoGrid videos={videos} title={selectedTagName ? `Videos tagged "${selectedTagName}"` : "Latest Videos"} />
         )}
 
-        {allTags.length === 0 && (
+        {localizedTags.length === 0 && (
           <div className="text-center py-16">
             <p className="text-muted-foreground text-lg">
               No tags found. AI categorization will generate tags automatically.

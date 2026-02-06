@@ -30,7 +30,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { TagIcon, Search, Trash2, TrendingUp, Sparkles, Upload, ImageIcon, X, Loader2 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { TagIcon, Search, Trash2, TrendingUp, Sparkles, Upload, ImageIcon, X, Loader2, Globe } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { TagImage } from "@shared/schema";
@@ -41,12 +51,24 @@ interface TagWithCount {
   videoIds: string[];
 }
 
+const LANGUAGES = [
+  { code: "en", label: "English" },
+  { code: "sr-Latn", label: "Serbian" },
+];
+
 export default function AdminTags() {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [deletingTag, setDeletingTag] = useState<string | null>(null);
   const [generatingImage, setGeneratingImage] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState<string | null>(null);
+  
+  // Translation state
+  const [editingTag, setEditingTag] = useState<string | null>(null);
+  const [translationData, setTranslationData] = useState<Record<string, string>>({
+      "sr-Latn": ""
+  });
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: tagsData = [], isLoading } = useQuery<TagWithCount[]>({
@@ -87,6 +109,52 @@ export default function AdminTags() {
       });
     },
   });
+  
+  const translateMutation = useMutation({
+      mutationFn: async ({ tagName, lang, translation }: { tagName: string, lang: string, translation: string }) => {
+          return await apiRequest(
+              "PUT",
+              `/api/admin/tags/${encodeURIComponent(tagName)}/translate`,
+              { languageCode: lang, translation }
+          );
+      },
+      onSuccess: () => {
+          toast({
+              title: "Tag Translated",
+              description: "Translation updated successfully"
+          });
+      },
+      onError: () => {
+          toast({
+              title: "Error",
+              description: "Failed to update translation",
+              variant: "destructive"
+          });
+      }
+  });
+
+  const handleTranslate = async () => {
+      if (!editingTag) return;
+      
+      // Save for Serbian (and potentially others in future)
+      if (translationData["sr-Latn"]?.trim()) {
+          await translateMutation.mutateAsync({
+              tagName: editingTag,
+              lang: "sr-Latn",
+              translation: translationData["sr-Latn"]
+          });
+      }
+      
+      setEditingTag(null);
+      setTranslationData({ "sr-Latn": "" });
+  };
+
+  const openTranslateDialog = (tagName: string) => {
+      setEditingTag(tagName);
+      // Ideally fetch existing translation here if available
+      // For now starting empty or we need an endpoint to get translations for a tagName
+      setTranslationData({ "sr-Latn": "" });
+  };
 
   const generateImageMutation = useMutation({
     mutationFn: async (tagName: string) => {
@@ -400,6 +468,15 @@ export default function AdminTags() {
                               <Button
                                 variant="ghost"
                                 size="sm"
+                                onClick={() => openTranslateDialog(tag.tagName)}
+                                title="Translate Tag"
+                                data-testid={`button-translate-${tag.tagName}`}
+                              >
+                                <Globe className="h-4 w-4 text-blue-500" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
                                 onClick={() => generateImageMutation.mutate(tag.tagName)}
                                 disabled={isGenerating || isUploading}
                                 title="Generate AI Image"
@@ -474,10 +551,57 @@ export default function AdminTags() {
         </div>
       </main>
 
+      {/* Translate Dialog */}
+      <Dialog
+        open={!!editingTag}
+        onOpenChange={(open) => {
+            if (!open) {
+                setEditingTag(null);
+                setTranslationData({ "sr-Latn": "" });
+            }
+        }}
+      >
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Translate Tag</DialogTitle>
+                <DialogDescription>
+                    Add translations for "{editingTag}".
+                </DialogDescription>
+            </DialogHeader>
+            <Tabs defaultValue="sr-Latn" className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="en">English (Original)</TabsTrigger>
+                    <TabsTrigger value="sr-Latn">Serbian</TabsTrigger>
+                </TabsList>
+                <TabsContent value="en" className="space-y-4 py-4">
+                    <div className="space-y-2">
+                        <Label>Tag Name (English)</Label>
+                        <Input value={editingTag || ''} disabled />
+                        <p className="text-xs text-muted-foreground">Original tag name is read-only here.</p>
+                    </div>
+                </TabsContent>
+                <TabsContent value="sr-Latn" className="space-y-4 py-4">
+                    <div className="space-y-2">
+                        <Label>Tag Name (Serbian)</Label>
+                        <Input 
+                            value={translationData["sr-Latn"]} 
+                            onChange={(e) => setTranslationData({ ...translationData, "sr-Latn": e.target.value })}
+                            placeholder="Muzika..." 
+                        />
+                    </div>
+                </TabsContent>
+            </Tabs>
+            <DialogFooter>
+                <Button variant="outline" onClick={() => setEditingTag(null)}>Cancel</Button>
+                <Button onClick={handleTranslate}>Save Translation</Button>
+            </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Delete Confirmation Dialog */}
       <AlertDialog
         open={!!deletingTag}
-        onOpenChange={() => setDeletingTag(null)}
+        onOpenChange={(open) => !open && setDeletingTag(null)}
       >
         <AlertDialogContent>
           <AlertDialogHeader>

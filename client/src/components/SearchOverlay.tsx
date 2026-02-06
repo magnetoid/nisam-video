@@ -5,14 +5,14 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { VideoCard } from "./VideoCard";
-import type { VideoWithRelations, Category } from "@shared/schema";
+import type { VideoWithLocalizedRelations, LocalizedCategory } from "@shared/schema";
 
 interface SearchOverlayProps {
   open: boolean;
   onClose: () => void;
   onSearch?: (query: string, categoryId?: string) => void;
-  results?: VideoWithRelations[];
-  categories?: Category[];
+  results?: VideoWithLocalizedRelations[];
+  categories?: LocalizedCategory[];
 }
 
 export function SearchOverlay({
