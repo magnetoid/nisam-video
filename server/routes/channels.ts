@@ -1,12 +1,58 @@
 import { Router } from "express";
 import { requireAuth } from "../middleware/auth.js";
 import { storage } from "../storage.js";
-import { scrapeYouTubeChannel } from "../scraper.js";
+import { scrapeYouTubeChannel, scrapeYouTubeChannelAbout } from "../scraper.js";
 import { categorizeVideo } from "../ai-service.js";
 import { insertChannelSchema, videos } from "../../shared/schema.js";
 import { generateSlug } from "../utils.js";
 import { db } from "../db.js";
 import { eq } from "drizzle-orm";
+import { kvStorage } from "../storage/kv.js";
+
+async function enrichYouTubeChannel(channel: any) {
+  const cacheKey = `channel:youtube:about:${channel.id}`;
+  const cached = await kvStorage.get(cacheKey);
+  if (cached && typeof cached === "object") {
+    return { ...channel, ...cached };
+  }
+
+  try {
+    const about = await scrapeYouTubeChannelAbout(channel.url);
+    const payload = {
+      description: about.description || null,
+      bannerUrl: about.bannerUrl || null,
+    };
+    await kvStorage.set(cacheKey, payload, 60 * 60 * 24 * 7);
+    return { ...channel, ...payload };
+  } catch {
+    await kvStorage.set(cacheKey, { description: null, bannerUrl: null }, 60 * 60 * 24);
+    return { ...channel, description: null, bannerUrl: null };
+  }
+}
+
+async function asyncPool<T, R>(
+  poolLimit: number,
+  items: T[],
+  iteratorFn: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const ret: Promise<R>[] = [];
+  const executing: Promise<any>[] = [];
+
+  for (const item of items) {
+    const p = Promise.resolve().then(() => iteratorFn(item));
+    ret.push(p);
+
+    if (poolLimit <= items.length) {
+      const e: Promise<any> = p.then(() => executing.splice(executing.indexOf(e), 1));
+      executing.push(e);
+      if (executing.length >= poolLimit) {
+        await Promise.race(executing);
+      }
+    }
+  }
+
+  return Promise.all(ret);
+}
 
 const router = Router();
 
@@ -25,10 +71,40 @@ router.post("/", requireAuth, async (req, res) => {
 router.get("/", async (req, res) => {
   try {
     const channels = await storage.getAllChannels();
-    res.json(channels);
+    const base = channels.map((c) => ({
+      ...c,
+      slug: `${generateSlug(c.name, 80)}-${c.id}`,
+    }));
+
+    const enriched = await asyncPool(3, base, (c) => {
+      if (c.platform === "youtube") return enrichYouTubeChannel(c);
+      return Promise.resolve({ ...c, description: null, bannerUrl: null });
+    });
+
+    res.json(enriched);
   } catch (error) {
     console.error("[channels] Fetch error:", error);
     res.status(500).json({ error: "Failed to fetch channels" });
+  }
+});
+
+router.get("/:id", async (req, res) => {
+  try {
+    const channel = await storage.getChannel(req.params.id);
+    if (!channel) {
+      return res.status(404).json({ error: "Channel not found" });
+    }
+    const withSlug = {
+      ...channel,
+      slug: `${generateSlug(channel.name, 80)}-${channel.id}`,
+    };
+    if (withSlug.platform === "youtube") {
+      return res.json(await enrichYouTubeChannel(withSlug));
+    }
+    res.json({ ...withSlug, description: null, bannerUrl: null });
+  } catch (error) {
+    console.error("[channels] Fetch by id error:", error);
+    res.status(500).json({ error: "Failed to fetch channel" });
   }
 });
 
@@ -54,10 +130,23 @@ router.post("/:id/scrape", requireAuth, async (req, res) => {
       channel.url,
     );
 
+    const kvKey = `channel:youtube:about:${channel.id}`;
+    if (channelInfo.description || channelInfo.bannerUrl) {
+      await kvStorage.set(
+        kvKey,
+        {
+          description: channelInfo.description || null,
+          bannerUrl: channelInfo.bannerUrl || null,
+        },
+        60 * 60 * 24 * 7,
+      );
+    }
+
     if (channelInfo.channelId || channelInfo.thumbnailUrl) {
       await storage.updateChannel(channel.id, {
         channelId: channelInfo.channelId || channel.channelId,
         thumbnailUrl: channelInfo.thumbnailUrl || channel.thumbnailUrl,
+        bannerUrl: channelInfo.bannerUrl, // Store banner URL
         lastScraped: new Date(),
       });
     }
@@ -113,35 +202,93 @@ router.post("/:id/scrape", requireAuth, async (req, res) => {
           { timeoutMs: 20000 },
         );
 
-        for (const categoryName of result.categories) {
-          const categorySlug = categoryName
+        const categoriesEn = result.categories.en || [];
+        const categoriesSr = result.categories.sr || [];
+        const maxCategories = Math.max(categoriesEn.length, categoriesSr.length);
+
+        for (let i = 0; i < maxCategories; i++) {
+          const nameEn = categoriesEn[i];
+          const nameSr = categoriesSr[i];
+          
+          if (!nameEn) continue;
+
+          const categorySlug = nameEn
             .toLowerCase()
             .replace(/[^a-z0-9]+/g, "-");
+            
           let category = await storage.getLocalizedCategoryBySlug(categorySlug, 'en');
 
           if (!category) {
-            category = await storage.createCategory({}, [{
+            const translations = [];
+            translations.push({
               languageCode: 'en',
-              name: categoryName,
+              name: nameEn,
               slug: categorySlug,
-            }]);
+              description: null
+            });
+            
+            if (nameSr) {
+              translations.push({
+                languageCode: 'sr-Latn',
+                name: nameSr,
+                slug: categorySlug,
+                description: null
+              });
+            }
+
+            category = await storage.createCategory({}, translations);
+          } else if (nameSr) {
+             try {
+                await storage.addCategoryTranslation(category.id, {
+                  categoryId: category.id,
+                  languageCode: 'sr-Latn',
+                  name: nameSr,
+                  slug: categorySlug,
+                  description: null
+                }).catch(() => {});
+             } catch (e) {
+               // Ignore
+             }
           }
 
           await storage.addVideoCategory(video.id, category.id);
         }
 
-        for (const tagName of result.tags) {
+        const tagsEn = result.tags.en || [];
+        const tagsSr = result.tags.sr || [];
+        const maxTags = Math.max(tagsEn.length, tagsSr.length);
+
+        for (let i = 0; i < maxTags; i++) {
+          const tagEn = tagsEn[i];
+          const tagSr = tagsSr[i];
+          
+          if (!tagEn) continue;
+
+          const translations = [{
+            languageCode: 'en',
+            tagName: tagEn
+          }];
+
+          if (tagSr) {
+             translations.push({
+               languageCode: 'sr-Latn',
+               tagName: tagSr
+             });
+          }
+
           await storage.createTag({
             videoId: video.id,
-          }, [{
-              languageCode: 'en',
-              tagName
-          }]);
+          }, translations);
         }
 
         console.log(`[channels] Categorized: ${video.title}`);
       } catch (error) {
-        console.error(`[channels] Failed to categorize video ${videoId}:`, error);
+        const message = error instanceof Error ? error.message : String(error);
+        if (message.includes("Cannot connect to localhost Ollama on Vercel")) {
+          console.warn(`[channels] Skipping categorization (AI unavailable) for ${videoId}: ${message}`);
+        } else {
+          console.error(`[channels] Failed to categorize video ${videoId}:`, error);
+        }
       }
     }
 
@@ -169,6 +316,12 @@ router.post("/:id/scrape", requireAuth, async (req, res) => {
       saved: savedCount,
     });
   } catch (error) {
+    const statusCode = typeof (error as any)?.statusCode === "number" ? (error as any).statusCode : undefined;
+    const message = error instanceof Error ? error.message : String(error);
+    if (statusCode === 404 || message.includes("Failed to fetch channel: 404")) {
+      console.warn("[channels] Scrape not found:", { channelId: req.params.id, message });
+      return res.status(404).json({ error: message });
+    }
     console.error("[channels] Scrape error:", error);
     res.status(500).json({ error: "Failed to scrape channel" });
   }

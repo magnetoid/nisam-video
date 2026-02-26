@@ -39,9 +39,10 @@ import {
   ChartTooltipContent
 } from "@/components/ui/chart";
 import { Line, LineChart, XAxis, YAxis, Bar, BarChart, Legend, ResponsiveContainer } from "recharts";
-import { CalendarIcon, Search, Filter, Trash2, Play, Pause, BarChart3, Activity } from "lucide-react";
-import { toast } from "sonner";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { CalendarIcon, Search, Filter, Trash2, Play, Pause, BarChart3, Activity, RefreshCw, Clock } from "lucide-react";
+import { format } from "date-fns";
+import { toast } from "@/hooks/use-toast";
+import { apiRequest, queryClient, invalidateContentQueries } from "@/lib/queryClient";
 import type { SchedulerSettings } from "@shared/schema";
 
 type JobStatus = "pending" | "running" | "completed" | "failed" | "cancelled" | "all";
@@ -80,6 +81,11 @@ type ScrapeJobLogEntry = {
   data?: Record<string, unknown>;
 };
 
+type JobsResponse = {
+  jobs: ScrapeJob[];
+  total: number;
+};
+
 function parseErrorCount(errorMessage: string | null): number {
   if (!errorMessage) return 0;
   const m = errorMessage.match(/errors:(\d+)/);
@@ -95,6 +101,7 @@ function formatDurationSeconds(seconds: number) {
 }
 
 export default function AdminAutomation() {
+  const { t } = useTranslation();
   const [liveJob, setLiveJob] = useState<ScrapeJob | null>(null);
   const [liveLogs, setLiveLogs] = useState<ScrapeJobLogEntry[]>([]);
   const streamRef = useRef<EventSource | null>(null);
@@ -132,14 +139,27 @@ export default function AdminAutomation() {
     return params.toString();
   }, [searchTerm, statusFilter, dateFrom, dateTo, currentPage]);
 
-  const { data: jobsData, isLoading: jobsLoading } = useQuery<ScrapeJob[]>({
-    queryKey: ["/api/automation/jobs", queryParams],
+  const { data: jobsData, isLoading: jobsLoading } = useQuery<JobsResponse | ScrapeJob[]>({
+    queryKey: [`/api/automation/jobs?${queryParams}`],
     refetchInterval: 5000,
     refetchIntervalInBackground: true,
   });
 
-  const jobs = useMemo(() => jobsData || [], [jobsData]);
-  const totalJobs = jobs.length; // For pagination, ideally from backend count
+  const jobs = useMemo(() => {
+    if (Array.isArray(jobsData)) return jobsData;
+    if (jobsData && typeof jobsData === "object" && Array.isArray((jobsData as any).jobs)) {
+      return (jobsData as any).jobs as ScrapeJob[];
+    }
+    return [];
+  }, [jobsData]);
+
+  const totalJobs = useMemo(() => {
+    if (jobsData && typeof jobsData === "object" && !Array.isArray(jobsData)) {
+      const total = (jobsData as any).total;
+      if (typeof total === "number") return total;
+    }
+    return jobs.length;
+  }, [jobsData, jobs.length]);
 
   const runNowMutation = useMutation({
     mutationFn: async () => {
@@ -148,7 +168,26 @@ export default function AdminAutomation() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/automation/jobs"] });
       queryClient.invalidateQueries({ queryKey: ["/api/automation/jobs/active"] });
+      invalidateContentQueries();
+      toast.success("Incremental batch started");
     },
+    onError: (error) => {
+      toast.error(`Failed to start job: ${error instanceof Error ? error.message : "Unknown error"}`);
+    }
+  });
+
+  const regenerateMutation = useMutation({
+    mutationFn: async (mode: 'all' | 'missing') => {
+      const res = await apiRequest("POST", `/api/admin/regenerate?mode=${mode}&limit=50`);
+      return res.json();
+    },
+    onSuccess: (data) => {
+      toast.success(`Regenerated metadata for ${data.processed} videos`);
+      invalidateContentQueries();
+    },
+    onError: (error) => {
+      toast.error(`Failed to regenerate: ${error instanceof Error ? error.message : "Unknown error"}`);
+    }
   });
 
   useEffect(() => {
@@ -212,6 +251,7 @@ export default function AdminAutomation() {
           toast.success(`Job completed with status: ${status}`);
           queryClient.invalidateQueries({ queryKey: ['/api/automation/jobs'] });
           queryClient.invalidateQueries({ queryKey: ['/api/automation/jobs/active'] });
+          invalidateContentQueries();
           setLiveJob(null);
           setLiveLogs([]);
         } catch (e) {
@@ -297,7 +337,7 @@ export default function AdminAutomation() {
 
   const [activeTab, setActiveTab] = useState<'monitor' | 'analytics'>('monitor');
   const { data: analyticsData } = useQuery({
-    queryKey: ['/api/automation/analytics', { period: 30 }],
+    queryKey: ['/api/automation/analytics?period=30'],
     refetchInterval: 30000, // 30s for analytics
   });
 
@@ -321,11 +361,8 @@ export default function AdminAutomation() {
   } satisfies ChartConfig;
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <AdminSidebar />
-      <main className="flex-1 p-8 ml-[240px] lg:ml-[240px] md:ml-0 sm:p-4" aria-label="Main content">
-        <div className="max-w-6xl mx-auto space-y-6">
-          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'monitor' | 'analytics')} className="space-y-4">
+    <div className="max-w-6xl mx-auto space-y-6">
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'monitor' | 'analytics')} className="space-y-4">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="monitor" className="space-x-2">
                 <Activity className="h-4 w-4" />
@@ -429,6 +466,39 @@ export default function AdminAutomation() {
                     ) : (
                       <div className="text-sm text-muted-foreground">No active scrape job.</div>
                     )}
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Metadata Regeneration</CardTitle>
+                    <CardDescription>Re-run AI categorization for existing videos</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex flex-col gap-2">
+                      <Button 
+                        onClick={() => regenerateMutation.mutate('missing')} 
+                        disabled={regenerateMutation.isPending}
+                        variant="outline"
+                        className="w-full justify-start"
+                      >
+                        <RefreshCw className={`mr-2 h-4 w-4 ${regenerateMutation.isPending ? "animate-spin" : ""}`} />
+                        Regenerate Missing Only (Batch 50)
+                      </Button>
+                      <Button 
+                        onClick={() => regenerateMutation.mutate('all')} 
+                        disabled={regenerateMutation.isPending}
+                        variant="secondary"
+                        className="w-full justify-start"
+                      >
+                        <RefreshCw className={`mr-2 h-4 w-4 ${regenerateMutation.isPending ? "animate-spin" : ""}`} />
+                        Regenerate ALL (Batch 50)
+                      </Button>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        Runs in batches of 50 videos. Check logs for progress.
+                        Using AI services may incur costs.
+                      </p>
+                    </div>
                   </CardContent>
                 </Card>
               </div>
@@ -760,9 +830,7 @@ export default function AdminAutomation() {
                 </CardContent>
               </Card>
             </TabsContent>
-          </Tabs>
-        </div>
-      </main>
+      </Tabs>
     </div>
   );
 }

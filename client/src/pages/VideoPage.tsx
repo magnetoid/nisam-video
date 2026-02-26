@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { SEO } from "@/components/SEO";
+import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { VideoCard } from "@/components/VideoCard";
 import { LikeButton } from "@/components/LikeButton";
@@ -209,6 +210,8 @@ export default function VideoPage() {
         canonical={currentUrl}
         hreflang={hreflangLinks}
       />
+
+      <Header />
 
       <div className="min-h-screen bg-background pt-16">
         {/* Back button - contained width */}

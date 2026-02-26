@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Header } from "@/components/Header";
 import { AdminSidebar } from "@/components/AdminSidebar";
 import {
@@ -14,313 +14,370 @@ import {
   TvIcon,
   VideoIcon,
   FolderIcon,
-  TagIcon,
   TrendingUp,
   Clock,
   Calendar,
   Activity,
+  RefreshCw,
+  Play,
+  StopCircle,
+  Loader2,
 } from "lucide-react";
 import { Link } from "wouter";
-import type {
-  VideoWithRelations,
-  Channel,
-  Category,
-} from "@shared/schema";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+} from "recharts";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { formatDistanceToNow } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
 
 export default function AdminDashboard() {
-  const { data: channels = [], isLoading: channelsLoading } = useQuery<Channel[]>({
-    queryKey: ["/api/channels"],
+  const { toast } = useToast();
+
+  // Fetch Analytics
+  const { data: analytics, isLoading: analyticsLoading } = useQuery({
+    queryKey: ["/api/analytics?days=30"],
   });
 
-  const { data: videos = [], isLoading: videosLoading } = useQuery<VideoWithRelations[]>({
-    queryKey: ["/api/videos"],
+  // Fetch Scheduler Settings/Status
+  const { data: scheduler, isLoading: schedulerLoading } = useQuery({
+    queryKey: ["/api/scheduler"],
+    refetchInterval: 5000, // Poll every 5s for real-time status
   });
 
-  const { data: categories = [], isLoading: categoriesLoading } = useQuery<Category[]>({
-    queryKey: ["/api/categories"],
+  // Fetch Recent Jobs
+  const { data: recentJobs = [], isLoading: jobsLoading } = useQuery({
+    queryKey: ["/api/scheduler/jobs"],
+    refetchInterval: 5000,
   });
 
-  const isLoading = channelsLoading || videosLoading || categoriesLoading;
+  // Scheduler Mutations
+  const startSchedulerMutation = useMutation({
+    mutationFn: async () => apiRequest("POST", "/api/scheduler/start", {}),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/scheduler"] });
+      toast({ title: "Scheduler started" });
+    },
+  });
+
+  const stopSchedulerMutation = useMutation({
+    mutationFn: async () => apiRequest("POST", "/api/scheduler/stop", {}),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/scheduler"] });
+      toast({ title: "Scheduler stopped" });
+    },
+  });
+
+  const runNowMutation = useMutation({
+    mutationFn: async () => apiRequest("POST", "/api/scheduler/run-now", {}),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/scheduler"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/scheduler/jobs"] });
+      toast({ title: "Manual scrape job started" });
+    },
+  });
+
+  const isLoading = analyticsLoading || schedulerLoading || jobsLoading;
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background">
-        <Header />
-        <AdminSidebar />
-        <main className="ml-60 pt-16 p-8">
-          <div className="flex items-center justify-center h-64">
-            <div className="text-muted-foreground">Loading dashboard...</div>
-          </div>
-        </main>
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
-  const recentVideos = videos.slice(0, 5);
-  const topChannels = channels
-    .sort((a, b) => b.videoCount - a.videoCount)
-    .slice(0, 5);
+  // Calculate daily growth data for chart
+  const growthData = analytics?.dailyGrowth || [];
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <AdminSidebar />
-
-      <main className="ml-60 pt-16 p-8">
-        <div className="space-y-6">
-          <div>
-            <h1 className="text-3xl font-bold" data-testid="text-page-title">
-              Dashboard
-            </h1>
-            <p className="text-muted-foreground mt-1">
-              Overview of your content platform
-            </p>
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold">Dashboard</h1>
+          <p className="text-muted-foreground mt-1">
+            Platform overview and system health
+          </p>
+        </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => queryClient.invalidateQueries()}
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Refresh
+              </Button>
+            </div>
           </div>
 
-          {/* Stats Cards */}
+          {/* Key Metrics */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Card data-testid="stat-card-channels">
-              <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
                   Total Channels
                 </CardTitle>
                 <TvIcon className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div
-                  className="text-2xl font-bold"
-                  data-testid="text-total-channels"
-                >
-                  {channels.length}
+                <div className="text-2xl font-bold">
+                  {analytics?.totals?.channels || 0}
                 </div>
                 <Link href="/admin/channels">
-                  <a
-                    className="text-xs text-primary hover:underline"
-                    data-testid="link-view-channels"
-                  >
-                    View all channels →
+                  <a className="text-xs text-primary hover:underline">
+                    View channels →
                   </a>
                 </Link>
               </CardContent>
             </Card>
 
-            <Card data-testid="stat-card-videos">
-              <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
                   Total Videos
                 </CardTitle>
                 <VideoIcon className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div
-                  className="text-2xl font-bold"
-                  data-testid="text-total-videos"
-                >
-                  {videos.length}
+                <div className="text-2xl font-bold">
+                  {analytics?.totals?.allTimeVideos || 0}
                 </div>
                 <Link href="/admin/videos">
-                  <a
-                    className="text-xs text-primary hover:underline"
-                    data-testid="link-view-videos"
-                  >
+                  <a className="text-xs text-primary hover:underline">
                     Manage videos →
                   </a>
                 </Link>
               </CardContent>
             </Card>
 
-            <Card data-testid="stat-card-categories">
-              <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Categories
-                </CardTitle>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Categories</CardTitle>
                 <FolderIcon className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div
-                  className="text-2xl font-bold"
-                  data-testid="text-total-categories"
-                >
-                  {categories.length}
+                <div className="text-2xl font-bold">
+                  {analytics?.totals?.categories || 0}
                 </div>
                 <Link href="/admin/categories">
-                  <a
-                    className="text-xs text-primary hover:underline"
-                    data-testid="link-view-categories"
-                  >
+                  <a className="text-xs text-primary hover:underline">
                     Manage categories →
                   </a>
                 </Link>
               </CardContent>
             </Card>
 
-            <Card data-testid="stat-card-analytics">
-              <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Analytics</CardTitle>
-                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Scheduler Status</CardTitle>
+                <Activity className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div
-                  className="text-2xl font-bold"
-                  data-testid="text-total-engagement"
-                >
-                  {videos.reduce(
-                    (sum, v) => sum + v.likesCount + v.internalViewsCount,
-                    0,
+                <div className="flex items-center gap-2">
+                  <div className={`w-3 h-3 rounded-full ${scheduler?.isActive ? 'bg-green-500' : 'bg-red-500'}`} />
+                  <span className="font-medium">
+                    {scheduler?.isActive ? "Active" : "Stopped"}
+                  </span>
+                  {scheduler?.isRunning && (
+                    <Badge variant="secondary" className="ml-auto animate-pulse">Running</Badge>
                   )}
                 </div>
-                <Link href="/admin/analytics">
-                  <a
-                    className="text-xs text-primary hover:underline"
-                    data-testid="link-view-analytics"
-                  >
-                    View analytics →
-                  </a>
-                </Link>
+                <div className="text-xs text-muted-foreground mt-1">
+                  Next run: {scheduler?.nextRun ? formatDistanceToNow(new Date(scheduler.nextRun), { addSuffix: true }) : 'N/A'}
+                </div>
               </CardContent>
             </Card>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
-            {/* Recent Videos */}
-            <Card>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
+            {/* Charts Section */}
+            <Card className="col-span-4">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Clock className="h-5 w-5" />
-                  Recent Videos
-                </CardTitle>
+                <CardTitle>Content Growth</CardTitle>
                 <CardDescription>
-                  Latest videos added to the platform
+                  New videos added over the last 30 days
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                {recentVideos.length > 0 ? (
-                  <div className="space-y-3">
-                    {recentVideos.map((video) => (
-                      <div
-                        key={video.id}
-                        className="flex items-start gap-3 p-2 rounded-md hover-elevate"
-                        data-testid={`video-item-${video.id}`}
-                      >
-                        <img
-                          src={video.thumbnailUrl}
-                          alt={video.title}
-                          className="w-20 h-12 object-cover rounded"
+              <CardContent className="pl-2">
+                <div className="h-[300px]">
+                  {growthData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={growthData}>
+                        <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                        <XAxis 
+                          dataKey="date" 
+                          tickFormatter={(date) => new Date(date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                          minTickGap={30}
+                          fontSize={12}
                         />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">
-                            {video.title}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {video.channel.name}
-                          </p>
-                          <div className="flex items-center gap-2 mt-1">
-                            <Badge variant="secondary" className="text-xs">
-                              {video.likesCount} likes
-                            </Badge>
-                            <Badge variant="secondary" className="text-xs">
-                              {video.internalViewsCount} views
-                            </Badge>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center text-muted-foreground py-8">
-                    No videos yet
-                  </div>
-                )}
+                        <YAxis fontSize={12} />
+                        <Tooltip 
+                          labelFormatter={(date) => new Date(date).toLocaleDateString()}
+                          contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: 'var(--radius)' }}
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="count"
+                          stroke="hsl(var(--primary))"
+                          strokeWidth={2}
+                          dot={false}
+                          activeDot={{ r: 4 }}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="flex items-center justify-center h-full text-muted-foreground">
+                      No data available
+                    </div>
+                  )}
+                </div>
               </CardContent>
             </Card>
 
-            {/* Top Channels */}
-            <Card>
+            {/* Scheduler Control & Recent Jobs */}
+            <Card className="col-span-3">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Activity className="h-5 w-5" />
-                  Top Channels
-                </CardTitle>
-                <CardDescription>Channels with most videos</CardDescription>
+                <CardTitle>System & Jobs</CardTitle>
+                <CardDescription>Manage synchronization</CardDescription>
               </CardHeader>
               <CardContent>
-                {topChannels.length > 0 ? (
-                  <div className="space-y-3">
-                    {topChannels.map((channel, index) => (
-                      <div
-                        key={channel.id}
-                        className="flex items-center gap-3 p-2 rounded-md hover-elevate"
-                        data-testid={`channel-item-${channel.id}`}
+                <div className="space-y-4">
+                  <div className="flex gap-2">
+                    {scheduler?.isActive ? (
+                      <Button 
+                        variant="destructive" 
+                        size="sm" 
+                        onClick={() => stopSchedulerMutation.mutate()}
+                        disabled={stopSchedulerMutation.isPending}
+                        className="flex-1"
                       >
-                        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary font-bold text-sm">
-                          {index + 1}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">
-                            {channel.name}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {channel.videoCount} videos
-                          </p>
-                        </div>
-                      </div>
-                    ))}
+                        <StopCircle className="h-4 w-4 mr-2" />
+                        Stop Scheduler
+                      </Button>
+                    ) : (
+                      <Button 
+                        variant="default" 
+                        size="sm" 
+                        onClick={() => startSchedulerMutation.mutate()}
+                        disabled={startSchedulerMutation.isPending}
+                        className="flex-1"
+                      >
+                        <Play className="h-4 w-4 mr-2" />
+                        Start Scheduler
+                      </Button>
+                    )}
+                    <Button 
+                      variant="secondary" 
+                      size="sm" 
+                      onClick={() => runNowMutation.mutate()}
+                      disabled={runNowMutation.isPending || scheduler?.isRunning}
+                      className="flex-1"
+                    >
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Run Now
+                    </Button>
                   </div>
-                ) : (
-                  <div className="text-center text-muted-foreground py-8">
-                    No channels yet
+
+                  <div className="space-y-2 mt-4">
+                    <h4 className="text-sm font-medium text-muted-foreground mb-2">Recent Jobs</h4>
+                    <div className="space-y-2 max-h-[250px] overflow-y-auto pr-2">
+                      {recentJobs.length > 0 ? (
+                        recentJobs.map((job: any) => (
+                          <div key={job.id} className="flex items-center justify-between p-2 rounded-md border bg-muted/40">
+                            <div className="flex flex-col gap-0.5">
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium text-sm capitalize">{job.type.replace('_', ' ')}</span>
+                                <Badge variant={
+                                  job.status === 'completed' ? 'default' : 
+                                  job.status === 'failed' ? 'destructive' : 
+                                  job.status === 'running' ? 'secondary' : 'outline'
+                                } className="text-[10px] px-1.5 py-0">
+                                  {job.status}
+                                </Badge>
+                              </div>
+                              <span className="text-xs text-muted-foreground">
+                                {formatDistanceToNow(new Date(job.startedAt), { addSuffix: true })}
+                              </span>
+                            </div>
+                            <div className="text-right text-xs">
+                              <div className="font-medium">{job.videosAdded} videos</div>
+                              <div className="text-muted-foreground">{job.processedChannels} / {job.totalChannels} ch</div>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-center text-sm text-muted-foreground py-4">
+                          No recent jobs
+                        </div>
+                      )}
+                    </div>
                   </div>
-                )}
+                </div>
               </CardContent>
             </Card>
           </div>
+          
+          <div className="grid gap-6 md:grid-cols-2">
+             {/* Top Channels */}
+             <Card>
+              <CardHeader>
+                <CardTitle>Top Channels</CardTitle>
+                <CardDescription>By video count</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                   {analytics?.channelPerformance?.slice(0, 5).map((channel: any, i: number) => (
+                     <div key={i} className="flex items-center justify-between">
+                       <div className="flex items-center gap-2">
+                         <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
+                           {i + 1}
+                         </div>
+                         <span className="text-sm font-medium">{channel.name}</span>
+                       </div>
+                       <span className="text-sm text-muted-foreground">{channel.videoCount} videos</span>
+                     </div>
+                   ))}
+                </div>
+              </CardContent>
+            </Card>
 
-          {/* Quick Actions */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Calendar className="h-5 w-5" />
-                Quick Actions
-              </CardTitle>
-              <CardDescription>Common administrative tasks</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-3 md:grid-cols-3">
-                <Link href="/admin/channels">
-                  <Button
-                    className="w-full"
-                    variant="outline"
-                    data-testid="button-add-channel"
-                  >
-                    <TvIcon className="mr-2 h-4 w-4" />
-                    Add Channel
-                  </Button>
-                </Link>
-                <Link href="/admin/categories">
-                  <Button
-                    className="w-full"
-                    variant="outline"
-                    data-testid="button-create-category"
-                  >
-                    <FolderIcon className="mr-2 h-4 w-4" />
-                    Create Category
-                  </Button>
-                </Link>
-                <Link href="/admin/scheduler">
-                  <Button
-                    className="w-full"
-                    variant="outline"
-                    data-testid="button-manage-scheduler"
-                  >
-                    <Clock className="mr-2 h-4 w-4" />
-                    Manage Scheduler
-                  </Button>
-                </Link>
-              </div>
-            </CardContent>
-          </Card>
+            {/* Top Categories */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Category Distribution</CardTitle>
+                <CardDescription>Videos per category</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[200px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={analytics?.topCategories || []} layout="vertical" margin={{ left: 20 }}>
+                      <CartesianGrid strokeDasharray="3 3" horizontal={false} opacity={0.3} />
+                      <XAxis type="number" hide />
+                      <YAxis 
+                        dataKey="name" 
+                        type="category" 
+                        width={100} 
+                        tick={{ fontSize: 12 }} 
+                      />
+                      <Tooltip 
+                        contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: 'var(--radius)' }}
+                      />
+                      <Bar dataKey="count" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} barSize={20} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
-      </main>
-    </div>
   );
 }

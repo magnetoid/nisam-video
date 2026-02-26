@@ -20,6 +20,8 @@ import exportsRouter from "./exports.js";
 import aiSettingsRouter from "./ai-settings.js";
 import publicRouter from "./public.js";
 import cronRouter from "./cron.js";
+import uploadsRouter from "./uploads.js";
+import tagImagesRouter from "./tag-images.js";
 
 export function registerFeatureRoutes(app: Express): void {
   app.use("/api", publicRouter);
@@ -43,4 +45,6 @@ export function registerFeatureRoutes(app: Express): void {
   app.use("/api/export", exportsRouter);
   app.use("/api/ai", aiSettingsRouter);
   app.use("/api/cron", cronRouter);
+  app.use("/api/uploads", uploadsRouter);
+  app.use("/api", tagImagesRouter);
 }

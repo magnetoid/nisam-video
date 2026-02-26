@@ -2,6 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
+.text-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
 /* LIGHT MODE */
 :root {
   --button-outline: rgba(0, 0, 0, 0.1);

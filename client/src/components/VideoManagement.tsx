@@ -38,6 +38,10 @@ interface VideoManagementProps {
   selectedVideoIds: string[];
   selectedChannelId?: string;
   selectedCategoryId?: string;
+  page?: number;
+  pageSize?: number;
+  hasNextPage?: boolean;
+  isLoading?: boolean;
   onView?: (video: VideoWithRelations) => void;
   onEdit?: (video: VideoWithRelations) => void;
   onCategorize?: (videoId: string) => void;
@@ -51,6 +55,8 @@ interface VideoManagementProps {
   onBulkDelete?: () => void;
   onChannelFilterChange?: (channelId: string | undefined) => void;
   onCategoryFilterChange?: (categoryId: string | undefined) => void;
+  onPageChange?: (page: number) => void;
+  onPageSizeChange?: (pageSize: number) => void;
   processingVideoIds?: Set<string>;
   isBulkProcessing?: boolean;
 }
@@ -63,6 +69,10 @@ export function VideoManagement({
   selectedVideoIds,
   selectedChannelId,
   selectedCategoryId,
+  page = 1,
+  pageSize = 50,
+  hasNextPage = false,
+  isLoading = false,
   onView,
   onEdit,
   onCategorize,
@@ -76,6 +86,8 @@ export function VideoManagement({
   onBulkDelete,
   onChannelFilterChange,
   onCategoryFilterChange,
+  onPageChange,
+  onPageSizeChange,
   processingVideoIds = new Set(),
   isBulkProcessing = false,
 }: VideoManagementProps) {
@@ -213,7 +225,12 @@ export function VideoManagement({
         )}
       </div>
 
-      {videos.length === 0 ? (
+      {isLoading && videos.length === 0 ? (
+        <div className="border border-dashed border-border rounded-lg p-12 text-center">
+          <h3 className="text-lg font-semibold mb-2">Loading…</h3>
+          <p className="text-muted-foreground">Fetching videos</p>
+        </div>
+      ) : videos.length === 0 ? (
         <div className="border border-dashed border-border rounded-lg p-12 text-center">
           <Eye className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
           <h3
@@ -401,6 +418,49 @@ export function VideoManagement({
               ))}
             </TableBody>
           </Table>
+
+          <div className="flex items-center justify-between gap-4 border-t border-border px-4 py-3">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Page</span>
+              <span className="text-sm font-medium">{page}</span>
+              {isLoading && (
+                <span className="text-sm text-muted-foreground">Loading…</span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Select
+                value={String(pageSize)}
+                onValueChange={(value) => onPageSizeChange?.(parseInt(value, 10))}
+              >
+                <SelectTrigger className="w-[110px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="25">25 / page</SelectItem>
+                  <SelectItem value="50">50 / page</SelectItem>
+                  <SelectItem value="100">100 / page</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => onPageChange?.(Math.max(1, page - 1))}
+                disabled={isLoading || page <= 1}
+              >
+                Previous
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => onPageChange?.(page + 1)}
+                disabled={isLoading || !hasNextPage}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
         </div>
       )}
     </div>

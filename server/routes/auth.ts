@@ -1,19 +1,31 @@
 import { Router } from "express";
 
-const ADMIN_USERNAME = process.env.ADMIN_USERNAME;
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+function normalizeCredential(value: unknown) {
+  const raw = typeof value === "string" ? value : "";
+  const trimmed = raw.trim();
+  if (
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+  ) {
+    return trimmed.slice(1, -1).trim();
+  }
+  return trimmed;
+}
 
 function getConfiguredAdmin() {
+  const ADMIN_USERNAME = process.env.ADMIN_USERNAME;
+  const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+
   if (process.env.NODE_ENV === "production") {
     if (!ADMIN_USERNAME || !ADMIN_PASSWORD) {
       return null;
     }
-    return { username: ADMIN_USERNAME, password: ADMIN_PASSWORD };
+    return { username: normalizeCredential(ADMIN_USERNAME), password: normalizeCredential(ADMIN_PASSWORD) };
   }
 
   return {
-    username: ADMIN_USERNAME || "admin",
-    password: ADMIN_PASSWORD || "admin",
+    username: normalizeCredential(ADMIN_USERNAME || "admin"),
+    password: normalizeCredential(ADMIN_PASSWORD || "admin"),
   };
 }
 
@@ -21,7 +33,8 @@ const router = Router();
 
 router.post("/login", async (req, res) => {
   try {
-    const { username, password } = req.body;
+    const username = normalizeCredential(req.body?.username);
+    const password = normalizeCredential(req.body?.password);
 
     const configured = getConfiguredAdmin();
     if (!configured) {

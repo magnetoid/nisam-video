@@ -10,7 +10,9 @@ import {
   json,
   jsonb,
   unique,
-  boolean
+  boolean,
+  uuid,
+  uniqueIndex
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
@@ -41,6 +43,7 @@ export const channels = pgTable("channels", {
   url: text("url").notNull().unique(),
   channelId: text("channel_id"), // YouTube channel ID or TikTok username
   thumbnailUrl: text("thumbnail_url"),
+  bannerUrl: text("banner_url"), // Added for storing channel banner/header image
   videoCount: integer("video_count").notNull().default(0),
   platform: text("platform").notNull().default("youtube"), // "youtube" or "tiktok"
   lastScraped: timestamp("last_scraped"),
@@ -435,18 +438,23 @@ export const videoViews = pgTable("video_views", {
     .default(sql`now()`),
 });
 
-// Hero Videos table - Configuration for featured hero section videos
 export const heroVideos = pgTable("hero_videos", {
   id: varchar("id")
     .primaryKey()
     .default(sql`gen_random_uuid()`),
-  slot: integer("slot").notNull().unique(), // 1 to 5, enforces exactly 5 slots
+  displayOrder: integer("display_order").notNull().default(0),
   videoId: varchar("video_id")
-    .references(() => videos.id, { onDelete: "set null" }), // Set to null if video deleted
+    .references(() => videos.id, { onDelete: "set null" }),
   title: text("title").notNull(),
   description: text("description").notNull(),
   buttonText: text("button_text").notNull(),
   buttonLink: text("button_link").notNull(),
+  thumbnailUrl: text("thumbnail_url"),
+  videoUrl: text("video_url"),
+  duration: integer("duration"),
+  startDate: timestamp("start_date"),
+  endDate: timestamp("end_date"),
+  isActive: integer("is_active").notNull().default(1),
   createdAt: timestamp("created_at")
     .notNull()
     .default(sql`now()`),
@@ -454,7 +462,7 @@ export const heroVideos = pgTable("hero_videos", {
     .notNull()
     .default(sql`now()`),
 }, (table) => ({
-  slotIdx: index("hero_videos_slot_idx").on(table.slot),
+  displayOrderIdx: index("hero_videos_display_order_idx").on(table.displayOrder),
   videoIdIdx: index("hero_videos_video_id_idx").on(table.videoId),
 }));
 
@@ -482,7 +490,7 @@ export const heroSettings = pgTable("hero_settings", {
   id: varchar("id")
     .primaryKey()
     .default(sql`gen_random_uuid()`),
-  fallbackImages: json("fallback_images").default(sql`[]::jsonb`),
+  fallbackImages: json("fallback_images").default(sql`'[]'::jsonb`),
   rotationInterval: integer("rotation_interval").default(4000),
   animationType: varchar("animation_type").default("fade"),
   defaultPlaceholderUrl: text("default_placeholder_url"),

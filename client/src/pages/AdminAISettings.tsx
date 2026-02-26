@@ -53,6 +53,14 @@ import {
   Radio
 } from "lucide-react";
 
+const OPENAI_MODEL_PRESETS: Array<{ value: string; label: string; notes?: string }> = [
+  { value: "gpt-4o-mini", label: "gpt-4o-mini", notes: "Fast, low cost" },
+  { value: "gpt-4o", label: "gpt-4o", notes: "Best general" },
+  { value: "gpt-4.1-mini", label: "gpt-4.1-mini" },
+  { value: "gpt-4.1", label: "gpt-4.1" },
+  { value: "o3-mini", label: "o3-mini", notes: "Reasoning" },
+];
+
 // Schema for AI Settings
 const aiSettingsSchema = z.object({
   provider: z.enum(["openai", "ollama"]),
@@ -363,9 +371,42 @@ export default function AdminAISettings() {
                             render={({ field }) => (
                               <FormItem>
                                 <FormLabel>Model</FormLabel>
-                                <FormControl>
-                                  <Input placeholder="gpt-5" {...field} />
-                                </FormControl>
+                                <Select
+                                  value={
+                                    OPENAI_MODEL_PRESETS.some((m) => m.value === field.value)
+                                      ? (field.value as string)
+                                      : "custom"
+                                  }
+                                  onValueChange={(value) => {
+                                    if (value === "custom") {
+                                      field.onChange("");
+                                      return;
+                                    }
+                                    field.onChange(value);
+                                  }}
+                                >
+                                  <FormControl>
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select a model" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    {OPENAI_MODEL_PRESETS.map((m) => (
+                                      <SelectItem key={m.value} value={m.value}>
+                                        {m.label}
+                                      </SelectItem>
+                                    ))}
+                                    <SelectItem value="custom">Custom…</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                {!OPENAI_MODEL_PRESETS.some((m) => m.value === form.watch("openaiModel")) && (
+                                  <FormControl>
+                                    <Input placeholder="Custom model id" {...field} />
+                                  </FormControl>
+                                )}
+                                <FormDescription>
+                                  Pick a preset or enter a custom model id.
+                                </FormDescription>
                                 <FormMessage />
                               </FormItem>
                             )}
@@ -513,42 +554,86 @@ export default function AdminAISettings() {
                   </CardContent>
                 </Card>
               ) : (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Server className="h-5 w-5" />
-                      OpenAI Status
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between p-4 border rounded-lg">
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 bg-green-100 dark:bg-green-900 rounded-full">
-                            <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
+                <>
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Server className="h-5 w-5" />
+                        OpenAI Status
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between p-4 border rounded-lg">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-green-100 dark:bg-green-900 rounded-full">
+                              <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
+                            </div>
+                            <div>
+                              <div className="font-medium">Service Status</div>
+                              <div className="text-sm text-muted-foreground">Configured by API key</div>
+                            </div>
                           </div>
-                          <div>
-                            <div className="font-medium">Service Status</div>
-                            <div className="text-sm text-muted-foreground">Operational</div>
+                          <Badge variant="outline">Info</Badge>
+                        </div>
+
+                        <div className="flex items-center justify-between p-4 border rounded-lg">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-full">
+                              <Cpu className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                            </div>
+                            <div>
+                              <div className="font-medium">Selected Model</div>
+                              <div className="text-sm text-muted-foreground">{form.watch("openaiModel")}</div>
+                            </div>
                           </div>
                         </div>
-                        <Badge variant="outline">Online</Badge>
                       </div>
-                      
-                      <div className="flex items-center justify-between p-4 border rounded-lg">
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-full">
-                            <Cpu className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                          </div>
-                          <div>
-                            <div className="font-medium">Selected Model</div>
-                            <div className="text-sm text-muted-foreground">{form.watch("openaiModel")}</div>
-                          </div>
-                        </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Cpu className="h-5 w-5" />
+                        Available OpenAI Models
+                      </CardTitle>
+                      <CardDescription>
+                        Presets you can choose from in this app
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="rounded-md border">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Name</TableHead>
+                              <TableHead>Notes</TableHead>
+                              <TableHead className="text-right">Action</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {OPENAI_MODEL_PRESETS.map((m) => (
+                              <TableRow key={m.value}>
+                                <TableCell className="font-medium">{m.label}</TableCell>
+                                <TableCell>{m.notes || "-"}</TableCell>
+                                <TableCell className="text-right">
+                                  <Button
+                                    size="sm"
+                                    variant={form.watch("openaiModel") === m.value ? "default" : "outline"}
+                                    onClick={() => form.setValue("openaiModel", m.value, { shouldDirty: true })}
+                                  >
+                                    Use
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
+                </>
               )}
             </div>
           </div>

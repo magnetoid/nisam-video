@@ -6,7 +6,7 @@ import { storage } from "../storage/index.js";
 import { jobQueue } from "../services/job-queue.js";
 import { db } from "../db.js";
 import { scrapeJobs } from "../../shared/schema.js";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, and, sql } from "drizzle-orm";
 
 const router = Router();
 
@@ -487,7 +487,7 @@ router.post("/jobs/:id/pause", requireAuth, async (req, res) => {
     const jobId = req.params.id;
     await db.update(scrapeJobs)
       .set({ status: "cancelled", transitioning: false })
-      .where(eq(scrapeJobs.id, jobId) and eq(scrapeJobs.status, "running"));
+      .where(and(eq(scrapeJobs.id, jobId), eq(scrapeJobs.status, "running")));
     res.json({ success: true, message: "Job paused" });
   } catch (error: any) {
     console.error("Pause job error:", error);
@@ -513,7 +513,7 @@ router.post("/jobs/:id/retry", requireAuth, async (req, res) => {
     const jobId = req.params.id;
     const [updated] = await db.update(scrapeJobs)
       .set({ status: "pending", transitioning: true, errorMessage: null })
-      .where(eq(scrapeJobs.id, jobId) and eq(scrapeJobs.status, "failed"))
+      .where(and(eq(scrapeJobs.id, jobId), eq(scrapeJobs.status, "failed")))
       .returning();
     if (updated) {
       jobQueue.processQueue();
@@ -535,26 +535,34 @@ router.get("/analytics", requireAuth, async (req, res) => {
 
     const analytics = await db.execute(sql`
       SELECT 
-        date_trunc('day', startedAt) as date,
+        date_trunc('day', started_at) as date,
         COUNT(*) as jobCount,
-        SUM(videosAdded) as totalVideosAdded,
-        SUM(failedItems) as totalErrors,
+        SUM(videos_added) as totalVideosAdded,
+        SUM(failed_items) as totalErrors,
         COUNT(CASE WHEN status = 'completed' THEN 1 END) as completedJobs,
         COUNT(CASE WHEN status = 'failed' THEN 1 END) as failedJobs
       FROM scrape_jobs 
-      WHERE startedAt >= ${thirtyDaysAgo} AND deletedAt IS NULL
-      GROUP BY date_trunc('day', startedAt)
+      WHERE started_at >= ${thirtyDaysAgo} AND deleted_at IS NULL
+      GROUP BY date_trunc('day', started_at)
       ORDER BY date DESC
     `);
 
-    const data = (analytics.rows as any[]).map(row => ({
-      date: row.date.toISOString().split('T')[0],
-      jobCount: row.jobcount,
-      totalVideosAdded: parseInt(row.totalvideosadded || 0),
-      totalErrors: parseInt(row.totalerrors || 0),
-      completedJobs: parseInt(row.completedjobs || 0),
-      failedJobs: parseInt(row.failedjobs || 0),
-    }));
+    const data = (analytics.rows as any[]).map((row) => {
+      const d = row?.date instanceof Date ? row.date : new Date(row?.date);
+      const date =
+        d instanceof Date && !Number.isNaN(d.getTime())
+          ? d.toISOString().slice(0, 10)
+          : String(row?.date ?? "").slice(0, 10);
+
+      return {
+        date,
+        jobCount: parseInt(row.jobcount || 0),
+        totalVideosAdded: parseInt(row.totalvideosadded || 0),
+        totalErrors: parseInt(row.totalerrors || 0),
+        completedJobs: parseInt(row.completedjobs || 0),
+        failedJobs: parseInt(row.failedjobs || 0),
+      };
+    });
 
     res.json({ periodDays, data });
   } catch (error: any) {

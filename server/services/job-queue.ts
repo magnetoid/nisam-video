@@ -1,13 +1,14 @@
 import { db } from "../db.js";
-import { scrapeJobs, channels, videos, type ScrapeJob } from "../../shared/schema.js";
-import { eq, sql } from "drizzle-orm";
+import { scrapeJobs, channels, type ScrapeJob } from "../../shared/schema.js";
+import { eq } from "drizzle-orm";
 import { scrapeYouTubeChannel } from "../scraper.js";
+import { scrapeTikTokProfile } from "../tiktok-scraper.js"; // Added TikTok support
 import { recordError } from "../error-log-service.js";
-import { categorizeVideo } from "../ai-service.js";
-import { generateSlug, ensureUniqueSlug } from "../utils.js";
 import { storage } from "../storage/index.js";
 import { invalidateChannelCaches, invalidateVideoContentCaches } from "../cache-invalidation.js";
 import { appendScrapeJobLog } from "../scrape-job-logs.js";
+import { processScrapedVideos } from "../video-ingestion.js"; // Import shared logic
+import { logger } from "../lib/logger.js"; // Use structured logger
 
 // Job States
 export type JobStatus = "pending" | "running" | "completed" | "failed" | "cancelled";
@@ -68,7 +69,7 @@ export class JobQueue {
         await this.runJob(job);
       }
     } catch (error) {
-      console.error("Job Queue Error:", error);
+      logger.error("Job Queue Error", error);
     } finally {
       this.isProcessing = false;
     }
@@ -89,7 +90,7 @@ export class JobQueue {
 
       await this.updateJobStatus(job.id, "completed", "Job completed successfully.", false);
     } catch (error: any) {
-      console.error(`Job ${job.id} failed:`, error);
+      logger.error(`Job ${job.id} failed`, error);
       await this.updateJobStatus(job.id, "failed", `Job failed: ${error.message}`, false);
       await recordError({
         level: "error",
@@ -107,14 +108,17 @@ export class JobQueue {
     let processed = 0;
     let failed = 0;
 
+    // Process sequentially to avoid overwhelming the system
+    // Could be optimized with p-map if needed, but full sync is rare
     for (const channel of allChannels) {
       try {
         await this.log(job.id, `Scanning channel: ${channel.name}`);
-        await this.scrapeChannel(channel, job.isIncremental);
+        await this.scrapeChannel(channel, job.isIncremental, job.id);
         processed++;
       } catch (e: any) {
         failed++;
         await this.log(job.id, `Failed to scan ${channel.name}: ${e.message}`);
+        logger.error(`Failed to scan channel ${channel.id}`, e);
       }
       await this.updateJobProgress(job.id, processed, allChannels.length, processed, failed);
     }
@@ -133,65 +137,51 @@ export class JobQueue {
 
   private async scrapeChannel(channel: any, incremental: boolean, jobId?: string) {
     // 1. Get existing video IDs to avoid duplicates
-    const existingVideos = await db.select({ videoId: videos.videoId }).from(videos).where(eq(videos.channelId, channel.id));
-    const existingIds = new Set(existingVideos.map(v => v.videoId));
+    const existingVideoIdsList = await storage.getVideoIdsByChannel(channel.id);
+    const existingIds = new Set(existingVideoIdsList);
 
     // 2. Scrape
     if (jobId) await this.log(jobId, `Fetching videos from ${channel.url}...`);
     
-    const { videos: scrapedVideos } = await scrapeYouTubeChannel(channel.url, {
-      existingVideoIds: existingIds,
-      incremental
-    });
+    const platform = channel.platform === "tiktok" ? "tiktok" : "youtube";
+    let scrapedVideos: any[] = [];
+
+    if (platform === "tiktok") {
+      const result = await scrapeTikTokProfile(channel.url);
+      scrapedVideos = result.videos;
+    } else {
+      const { videos: ytVideos } = await scrapeYouTubeChannel(channel.url, {
+        existingVideoIds: existingIds,
+        incremental
+      });
+      scrapedVideos = ytVideos;
+    }
 
     if (jobId) await this.log(jobId, `Found ${scrapedVideos.length} new videos.`);
 
-    // 3. Save Videos & Process AI
-    let savedCount = 0;
-    
-    for (const videoData of scrapedVideos) {
-      // Double check existence
-      if (existingIds.has(videoData.videoId)) continue;
+    // 3. Save Videos & Process AI using shared logic
+    const result = await processScrapedVideos(scrapedVideos, {
+      channelId: channel.id,
+      platform,
+      runCategorization: true // Manual jobs typically want immediate categorization
+    });
 
-      // Generate slug
-      const slug = ensureUniqueSlug(generateSlug(videoData.title), []); // Simple check, real unique check happens on insert usually or explicit check
-
-      const [newVideo] = await db.insert(videos).values({
-        channelId: channel.id,
-        videoId: videoData.videoId,
-        title: videoData.title,
-        description: videoData.description,
-        thumbnailUrl: videoData.thumbnailUrl,
-        duration: videoData.duration,
-        viewCount: videoData.viewCount,
-        publishDate: videoData.publishDate,
-        videoType: videoData.videoType,
-        slug: slug, // Might need better collision handling
-      }).returning();
-
-      // AI Categorization (Async, don't block job too long)
-      // We can fire and forget, or wait. For robustness, we wait but with short timeout
-      try {
-        const aiResult = await categorizeVideo(newVideo.title, newVideo.description || "");
-        
-        // Save categories/tags (simplified logic)
-        // In real app, reuse storage.addVideoCategory logic
-        // This part is skipped for brevity, relying on the fact that the video is saved.
-        // You might want to create a separate "AI Processing" job for these.
-      } catch (e) {
-        console.warn(`AI failed for ${newVideo.title}`, e);
+    if (jobId) {
+      await this.log(jobId, `Saved ${result.savedCount} videos. Errors: ${result.errors.length}`);
+      if (result.errors.length > 0) {
+        for (const err of result.errors.slice(0, 5)) { // Log first 5 errors
+          await this.log(jobId, `Error: ${err}`);
+        }
       }
-
-      savedCount++;
     }
 
     // Update channel stats
     await db.update(channels).set({
       lastScraped: new Date(),
-      videoCount: (channel.videoCount || 0) + savedCount
+      videoCount: (channel.videoCount || 0) + result.savedCount
     }).where(eq(channels.id, channel.id));
 
-    if (savedCount > 0) {
+    if (result.savedCount > 0) {
       invalidateVideoContentCaches();
     }
     invalidateChannelCaches();

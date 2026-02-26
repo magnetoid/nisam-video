@@ -1,8 +1,20 @@
 import { Router } from "express";
 import { scheduler } from "../scheduler.js";
 import { requireAuth } from "../middleware/auth.js";
+import { storage } from "../storage/index.js";
+import { logger } from "../lib/logger.js";
 
 const router = Router();
+
+router.get("/jobs", requireAuth, async (req, res) => {
+  try {
+    const jobs = await storage.getRecentScrapeJobs(20);
+    res.json(jobs);
+  } catch (error) {
+    logger.error("Get scrape jobs error:", error);
+    res.status(500).json({ error: "Failed to fetch scrape jobs" });
+  }
+});
 
 router.get("/", async (req, res) => {
   try {
@@ -10,7 +22,7 @@ router.get("/", async (req, res) => {
     const status = scheduler.getStatus();
     res.json({ ...settings, ...status });
   } catch (error) {
-    console.error("Get scheduler error:", error);
+    logger.error("Get scheduler error:", error);
     res.status(500).json({ error: "Failed to fetch scheduler status" });
   }
 });
@@ -21,7 +33,7 @@ router.post("/start", requireAuth, async (req, res) => {
     const settings = await scheduler.getSettings();
     res.json({ success: true, settings });
   } catch (error) {
-    console.error("Start scheduler error:", error);
+    logger.error("Start scheduler error:", error);
     res.status(500).json({ error: "Failed to start scheduler" });
   }
 });
@@ -32,7 +44,7 @@ router.post("/stop", requireAuth, async (req, res) => {
     const settings = await scheduler.getSettings();
     res.json({ success: true, settings });
   } catch (error) {
-    console.error("Stop scheduler error:", error);
+    logger.error("Stop scheduler error:", error);
     res.status(500).json({ error: "Failed to stop scheduler" });
   }
 });
@@ -50,20 +62,17 @@ router.patch("/", requireAuth, async (req, res) => {
 
     res.json(settings);
   } catch (error) {
-    console.error("Update scheduler error:", error);
+    logger.error("Update scheduler error:", error);
     res.status(500).json({ error: "Failed to update scheduler" });
   }
 });
 
 router.post("/run-now", requireAuth, async (req, res) => {
   try {
-    // Run scrape job immediately (don't await to return response quickly)
-    scheduler.runScrapeJob().catch((error) => {
-      console.error("Manual scrape job error:", error);
-    });
-    res.json({ success: true, message: "Scrape job started" });
+    await scheduler.runScrapeJob({ source: "manual", maxBatchSize: 1, retries: 1 });
+    res.json({ success: true, message: "Scrape job completed" });
   } catch (error) {
-    console.error("Run scheduler error:", error);
+    logger.error("Run scheduler error:", error);
     res.status(500).json({ error: "Failed to run scheduler" });
   }
 });

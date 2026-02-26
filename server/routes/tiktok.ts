@@ -114,35 +114,93 @@ router.post("/:id/scrape", requireAuth, async (req, res) => {
           video.description || "",
         );
 
-        for (const categoryName of result.categories) {
-          const categorySlug = categoryName
+        const categoriesEn = result.categories.en || [];
+        const categoriesSr = result.categories.sr || [];
+        const maxCategories = Math.max(categoriesEn.length, categoriesSr.length);
+
+        for (let i = 0; i < maxCategories; i++) {
+          const nameEn = categoriesEn[i];
+          const nameSr = categoriesSr[i];
+          
+          if (!nameEn) continue;
+
+          const categorySlug = nameEn
             .toLowerCase()
             .replace(/[^a-z0-9]+/g, "-");
+            
           let category = await storage.getLocalizedCategoryBySlug(categorySlug, 'en');
 
           if (!category) {
-            category = await storage.createCategory({}, [{
+            const translations = [];
+            translations.push({
               languageCode: 'en',
-              name: categoryName,
+              name: nameEn,
               slug: categorySlug,
-            }]);
+              description: null
+            });
+            
+            if (nameSr) {
+              translations.push({
+                languageCode: 'sr-Latn',
+                name: nameSr,
+                slug: categorySlug,
+                description: null
+              });
+            }
+
+            category = await storage.createCategory({}, translations);
+          } else if (nameSr) {
+             try {
+                await storage.addCategoryTranslation(category.id, {
+                  categoryId: category.id,
+                  languageCode: 'sr-Latn',
+                  name: nameSr,
+                  slug: categorySlug,
+                  description: null
+                }).catch(() => {});
+             } catch (e) {
+               // Ignore
+             }
           }
 
           await storage.addVideoCategory(video.id, category.id);
         }
 
-        for (const tagName of result.tags) {
+        const tagsEn = result.tags.en || [];
+        const tagsSr = result.tags.sr || [];
+        const maxTags = Math.max(tagsEn.length, tagsSr.length);
+
+        for (let i = 0; i < maxTags; i++) {
+          const tagEn = tagsEn[i];
+          const tagSr = tagsSr[i];
+          
+          if (!tagEn) continue;
+
+          const translations = [{
+            languageCode: 'en',
+            tagName: tagEn
+          }];
+
+          if (tagSr) {
+             translations.push({
+               languageCode: 'sr-Latn',
+               tagName: tagSr
+             });
+          }
+
           await storage.createTag({
             videoId: video.id,
-          }, [{
-            languageCode: 'en',
-            tagName,
-          }]);
+          }, translations);
         }
 
         console.log(`[tiktok] Categorized: ${video.title}`);
       } catch (error) {
-        console.error(`[tiktok] Failed to categorize video ${videoId}:`, error);
+        const message = error instanceof Error ? error.message : String(error);
+        if (message.includes("Cannot connect to localhost Ollama on Vercel")) {
+          console.warn(`[tiktok] Skipping categorization (AI unavailable) for ${videoId}: ${message}`);
+        } else {
+          console.error(`[tiktok] Failed to categorize video ${videoId}:`, error);
+        }
       }
     }
 

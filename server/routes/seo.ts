@@ -6,8 +6,47 @@ import { z } from "zod";
 import { seoSettings, seoRedirects, seoMetaTags, seoKeywords, seoAuditLogs, seoABTests, seoCompetitors } from "../../shared/schema.js";
 import { eq, and, desc, asc, sql } from "drizzle-orm";
 import { db, isDbReady } from "../db.js";
+import { generateSlug } from "../utils.js";
 
 const router = Router();
+
+function isMissingRelationError(error: unknown) {
+  const anyErr = error as any;
+  const code = anyErr?.code;
+  const message = anyErr?.message ? String(anyErr.message) : String(error);
+  if (code === "42P01") return true;
+  const msg = message.toLowerCase();
+  return msg.includes("relation") && msg.includes("does not exist") && msg.includes("seo_");
+}
+
+function emptyPagination(page: number, limit: number) {
+  return {
+    page,
+    limit,
+    total: 0,
+    totalPages: 0,
+  };
+}
+
+router.get("/meta-tags", async (req, res) => {
+  const { pageUrl } = req.query as { pageUrl?: string };
+  if (!pageUrl) return res.json([]);
+  if (!isDbReady()) return res.json([]);
+
+  try {
+    const tags = await db
+      .select()
+      .from(seoMetaTags)
+      .where(and(eq(seoMetaTags.pageUrl, pageUrl), eq(seoMetaTags.isActive, true)))
+      .orderBy(desc(seoMetaTags.createdAt))
+      .limit(1);
+    res.json(tags);
+  } catch (error) {
+    if (isMissingRelationError(error)) return res.json([]);
+    console.warn("Get meta tags error:", error);
+    res.json([]);
+  }
+});
 
 // Enhanced SEO settings schema
 const seoSettingsSchema = z.object({
@@ -158,6 +197,10 @@ router.get("/enhanced/settings", async (req, res) => {
       res.json(settings);
     }
   } catch (error) {
+    if (isMissingRelationError(error)) {
+      const settings = await storage.getSeoSettings().catch(() => null);
+      return res.json(settings || {});
+    }
     console.error("Get enhanced SEO settings error:", error);
     res.status(500).json({ error: "Failed to fetch SEO settings" });
   }
@@ -410,6 +453,11 @@ router.get("/enhanced/redirects", async (req, res) => {
       }
     });
   } catch (error) {
+    const safeLimit = Math.max(1, Math.min(200, Number(req.query.limit) || 50));
+    const safePage = Math.max(1, Number(req.query.page) || 1);
+    if (isMissingRelationError(error)) {
+      return res.json({ redirects: [], pagination: emptyPagination(safePage, safeLimit) });
+    }
     console.error("Get redirects error:", error);
     res.status(500).json({ error: "Failed to fetch redirects" });
   }
@@ -525,6 +573,11 @@ router.get("/enhanced/keywords", async (req, res) => {
       }
     });
   } catch (error) {
+    const safeLimit = Math.max(1, Math.min(200, Number(req.query.limit) || 50));
+    const safePage = Math.max(1, Number(req.query.page) || 1);
+    if (isMissingRelationError(error)) {
+      return res.json({ keywords: [], pagination: emptyPagination(safePage, safeLimit) });
+    }
     console.error("Get keywords error:", error);
     res.status(500).json({ error: "Failed to fetch keywords" });
   }
@@ -630,6 +683,11 @@ router.get("/enhanced/audits", async (req, res) => {
       }
     });
   } catch (error) {
+    const safeLimit = Math.max(1, Math.min(200, Number(req.query.limit) || 50));
+    const safePage = Math.max(1, Number(req.query.page) || 1);
+    if (isMissingRelationError(error)) {
+      return res.json({ audits: [], pagination: emptyPagination(safePage, safeLimit) });
+    }
     console.error("Get audits error:", error);
     res.status(500).json({ error: "Failed to fetch audits" });
   }
@@ -693,6 +751,11 @@ router.get("/enhanced/ab-tests", async (req, res) => {
       }
     });
   } catch (error) {
+    const safeLimit = Math.max(1, Math.min(200, Number(req.query.limit) || 50));
+    const safePage = Math.max(1, Number(req.query.page) || 1);
+    if (isMissingRelationError(error)) {
+      return res.json({ abTests: [], pagination: emptyPagination(safePage, safeLimit) });
+    }
     console.error("Get A/B tests error:", error);
     res.status(500).json({ error: "Failed to fetch A/B tests" });
   }
@@ -757,6 +820,11 @@ router.get("/enhanced/competitors", async (req, res) => {
       }
     });
   } catch (error) {
+    const safeLimit = Math.max(1, Math.min(200, Number(req.query.limit) || 50));
+    const safePage = Math.max(1, Number(req.query.page) || 1);
+    if (isMissingRelationError(error)) {
+      return res.json({ competitors: [], pagination: emptyPagination(safePage, safeLimit) });
+    }
     console.error("Get competitors error:", error);
     res.status(500).json({ error: "Failed to fetch competitors" });
   }
@@ -789,11 +857,27 @@ router.post("/enhanced/competitors", requireAuth, async (req, res) => {
 // Generate XML sitemap
 router.get("/enhanced/sitemap", async (req, res) => {
   try {
-    const videos = await storage.getAllVideos();
-    const categories = await storage.getAllLocalizedCategories("en");
-    const tags = await storage.getAllLocalizedTags("en");
-    
     const baseUrl = "https://nisam.video";
+    const lang = typeof req.query.lang === "string" ? req.query.lang : "en";
+    const includeVideos = String(req.query.includeVideos ?? "1") !== "0";
+    const includeCategories = String(req.query.includeCategories ?? "1") !== "0";
+    const includeTags = String(req.query.includeTags ?? "1") !== "0";
+    const includeChannels = String(req.query.includeChannels ?? "1") !== "0";
+    const maxVideosRaw = typeof req.query.maxVideos === "string" ? req.query.maxVideos : "";
+    const maxVideos = Number.isFinite(parseInt(maxVideosRaw || "", 10)) ? Math.max(0, parseInt(maxVideosRaw, 10)) : 0;
+
+    const [videos, categories, tags, channels] = await Promise.all([
+      includeVideos && maxVideos !== 0
+        ? storage.getAllVideos({
+            lang,
+            limit: maxVideos > 0 ? maxVideos : undefined,
+            sort: "createdAt",
+          })
+        : Promise.resolve([]),
+      includeCategories ? storage.getAllLocalizedCategories(lang) : Promise.resolve([]),
+      includeTags ? storage.getAllLocalizedTags(lang) : Promise.resolve([]),
+      includeChannels ? storage.getAllChannels() : Promise.resolve([]),
+    ]);
     
     let sitemap = '<?xml version="1.0" encoding="UTF-8"?>\n';
     sitemap += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" ';
@@ -804,6 +888,12 @@ router.get("/enhanced/sitemap", async (req, res) => {
     sitemap += `    <loc>${baseUrl}/</loc>\n`;
     sitemap += "    <changefreq>daily</changefreq>\n";
     sitemap += "    <priority>1.0</priority>\n";
+    sitemap += "  </url>\n";
+
+    sitemap += "  <url>\n";
+    sitemap += `    <loc>${baseUrl}/channels</loc>\n`;
+    sitemap += "    <changefreq>weekly</changefreq>\n";
+    sitemap += "    <priority>0.7</priority>\n";
     sitemap += "  </url>\n";
     
     // Add video pages
@@ -840,9 +930,19 @@ router.get("/enhanced/sitemap", async (req, res) => {
     // Add tag pages
     for (const tag of tags) {
       sitemap += "  <url>\n";
-      sitemap += `    <loc>${baseUrl}/tag/${tag.slug}</loc>\n`;
+      const tagSlug = encodeURIComponent(String((tag as any).tagName || "").trim().replace(/\s+/g, "-"));
+      sitemap += `    <loc>${baseUrl}/tag/${tagSlug}</loc>\n`;
       sitemap += "    <changefreq>weekly</changefreq>\n";
       sitemap += "    <priority>0.5</priority>\n";
+      sitemap += "  </url>\n";
+    }
+
+    for (const channel of channels) {
+      const slug = `${generateSlug(channel.name, 80)}-${channel.id}`;
+      sitemap += "  <url>\n";
+      sitemap += `    <loc>${baseUrl}/channels/${slug}</loc>\n`;
+      sitemap += "    <changefreq>weekly</changefreq>\n";
+      sitemap += "    <priority>0.6</priority>\n";
       sitemap += "  </url>\n";
     }
     

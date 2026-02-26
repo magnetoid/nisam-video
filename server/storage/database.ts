@@ -59,7 +59,7 @@ import {
   type Tag
 } from "../../shared/schema.js";
 import { db } from "../db.js";
-import { eq, like, and, or, isNull, lte, gte, inArray, sql, desc } from "drizzle-orm";
+import { eq, like, and, or, isNull, lte, gte, inArray, notInArray, sql, desc } from "drizzle-orm";
 import { cache } from "../cache.js";
 import { invalidateChannelCaches, invalidateVideoContentCaches } from "../cache-invalidation.js";
 import { IStorage } from "./types.js";
@@ -172,6 +172,18 @@ export class DatabaseStorage implements IStorage {
       invalidateChannelCaches();
       return channel;
     } catch (error) {
+      const err = error as any;
+      if (
+        err?.code === "23505" &&
+        (err?.constraint === "channels_url_unique" || String(err?.detail || "").includes("(url)=") )
+      ) {
+        const [existing] = await db
+          .select()
+          .from(channels)
+          .where(eq(channels.url, insertChannel.url))
+          .limit(1);
+        if (existing) return existing;
+      }
       console.error(`[storage] createChannel failed:`, error);
       throw error;
     }
@@ -395,6 +407,7 @@ export class DatabaseStorage implements IStorage {
     lang?: string;
     limit?: number;
     offset?: number;
+    sort?: "publishDate" | "createdAt";
   }): Promise<VideoWithLocalizedRelations[]> {
     const lang = filters?.lang || 'en';
     const cacheKey = `videos:all:${JSON.stringify(filters || {})}`;
@@ -431,7 +444,11 @@ export class DatabaseStorage implements IStorage {
         query = query.where(and(...conditions));
       }
 
-      query = query.orderBy(desc(videos.publishDate));
+      const sort = filters?.sort || "publishDate";
+      query =
+        sort === "createdAt"
+          ? query.orderBy(desc(videos.createdAt))
+          : query.orderBy(desc(videos.publishDate));
 
       if (filters?.limit) {
         query = query.limit(filters.limit);
@@ -890,6 +907,8 @@ export class DatabaseStorage implements IStorage {
 
     try {
       const now = new Date();
+      const heroSettings = await this.getHeroSettings();
+      const enableRandom = heroSettings?.enableRandom ?? true;
       
       // First, try to get admin-selected hero videos
       const heroEntries = await db
@@ -930,91 +949,101 @@ export class DatabaseStorage implements IStorage {
         } : null as any,
       }));
 
-      // If no admin-selected hero videos, fall back to analytics-based popular videos
+      // If no admin-selected hero videos, fall back to either popular or random
       if (result.length === 0) {
-        // 1. Try to get top 5 most viewed videos from the last 7 days (analytics)
-        const sevenDaysAgo = new Date();
-        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-
-        const analyticsVideos = await db
-          .select({
-            video: videos,
-            viewCount: sql<number>`count(${videoViews.id})`,
-          })
-          .from(videos)
-          .innerJoin(videoViews, eq(videos.id, videoViews.videoId))
-          .where(gte(videoViews.createdAt, sevenDaysAgo))
-          .groupBy(videos.id)
-          .orderBy(desc(sql`count(${videoViews.id})`))
-          .limit(5);
-
-        let selectedVideos = analyticsVideos.map(av => av.video);
-
-        // 2. If not enough analytics data (e.g. < 5 videos), fill with generally trending videos
-        if (selectedVideos.length < 5) {
-          const excludeIds = selectedVideos.map(v => v.id);
-          
-          // Use the trending formula but exclude already selected videos
-          const fillVideos = await db
+        if (enableRandom) {
+          const candidates = await db
             .select()
             .from(videos)
-            .where(
-              and(
-                sql`${videos.videoType} NOT IN ('youtube_short', 'tiktok')`,
-                excludeIds.length > 0 ? sql`${videos.id} NOT IN ${excludeIds}` : undefined
-              )
-            )
-            .orderBy(
-              sql<number>`(
-                COALESCE(CAST(NULLIF(REGEXP_REPLACE(${videos.viewCount}, '[^0-9]', '', 'g'), '') AS INTEGER), 0) * 0.3 +
-                COALESCE(${videos.internalViewsCount}, 0) * 50 +
-                COALESCE(${videos.likesCount}, 0) * 100
-              ) DESC`,
-              desc(videos.publishDate)
-            )
-            .limit(5 - selectedVideos.length);
-
-          selectedVideos = [...selectedVideos, ...fillVideos];
-        }
-
-        // 3. Last resort: If still < 5 (e.g. empty DB), fill with latest videos
-        if (selectedVideos.length < 5) {
-          const excludeIds = selectedVideos.map(v => v.id);
-          const latestFill = await db
-            .select()
-            .from(videos)
-            .where(
-              excludeIds.length > 0 ? sql`${videos.id} NOT IN ${excludeIds}` : undefined
-            )
+            .where(sql`${videos.videoType} NOT IN ('youtube_short', 'tiktok')`)
             .orderBy(desc(videos.createdAt))
-            .limit(5 - selectedVideos.length);
-            
-          selectedVideos = [...selectedVideos, ...latestFill];
-        }
+            .limit(10);
 
-        result = selectedVideos.map((video, index) => ({
-          id: `fallback-${index}`,
-          displayOrder: index,
-          videoId: video.id,
-          title: video.title,
-          description: video.description || "Check out this featured video",
-          buttonText: "Watch Now",
-          buttonLink: `/video/${video.slug || video.id}`,
-          thumbnailUrl: video.thumbnailUrl,
-          videoUrl: video.embedUrl,
-          duration: null,
-          startDate: null,
-          endDate: null,
-          isActive: 1,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          video: {
-            ...video,
-            channel: null as any, // Will be hydrated if needed, but here we just need basic info
-            tags: [],
-            categories: [],
-          },
-        }));
+          const shuffled = [...candidates].sort(() => 0.5 - Math.random());
+          const selected = shuffled.slice(0, 5);
+
+          result = selected.map((video, index) => ({
+            id: `fallback-${index}`,
+            displayOrder: index,
+            videoId: video.id,
+            title: video.title,
+            description: video.description || "Check out this featured video",
+            buttonText: "Watch Now",
+            buttonLink: `/video/${video.slug || video.id}`,
+            thumbnailUrl: video.thumbnailUrl,
+            videoUrl: video.embedUrl,
+            duration: null,
+            startDate: null,
+            endDate: null,
+            isActive: 1,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            video: {
+              ...video,
+              channel: null as any,
+              tags: [],
+              categories: [],
+            },
+          }));
+        } else {
+          const sevenDaysAgo = new Date();
+          sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+          const analyticsVideos = await db
+            .select({
+              video: videos,
+              viewCount: sql<number>`count(${videoViews.id})`,
+            })
+            .from(videos)
+            .innerJoin(videoViews, eq(videos.id, videoViews.videoId))
+            .where(gte(videoViews.createdAt, sevenDaysAgo))
+            .groupBy(videos.id)
+            .orderBy(desc(sql`count(${videoViews.id})`))
+            .limit(5);
+
+          let selectedVideos = analyticsVideos.map((av) => av.video);
+
+          if (selectedVideos.length < 5) {
+            const excludeIds = selectedVideos.map((v) => v.id);
+            const fillVideos = await db
+              .select()
+              .from(videos)
+              .where(
+                and(
+                  sql`${videos.videoType} NOT IN ('youtube_short', 'tiktok')`,
+                  excludeIds.length > 0 ? notInArray(videos.id, excludeIds) : undefined,
+                ),
+              )
+              .orderBy(desc(videos.createdAt))
+              .limit(5 - selectedVideos.length);
+
+            selectedVideos = [...selectedVideos, ...fillVideos];
+          }
+
+          result = selectedVideos.map((video, index) => ({
+            id: `fallback-${index}`,
+            displayOrder: index,
+            videoId: video.id,
+            title: video.title,
+            description: video.description || "Check out this featured video",
+            buttonText: "Watch Now",
+            buttonLink: `/video/${video.slug || video.id}`,
+            thumbnailUrl: video.thumbnailUrl,
+            videoUrl: video.embedUrl,
+            duration: null,
+            startDate: null,
+            endDate: null,
+            isActive: 1,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            video: {
+              ...video,
+              channel: null as any,
+              tags: [],
+              categories: [],
+            },
+          }));
+        }
       }
 
       cache.set(cacheKey, result, 300000); // 5 min cache
@@ -1033,6 +1062,8 @@ export class DatabaseStorage implements IStorage {
 
     try {
       const now = new Date();
+      const heroSettings = await this.getHeroSettings();
+      const enableRandom = heroSettings?.enableRandom ?? true;
 
       const configured = await db
         .select({ video: videos })
@@ -1052,19 +1083,54 @@ export class DatabaseStorage implements IStorage {
 
       if (selectedVideos.length < limit) {
         const excludeIds = selectedVideos.map((v) => v.id);
-        const randomFill = await db
-          .select()
-          .from(videos)
-          .where(
-            and(
-              sql`${videos.videoType} NOT IN ('youtube_short', 'tiktok')`,
-              excludeIds.length > 0 ? sql`${videos.id} NOT IN ${excludeIds}` : undefined,
-            ),
-          )
-          .orderBy(sql`RANDOM()`)
-          .limit(limit - selectedVideos.length);
+        if (enableRandom) {
+          const randomFill = await db
+            .select()
+            .from(videos)
+            .where(
+              and(
+                notInArray(videos.videoType, ["youtube_short", "tiktok"]),
+                excludeIds.length > 0 ? notInArray(videos.id, excludeIds) : undefined,
+              ),
+            )
+            .orderBy(sql`RANDOM()`)
+            .limit(limit - selectedVideos.length);
 
-        selectedVideos = [...selectedVideos, ...randomFill];
+          selectedVideos = [...selectedVideos, ...randomFill];
+        } else {
+          const trending = await this.getTrendingVideos(Math.max(limit, 10), lang).catch(() => []);
+          const popularFillIds = trending
+            .filter((v) => v.videoType !== "youtube_short" && v.videoType !== "tiktok")
+            .map((v) => v.id)
+            .filter((id) => !excludeIds.includes(id));
+
+          const popularIds = popularFillIds.slice(0, limit - selectedVideos.length);
+          if (popularIds.length > 0) {
+            const rows = await db
+              .select()
+              .from(videos)
+              .where(inArray(videos.id, popularIds));
+            const rowById = new Map(rows.map((r) => [r.id, r] as const));
+            const ordered = popularIds.map((id) => rowById.get(id)).filter(Boolean) as any[];
+            selectedVideos = [...selectedVideos, ...ordered];
+          }
+
+          if (selectedVideos.length < limit) {
+            const newExclude = selectedVideos.map((v) => v.id);
+            const latestFill = await db
+              .select()
+              .from(videos)
+              .where(
+                and(
+                  notInArray(videos.videoType, ["youtube_short", "tiktok"]),
+                  newExclude.length > 0 ? notInArray(videos.id, newExclude) : undefined,
+                ),
+              )
+              .orderBy(desc(videos.createdAt))
+              .limit(limit - selectedVideos.length);
+            selectedVideos = [...selectedVideos, ...latestFill];
+          }
+        }
       }
 
       const hydrated = await this.hydrateVideosWithRelations(selectedVideos, lang);
@@ -1127,7 +1193,7 @@ export class DatabaseStorage implements IStorage {
       if (!settings) {
         // Create default
         const [newSettings] = await db.insert(heroSettings).values({
-          fallbackImages: sql`[]::jsonb`,
+          fallbackImages: sql`'[]'::jsonb`,
           rotationInterval: 4000,
           animationType: "fade",
           defaultPlaceholderUrl: null,
@@ -2084,13 +2150,27 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  async getRecentScrapeJobs(limit: number): Promise<ScrapeJob[]> {
+    try {
+      const jobs = await db
+        .select()
+        .from(scrapeJobs)
+        .orderBy(desc(scrapeJobs.startedAt))
+        .limit(limit);
+      return jobs;
+    } catch (error) {
+      console.error("[storage] getRecentScrapeJobs failed:", error);
+      return [];
+    }
+  }
+
   async getActiveScrapeJob(): Promise<ScrapeJob | undefined> {
     try {
       const [job] = await db
         .select()
         .from(scrapeJobs)
         .where(eq(scrapeJobs.status, "running"))
-        .orderBy(sql`${scrapeJobs.startedAt} DESC`)
+        .orderBy(desc(scrapeJobs.startedAt))
         .limit(1);
       return job || undefined;
     } catch (error) {

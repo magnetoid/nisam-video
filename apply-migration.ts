@@ -4,10 +4,10 @@ import fs from "fs";
 import path from "path";
 
 async function apply() {
-  const sqlFile = path.join(process.cwd(), "migrations", "0001_lucky_xavin.sql");
+  const sqlFile = path.join(process.cwd(), "migrations", "0006_fix_schema_sync.sql");
   const sqlContent = fs.readFileSync(sqlFile, "utf-8");
   
-  console.log("Applying migration 0001...");
+  console.log("Applying migration 0006...");
   
   if (!pool) {
       console.error("Pool not initialized");

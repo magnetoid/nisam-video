@@ -52,22 +52,39 @@ export const VideoCard = memo(function VideoCard({ video, onClick, variant = "ca
         zIndex: isHovered ? 10 : 1,
       }}
     >
-      <div className="relative aspect-video rounded-md overflow-hidden bg-muted">
+      <div className="relative aspect-video rounded-md overflow-hidden bg-muted group-hover:shadow-lg transition-all duration-300">
+        {/* Banner Background Layer - Only visible if banner exists */}
+        {video.channel?.bannerUrl && (
+           <div 
+             className="absolute inset-0 z-0 opacity-50 blur-lg scale-110 transition-transform duration-700 group-hover:scale-125"
+             style={{
+               backgroundImage: `url(${video.channel.bannerUrl})`,
+               backgroundSize: 'cover',
+               backgroundPosition: 'center',
+             }}
+           />
+        )}
+        
+        {/* Gradient Overlay for Banner */}
+        {video.channel?.bannerUrl && (
+          <div className="absolute inset-0 z-0 bg-gradient-to-r from-background/90 via-background/50 to-transparent" />
+        )}
+
         <img
           src={optimizedThumbnail}
           alt={video.title}
-          className="w-full h-full object-cover"
+          className={`w-full h-full object-cover relative z-1 transition-all duration-300 ${video.channel?.bannerUrl ? 'opacity-85 group-hover:opacity-100 scale-95 group-hover:scale-100 rounded-sm' : ''}`}
           loading="lazy"
           data-testid="img-thumbnail"
           onError={() => setImgError(true)}
         />
 
         <div
-          className={`absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent transition-all duration-200 ease-out ${
+          className={`absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent transition-all duration-200 ease-out z-10 ${
             isHovered ? "opacity-100" : "opacity-0"
           }`}
         >
-          <div className="absolute bottom-0 left-0 right-0 p-4 space-y-2">
+          <div className="absolute bottom-0 left-0 right-0 p-4 space-y-2 z-20">
             <h3
               className="font-semibold text-base line-clamp-2"
               data-testid="text-title"
@@ -87,7 +104,10 @@ export const VideoCard = memo(function VideoCard({ video, onClick, variant = "ca
 
             {video.tags && video.tags.length > 0 && (
               <div className="flex flex-wrap gap-1">
-                {video.tags.slice(0, 3).map((tag) => (
+                {video.tags
+                  .filter(tag => tag.tagName.toLowerCase() !== 'youtube') // Filter out "youtube" tag
+                  .slice(0, 3)
+                  .map((tag) => (
                   <Badge
                     key={tag.id}
                     variant="secondary"
@@ -103,7 +123,7 @@ export const VideoCard = memo(function VideoCard({ video, onClick, variant = "ca
         </div>
 
         <div
-          className={`absolute inset-0 flex items-center justify-center transition-all duration-200 ease-out ${
+          className={`absolute inset-0 flex items-center justify-center transition-all duration-200 ease-out z-10 ${
             isHovered ? "opacity-100 scale-100" : "opacity-0 scale-95"
           }`}
         >
@@ -113,14 +133,14 @@ export const VideoCard = memo(function VideoCard({ video, onClick, variant = "ca
         </div>
 
         {video.duration && (
-          <div className="absolute bottom-2 right-2 bg-black/90 px-2 py-1 rounded text-xs font-medium">
+          <div className="absolute bottom-2 right-2 bg-black/90 px-2 py-1 rounded text-xs font-medium z-10">
             {video.duration}
           </div>
         )}
       </div>
 
       {!isHovered && (
-        <div className="mt-2 space-y-1">
+        <div className="mt-2 space-y-1 relative z-20">
           <h3
             className="font-medium text-sm line-clamp-2"
             data-testid="text-title-static"
@@ -159,5 +179,5 @@ export const VideoCard = memo(function VideoCard({ video, onClick, variant = "ca
     };
   }, []);
 
-  return <Link href={`/video/${video.slug || video.id}`}>{content}</Link>;
+  return <Link href={`/video/${video.slug || video.id}`} className="block">{content}</Link>;
 });

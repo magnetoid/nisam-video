@@ -242,6 +242,25 @@ export default function AdminTags() {
   const handleFileSelect = async (tagName: string, file: File) => {
     setUploadingImage(tagName);
     try {
+      const blobRes = await fetch(
+        `/api/uploads/blob?folder=${encodeURIComponent(`tag-images/${tagName}`)}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": file.type || "application/octet-stream",
+            "X-Filename": file.name,
+          },
+          body: file,
+          credentials: "include",
+        },
+      );
+
+      if (blobRes.ok) {
+        const { url } = await blobRes.json();
+        uploadImageMutation.mutate({ tagName, imageUrl: url });
+        return;
+      }
+
       const response = await fetch("/api/uploads/request-url", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -250,6 +269,7 @@ export default function AdminTags() {
           size: file.size,
           contentType: file.type || "image/jpeg",
         }),
+        credentials: "include",
       });
 
       if (!response.ok) {
@@ -286,26 +306,21 @@ export default function AdminTags() {
   const sortedTags = [...filteredTags].sort((a, b) => b.count - a.count);
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <AdminSidebar />
-
-      <main className="ml-60 pt-16 p-8">
-        <div className="space-y-6">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h1
-                className="text-3xl font-bold flex items-center gap-2"
-                data-testid="text-page-title"
-              >
-                <TagIcon className="h-8 w-8" />
-                Tags Management
-              </h1>
-              <p className="text-muted-foreground mt-1">
-                View and manage video tags and their images
-              </p>
-            </div>
-          </div>
+    <div className="space-y-6">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1
+            className="text-3xl font-bold flex items-center gap-2"
+            data-testid="text-page-title"
+          >
+            <TagIcon className="h-8 w-8" />
+            Tags Management
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            View and manage video tags and their images
+          </p>
+        </div>
+      </div>
 
           {/* Stats */}
           <div className="grid gap-4 md:grid-cols-4">
@@ -548,8 +563,7 @@ export default function AdminTags() {
               )}
             </CardContent>
           </Card>
-        </div>
-      </main>
+      
 
       {/* Translate Dialog */}
       <Dialog

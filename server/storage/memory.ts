@@ -241,7 +241,16 @@ export class MemStorage implements IStorage {
     return this.getVideoWithRelations(video.id, lang);
   }
 
-  async getAllVideos(filters?: { channelId?: string; categoryId?: string; search?: string; tagName?: string; lang?: string }): Promise<VideoWithLocalizedRelations[]> {
+  async getAllVideos(filters?: {
+    channelId?: string;
+    categoryId?: string;
+    search?: string;
+    tagName?: string;
+    lang?: string;
+    limit?: number;
+    offset?: number;
+    sort?: "publishDate" | "createdAt";
+  }): Promise<VideoWithLocalizedRelations[]> {
     let videos = Array.from(this.videos.values());
     const lang = filters?.lang || 'en';
     
@@ -262,7 +271,20 @@ export class MemStorage implements IStorage {
         videos = videos.filter(v => videoIdsWithCategory.includes(v.id));
     }
 
-    videos.sort((a, b) => new Date(b.publishDate || 0).getTime() - new Date(a.publishDate || 0).getTime());
+    const sort = filters?.sort || "publishDate";
+    videos.sort((a, b) => {
+      if (sort === "createdAt") {
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      }
+      return new Date(b.publishDate || 0).getTime() - new Date(a.publishDate || 0).getTime();
+    });
+
+    if (filters?.offset) {
+      videos = videos.slice(filters.offset);
+    }
+    if (filters?.limit) {
+      videos = videos.slice(0, filters.limit);
+    }
 
     return Promise.all(videos.map(v => this.getVideoWithRelations(v.id, lang) as Promise<VideoWithLocalizedRelations>));
   }
@@ -778,6 +800,12 @@ export class MemStorage implements IStorage {
 
   async getScrapeJob(id: string): Promise<ScrapeJob | undefined> {
     return this.scrapeJobs.get(id);
+  }
+
+  async getRecentScrapeJobs(limit: number): Promise<ScrapeJob[]> {
+    return Array.from(this.scrapeJobs.values())
+      .sort((a, b) => new Date(b.startedAt || 0).getTime() - new Date(a.startedAt || 0).getTime())
+      .slice(0, limit);
   }
 
   async getActiveScrapeJob(): Promise<ScrapeJob | undefined> {

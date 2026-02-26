@@ -47,7 +47,33 @@ export const getQueryFn = <T,>({
   on401: UnauthorizedBehavior;
 }): QueryFunction<T> =>
   async ({ queryKey }) => {
-    const url = queryKey.join("/") as string;
+    let url = "";
+    const params: Record<string, string> = {};
+
+    // Process query key segments
+    for (const item of queryKey) {
+      if (typeof item === "object" && item !== null) {
+        // Assume object means query params
+        Object.entries(item).forEach(([key, value]) => {
+          if (value !== undefined && value !== null) {
+            params[key] = String(value);
+          }
+        });
+      } else if (typeof item === "string" || typeof item === "number") {
+        const segment = String(item);
+        if (url && !url.endsWith("/") && !segment.startsWith("/")) {
+          url += "/";
+        }
+        url += segment;
+      }
+    }
+
+    // Append query params
+    const searchParams = new URLSearchParams(params).toString();
+    if (searchParams) {
+      url += (url.includes("?") ? "&" : "?") + searchParams;
+    }
+
     const res = await fetch(url, {
       credentials: "include",
       headers: {
@@ -172,6 +198,24 @@ export const queryClient = new QueryClient({
     },
   },
 });
+
+export function invalidateContentQueries() {
+  queryClient.invalidateQueries({
+    predicate: (query) => {
+      const first = query.queryKey[0];
+      if (typeof first !== "string") return false;
+      return (
+        first.startsWith("/api/videos") ||
+        first.startsWith("/api/categories") ||
+        first.startsWith("/api/tags") ||
+        first.startsWith("/api/channels") ||
+        first.startsWith("/api/playlists") ||
+        first.startsWith("/api/system/settings") ||
+        first.startsWith("/api/seo-settings")
+      );
+    },
+  });
+}
 
 // Prefetch home page data on app load for faster initial render
 export function prefetchHomeData() {

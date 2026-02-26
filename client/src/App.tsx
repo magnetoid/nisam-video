@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, LazyExoticComponent, ComponentType, Component, ReactNode } from "react";
-import { Switch, Route } from "wouter";
+import { Switch, Route, Router as WouterRouter } from "wouter";
+import { useTranslation } from "react-i18next";
 import { queryClient, prefetchHomeData } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -9,9 +10,12 @@ import { CustomCodeInjector } from "@/components/CustomCodeInjector";
 import { AnalyticsTracker } from "@/components/AnalyticsTracker";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { ErrorReporter } from "@/components/ErrorReporter";
+import { DebugOverlay } from "@/components/DebugOverlay";
 import Home from "@/pages/Home";
 import VideoPage from "@/pages/VideoPage";
 import Categories from "@/pages/Categories";
+import Channels from "@/pages/Channels";
+import ChannelPage from "@/pages/ChannelPage";
 import Tags from "@/pages/Tags";
 import Popular from "@/pages/Popular";
 import Shorts from "@/pages/Shorts";
@@ -44,8 +48,8 @@ const adminPages = {
   about: lazy(() => import("@/pages/AdminAbout")),
   tiktok: lazy(() => import("@/pages/AdminTikTok")),
   hero: lazy(() => import("@/pages/AdminHeroManagement")),
-  clientLogs: lazy(() => import("@/pages/ClientLogs")),
   aiSettings: lazy(() => import("@/pages/AdminAISettings")),
+  debug: lazy(() => import("@/pages/AdminDebugDashboard")),
 };
 
 type AdminPageKey = keyof typeof adminPages;
@@ -75,8 +79,8 @@ const adminRoutes: AdminRouteConfig[] = [
   { path: "/admin/about", page: "about" },
   { path: "/admin/tiktok", page: "tiktok" },
   { path: "/admin/hero", page: "hero" },
-  { path: "/admin/client-logs", page: "clientLogs" },
   { path: "/admin/ai-settings", page: "aiSettings" },
+  { path: "/admin/debug", page: "debug" },
   { path: "/admin", page: "dashboard" },
 ];
 
@@ -109,6 +113,47 @@ async function clearCachesAndReload() {
   }
 
   window.location.reload();
+}
+
+class AppErrorBoundary extends Component<
+  { children: ReactNode },
+  { error: unknown | null }
+> {
+  state: { error: unknown | null } = { error: null };
+
+  static getDerivedStateFromError(error: unknown) {
+    return { error };
+  }
+
+  componentDidCatch(error: unknown, errorInfo: unknown) {
+    console.error("AppErrorBoundary caught an error:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="min-h-screen bg-background flex items-center justify-center p-6">
+          <div className="max-w-md w-full text-center space-y-4">
+            <h1 className="text-2xl font-bold text-foreground">Something went wrong</h1>
+            <p className="text-muted-foreground">
+              We encountered an unexpected error. Please try reloading the page.
+            </p>
+            <div className="p-4 bg-muted/50 rounded-lg text-left overflow-auto max-h-[200px] text-xs font-mono mb-4">
+              {this.state.error instanceof Error ? this.state.error.message : String(this.state.error)}
+            </div>
+            <button
+              className="inline-flex items-center justify-center rounded-md bg-primary text-primary-foreground px-4 py-2 text-sm font-medium hover:bg-primary/90"
+              onClick={() => window.location.reload()}
+            >
+              Reload Application
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
 }
 
 class AdminErrorBoundary extends Component<
@@ -158,24 +203,40 @@ class AdminErrorBoundary extends Component<
   }
 }
 
+import { AdminLayout } from "@/components/AdminLayout";
+
 function AdminRoute({ component: Component }: { component: LazyExoticComponent<ComponentType<any>> }) {
   return (
     <ProtectedRoute>
       <AdminErrorBoundary>
-        <Suspense fallback={<AdminLoadingFallback />}>
-          <Component />
-        </Suspense>
+        <AdminLayout>
+          <Suspense fallback={<AdminLoadingFallback />}>
+            <Component />
+          </Suspense>
+        </AdminLayout>
       </AdminErrorBoundary>
     </ProtectedRoute>
   );
 }
 
-function Router() {
+function LanguageWrapper({ lang, children }: { lang: string, children: ReactNode }) {
+  const { i18n } = useTranslation();
+  useEffect(() => {
+    if (i18n.language !== lang) {
+      i18n.changeLanguage(lang);
+    }
+  }, [lang, i18n]);
+  return <>{children}</>;
+}
+
+function AppRoutes() {
   return (
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/public/log" component={PublicLog} />
       <Route path="/video/:slug" component={VideoPage} />
+      <Route path="/channels/:slug" component={ChannelPage} />
+      <Route path="/channels" component={Channels} />
       <Route path="/categories" component={Categories} />
       <Route path="/category/:slug" component={CategoryPage} />
       <Route path="/tags" component={Tags} />
@@ -197,6 +258,28 @@ function Router() {
   );
 }
 
+function Router() {
+  return (
+    <Switch>
+      {/* English Routes */}
+      <Route path="/en/:rest*">
+        <WouterRouter base="/en">
+          <LanguageWrapper lang="en">
+            <AppRoutes />
+          </LanguageWrapper>
+        </WouterRouter>
+      </Route>
+
+      {/* Default (Serbian) Routes */}
+      <Route path="/:rest*">
+        <LanguageWrapper lang="sr-Latn">
+          <AppRoutes />
+        </LanguageWrapper>
+      </Route>
+    </Switch>
+  );
+}
+
 function App() {
   useEffect(() => {
     prefetchHomeData();
@@ -208,9 +291,12 @@ function App() {
         <TooltipProvider>
           <CustomCodeInjector />
           <ErrorReporter />
+          <DebugOverlay />
           <AnalyticsTracker>
             <Toaster />
-            <Router />
+            <AppErrorBoundary>
+              <Router />
+            </AppErrorBoundary>
           </AnalyticsTracker>
         </TooltipProvider>
       </ThemeProvider>

@@ -12,7 +12,17 @@ async function getOllamaConfig() {
     const config = settings[0];
     
     // Default to localhost if not set
-    const url = config?.ollamaUrl || "http://localhost:11434";
+    const rawUrl = (config?.ollamaUrl || "http://localhost:11434").trim();
+    const url = (() => {
+      if (!rawUrl) return "http://localhost:11434";
+      if (!/^https?:\/\//i.test(rawUrl)) return "http://localhost:11434";
+      try {
+        new URL(rawUrl);
+        return rawUrl;
+      } catch {
+        return "http://localhost:11434";
+      }
+    })();
     const model = config?.ollamaModel || "llama3";
     
     // Ensure URL doesn't have trailing slash
@@ -34,11 +44,11 @@ async function getOllamaConfig() {
   }
 }
 
-// Validation schemas
-const CategorizationSchema = z.object({
-  categories: z.array(z.string()).default([]),
-  tags: z.array(z.string()).default([]),
-});
+// Remove old schema
+// const CategorizationSchema = z.object({
+//   categories: z.array(z.string()).default([]),
+//   tags: z.array(z.string()).default([]),
+// });
 
 const SeoSchema = z.object({
   title: z.string().default(""),
@@ -85,9 +95,22 @@ async function ollamaGenerate(prompt: string, options: { model: string; url: str
 }
 
 export interface VideoCategorizationResult {
-  categories: string[];
-  tags: string[];
+  categories: {
+    en: string[];
+    sr: string[];
+  };
+  tags: {
+    en: string[];
+    sr: string[];
+  };
 }
+
+const CategorizationSchema = z.object({
+  categories_en: z.array(z.string()).default([]),
+  categories_sr: z.array(z.string()).default([]),
+  tags_en: z.array(z.string()).default([]),
+  tags_sr: z.array(z.string()).default([]),
+});
 
 export async function categorizeVideo(
   title: string,
@@ -103,19 +126,23 @@ export async function categorizeVideo(
         try {
           const config = await getOllamaConfig();
           
-          const prompt = `Analyze this video and provide categories and tags.
+          const prompt = `Analyze this video and provide categories and tags in both English and Serbian.
 
 Title: ${title}
 Description: ${description || "No description"}
 
 Return a JSON object with:
-- categories: array of 1-3 broad categories (e.g., "Technology", "Education", "Entertainment")
-- tags: array of 3-8 specific descriptive tags
+- categories_en: array of up to 5 broad categories in English
+- categories_sr: array of up to 5 broad categories in Serbian (Latin script)
+- tags_en: array of up to 5 specific descriptive tags in English
+- tags_sr: array of up to 5 specific descriptive tags in Serbian (Latin script)
 
 Example JSON:
 {
-  "categories": ["Technology"],
-  "tags": ["AI", "Coding", "Tutorial"]
+  "categories_en": ["Technology", "Education"],
+  "categories_sr": ["Tehnologija", "Obrazovanje"],
+  "tags_en": ["AI", "Coding"],
+  "tags_sr": ["Veštačka inteligencija", "Programiranje"]
 }
 
 Return ONLY valid JSON. Do not include markdown formatting or explanations.`;
@@ -136,21 +163,55 @@ Return ONLY valid JSON. Do not include markdown formatting or explanations.`;
             throw new Error(`Failed to parse JSON response: ${content.substring(0, 100)}...`);
           }
 
+          // Support legacy format fallback if model returns old format
+          if (result.categories && !result.categories_en) {
+             result.categories_en = result.categories;
+             result.categories_sr = [];
+          }
+          if (result.tags && !result.tags_en) {
+             result.tags_en = result.tags;
+             result.tags_sr = [];
+          }
+
           const parsed = CategorizationSchema.safeParse(result);
           if (!parsed.success) {
              throw new Error(`Invalid JSON schema: ${parsed.error.message}`);
           }
 
           return {
-            categories: parsed.data.categories,
-            tags: parsed.data.tags,
+            categories: {
+              en: parsed.data.categories_en,
+              sr: parsed.data.categories_sr
+            },
+            tags: {
+              en: parsed.data.tags_en,
+              sr: parsed.data.tags_sr
+            },
           };
         } catch (error: any) {
+          const message = typeof error?.message === "string" ? error.message : String(error);
+          const isProviderUnavailable =
+            message.includes("Cannot connect to localhost Ollama on Vercel") ||
+            message.includes("Failed to parse URL") ||
+            message.includes("ERR_INVALID_URL");
+
+          if (isProviderUnavailable) {
+            console.warn("Ollama categorization unavailable:", message);
+            await recordError({
+              level: "warn",
+              type: "ai_provider_unavailable",
+              message,
+              module: "ai-service",
+              context: { title }
+            });
+            throw new AbortError(new Error(message));
+          }
+
           console.error("Ollama categorization error:", error);
           await recordError({
             level: "error",
             type: "ai_categorization_failed",
-            message: error.message,
+            message,
             module: "ai-service",
             context: { title, error: String(error) }
           });
@@ -180,7 +241,10 @@ export async function batchCategorizeVideos(
           } catch (error: any) {
             console.error("Batch categorization error:", error);
             // Return empty fallback on failure
-            return { categories: [], tags: [] };
+            return { 
+              categories: { en: [], sr: [] }, 
+              tags: { en: [], sr: [] } 
+            };
           }
         },
         {

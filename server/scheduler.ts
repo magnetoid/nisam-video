@@ -6,6 +6,7 @@ import { scrapeTikTokProfile } from "./tiktok-scraper.js";
 import { storage } from "./storage.js";
 import { processScrapedVideos } from "./video-ingestion.js";
 import { appendScrapeJobLog } from "./scrape-job-logs.js";
+import { logger } from "./lib/logger.js";
 
 function sleep(ms: number) {
   return new Promise<void>((resolve) => setTimeout(resolve, ms));
@@ -56,7 +57,7 @@ class SchedulerService {
     await this.updateSettings({ isEnabled: 1 });
     await this.updateNextRunTime();
 
-    console.log(
+    logger.info(
       `[Scheduler] Started with interval: ${settings.intervalHours} hours (TZ: ${timezone})`,
     );
   }
@@ -70,17 +71,22 @@ class SchedulerService {
     // Clear next run time when stopping
     await storage.updateSchedulerSettings({ isEnabled: 0, nextRun: null });
 
-    console.log("[Scheduler] Stopped");
+    logger.info("[Scheduler] Stopped");
   }
 
-  async runScrapeJob() {
+  async runScrapeJob(options?: {
+    source?: "cron" | "manual" | "system";
+    batchSize?: number;
+    maxBatchSize?: number;
+    retries?: number;
+  }) {
     if (this.isRunning) {
-      console.log("[Scheduler] Scrape job already running, skipping...");
+      logger.info("[Scheduler] Scrape job already running, skipping...");
       return;
     }
 
     this.isRunning = true;
-    console.log("[Scheduler] Starting scrape job...");
+    logger.info("[Scheduler] Starting scrape job...");
 
     try {
       // Update last run time
@@ -89,10 +95,19 @@ class SchedulerService {
       const settings = await this.getSettings();
       const intervalHours = settings?.intervalHours || 6;
       const cutoffMs = Date.now() - intervalHours * 60 * 60 * 1000;
-      const maxBatchSize = process.env.VERCEL === "1" ? 2 : 50;
+      const maxBatchSize = Math.max(
+        1,
+        Math.min(
+          options?.maxBatchSize ?? (process.env.VERCEL === "1" ? 2 : 50),
+          50,
+        ),
+      );
       const batchSize = Math.max(
         1,
-        Math.min(maxBatchSize, parseInt(process.env.SCRAPE_BATCH_SIZE || "10", 10) || 10),
+        Math.min(
+          maxBatchSize,
+          options?.batchSize ?? (parseInt(process.env.SCRAPE_BATCH_SIZE || "10", 10) || 10),
+        ),
       );
 
       // Get all channels, then process incrementally based on lastScraped
@@ -109,7 +124,7 @@ class SchedulerService {
         });
 
       const batch = channelsNeedingScrape.slice(0, batchSize);
-      console.log(
+      logger.info(
         `[Scheduler] Incremental batch: ${batch.length}/${channelsNeedingScrape.length} channels due (total channels: ${allChannels.length}, cutoff: ${intervalHours}h)`,
       );
 
@@ -185,7 +200,7 @@ class SchedulerService {
 
           await pRetry(
             async () => {
-              console.log(`[Scheduler] Scraping ${channel.platform || 'youtube'} channel: ${channel.name}`);
+              logger.info(`[Scheduler] Scraping ${channel.platform || 'youtube'} channel: ${channel.name}`);
               
               let savedCount = 0;
               let videosFound = 0;
@@ -229,7 +244,7 @@ class SchedulerService {
               });
 
               scrapedCount++;
-              console.log(
+              logger.info(
                 `[Scheduler] Channel ${channel.name}: found ${videosFound}, saved ${savedCount} new videos`,
               );
               try {
@@ -243,11 +258,11 @@ class SchedulerService {
               } catch {}
             },
             {
-              retries: 3,
+              retries: Math.max(0, Math.min(5, options?.retries ?? 3)),
               minTimeout: 1000,
               maxTimeout: 5000,
               onFailedAttempt: (error) => {
-                console.log(
+                logger.warn(
                   `[Scheduler] Retry attempt ${error.attemptNumber} for channel ${channel.name}`,
                 );
               },
@@ -255,7 +270,7 @@ class SchedulerService {
           );
         } catch (error) {
           errorCount++;
-          console.error(
+          logger.error(
             `[Scheduler] Failed to scrape channel ${channel.name} after retries:`,
             error,
           );
@@ -291,7 +306,7 @@ class SchedulerService {
         }
       }
 
-      console.log(
+      logger.info(
         `[Scheduler] Scrape job completed. Scraped ${scrapedCount}/${batch.length} channels in batch. Errors: ${errorCount}. Remaining due: ${Math.max(0, channelsNeedingScrape.length - batch.length)}`,
       );
 
@@ -328,7 +343,7 @@ class SchedulerService {
         await this.updateNextRunTime();
       }
     } catch (error) {
-      console.error("[Scheduler] Scrape job failed:", error);
+      logger.error("[Scheduler] Scrape job failed:", error);
       try {
         const activeJob = await storage.getActiveScrapeJob();
         if (activeJob) {

@@ -76,19 +76,12 @@ export default function AdminChannels() {
   });
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <AdminSidebar />
-
-      <main className="ml-60 pt-16 p-8">
-        <ChannelManagement
-          channels={channels}
-          onAdd={(url, name) => addChannelMutation.mutate({ url, name })}
-          onScrape={(id) => scrapeChannelMutation.mutate(id)}
-          onDelete={(id) => deleteChannelMutation.mutate(id)}
-          isLoading={scrapeChannelMutation.isPending}
-        />
-      </main>
-    </div>
+    <ChannelManagement
+      channels={channels}
+      onAdd={(url, name) => addChannelMutation.mutate({ url, name })}
+      onScrape={(id) => scrapeChannelMutation.mutate(id)}
+      onDelete={(id) => deleteChannelMutation.mutate(id)}
+      isLoading={scrapeChannelMutation.isPending}
+    />
   );
 }

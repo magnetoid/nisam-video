@@ -171,12 +171,6 @@ export function AdminSidebar() {
       testId: "link-seo",
     },
     {
-      icon: Star,
-      label: "SEO Enhanced",
-      path: "/admin/seo/enhanced",
-      testId: "link-seo-enhanced",
-    },
-    {
       icon: Sliders,
       label: "System Settings",
       path: "/admin/settings",
@@ -190,9 +184,9 @@ export function AdminSidebar() {
     },
     {
       icon: Bug,
-      label: "Client Errors",
-      path: "/admin/client-logs",
-      testId: "link-client-logs",
+      label: "System Health & Logs",
+      path: "/admin/debug",
+      testId: "link-debug",
     },
   ];
 

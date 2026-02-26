@@ -21,6 +21,8 @@
     }
   ],
   "rewrites": [
+    { "source": "/sitemap.xml", "destination": "/api/index?path=seo/enhanced/sitemap" },
+    { "source": "/robots.txt", "destination": "/api/index?path=seo/enhanced/robots-txt" },
     { "source": "/api/(.*)", "destination": "/api/index?path=$1" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
@@ -29,5 +31,10 @@
       "path": "/api/cron/scrape",
       "schedule": "*/10 * * * *"
     }
-  ]
+  ],
+  "functions": {
+    "api/index.ts": {
+      "includeFiles": "migrations/**"
+    }
+  }
 }

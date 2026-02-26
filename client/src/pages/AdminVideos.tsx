@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Header } from "@/components/Header";
 import { AdminSidebar } from "@/components/AdminSidebar";
@@ -28,19 +28,38 @@ export default function AdminVideos() {
   );
   const [channelFilter, setChannelFilter] = useState<string | undefined>();
   const [categoryFilter, setCategoryFilter] = useState<string | undefined>();
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
 
-  const { data: videos = [] } = useQuery<VideoWithRelations[]>({
-    queryKey: ["/api/videos", channelFilter, categoryFilter],
+  useEffect(() => {
+    setPage(1);
+    setSelectedVideoIds([]);
+  }, [channelFilter, categoryFilter]);
+
+  useEffect(() => {
+    setSelectedVideoIds([]);
+  }, [page, pageSize]);
+
+  const { data: videos = [], isLoading: videosLoading, isFetching: videosFetching } = useQuery<VideoWithRelations[]>({
+    queryKey: ["/api/videos", channelFilter, categoryFilter, page, pageSize, "createdAt"],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (channelFilter) params.append("channelId", channelFilter);
       if (categoryFilter) params.append("categoryId", categoryFilter);
-      const url = `/api/videos${params.toString() ? `?${params.toString()}` : ""}`;
-      const response = await fetch(url);
+      params.append("limit", String(pageSize));
+      params.append("offset", String((page - 1) * pageSize));
+      params.append("sort", "createdAt");
+      const url = `/api/videos?${params.toString()}`;
+      const response = await fetch(url, { credentials: "include" });
       if (!response.ok) throw new Error("Failed to fetch videos");
       return response.json();
     },
+    staleTime: 0,
+    refetchOnMount: "always",
+    placeholderData: (prev) => prev,
   });
+
+  const hasNextPage = useMemo(() => videos.length === pageSize, [videos.length, pageSize]);
 
   const { data: channels = [] } = useQuery<Channel[]>({
     queryKey: ["/api/channels"],
@@ -270,42 +289,43 @@ export default function AdminVideos() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <AdminSidebar />
-
-      <main className="ml-60 pt-16 p-8">
-        <VideoManagement
-          videos={videos}
-          channels={channels}
-          categories={categories}
-          playlists={playlists}
-          selectedVideoIds={selectedVideoIds}
-          selectedChannelId={channelFilter}
-          selectedCategoryId={categoryFilter}
-          onView={setSelectedVideo}
-          onEdit={setEditingVideo}
-          onCategorize={(id) => categorizeVideoMutation.mutate(id)}
-          onDelete={(id) => deleteVideoMutation.mutate(id)}
-          onAddToPlaylist={(videoId, playlistId) =>
-            addToPlaylistMutation.mutate({ videoId, playlistId })
-          }
-          onToggleSelect={handleToggleSelect}
-          onSelectAll={handleSelectAll}
-          onDeselectAll={handleDeselectAll}
-          onBulkCategorize={handleBulkCategorize}
-          onBulkTag={handleBulkTag}
-          onBulkDelete={handleBulkDelete}
-          onChannelFilterChange={setChannelFilter}
-          onCategoryFilterChange={setCategoryFilter}
-          processingVideoIds={processingVideoIds}
-          isBulkProcessing={
-            bulkCategorizeMutation.isPending ||
-            bulkTagMutation.isPending ||
-            bulkDeleteMutation.isPending
-          }
-        />
-      </main>
+    <>
+      <VideoManagement
+        videos={videos}
+        channels={channels}
+        categories={categories}
+        playlists={playlists}
+        selectedVideoIds={selectedVideoIds}
+        selectedChannelId={channelFilter}
+        selectedCategoryId={categoryFilter}
+        page={page}
+        pageSize={pageSize}
+        hasNextPage={hasNextPage}
+        isLoading={videosLoading || videosFetching}
+        onView={setSelectedVideo}
+        onEdit={setEditingVideo}
+        onCategorize={(id) => categorizeVideoMutation.mutate(id)}
+        onDelete={(id) => deleteVideoMutation.mutate(id)}
+        onAddToPlaylist={(videoId, playlistId) =>
+          addToPlaylistMutation.mutate({ videoId, playlistId })
+        }
+        onToggleSelect={handleToggleSelect}
+        onSelectAll={handleSelectAll}
+        onDeselectAll={handleDeselectAll}
+        onBulkCategorize={handleBulkCategorize}
+        onBulkTag={handleBulkTag}
+        onBulkDelete={handleBulkDelete}
+        onChannelFilterChange={setChannelFilter}
+        onCategoryFilterChange={setCategoryFilter}
+        onPageChange={setPage}
+        onPageSizeChange={setPageSize}
+        processingVideoIds={processingVideoIds}
+        isBulkProcessing={
+          bulkCategorizeMutation.isPending ||
+          bulkTagMutation.isPending ||
+          bulkDeleteMutation.isPending
+        }
+      />
 
       <VideoDetailModal
         video={selectedVideo}
@@ -329,6 +349,6 @@ export default function AdminVideos() {
         }}
         isSaving={editVideoMutation.isPending}
       />
-    </div>
+    </>
   );
 }

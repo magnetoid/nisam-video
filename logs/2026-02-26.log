@@ -1,0 +1,26 @@
+{"timestamp":"2026-02-26T00:00:00.505Z","level":"info","message":"[Scheduler] Starting scrape job..."}
+{"timestamp":"2026-02-26T00:00:01.230Z","level":"info","message":"[Scheduler] Incremental batch: 2/2 channels due (total channels: 14, cutoff: 6h)"}
+{"timestamp":"2026-02-26T00:00:01.952Z","level":"info","message":"[Scheduler] Scraping youtube channel: Insajder"}
+{"timestamp":"2026-02-26T00:00:03.317Z","level":"info","message":"[Scheduler] Channel Insajder: found 0, saved 0 new videos"}
+{"timestamp":"2026-02-26T00:00:04.279Z","level":"info","message":"[Scheduler] Scraping youtube channel: Al Jazeera Balkan"}
+{"timestamp":"2026-02-26T00:00:04.768Z","level":"info","message":"[Scheduler] Channel Al Jazeera Balkan: found 0, saved 0 new videos"}
+{"timestamp":"2026-02-26T00:00:05.305Z","level":"info","message":"[Scheduler] Scrape job completed. Scraped 2/2 channels in batch. Errors: 0. Remaining due: 0"}
+{"timestamp":"2026-02-26T06:00:00.630Z","level":"info","message":"[Scheduler] Starting scrape job..."}
+{"timestamp":"2026-02-26T06:00:01.378Z","level":"info","message":"[Scheduler] Incremental batch: 3/3 channels due (total channels: 22, cutoff: 6h)"}
+{"timestamp":"2026-02-26T06:00:02.099Z","level":"info","message":"[Scheduler] Scraping youtube channel: Nedeljnik Vreme"}
+{"timestamp":"2026-02-26T06:00:03.147Z","level":"info","message":"[Scheduler] Channel Nedeljnik Vreme: found 0, saved 0 new videos"}
+{"timestamp":"2026-02-26T06:00:04.148Z","level":"info","message":"[Scheduler] Scraping youtube channel: Merila Vremena RTS"}
+{"timestamp":"2026-02-26T06:00:04.616Z","level":"info","message":"[Scheduler] Channel Merila Vremena RTS: found 0, saved 0 new videos"}
+{"timestamp":"2026-02-26T06:00:05.581Z","level":"info","message":"[Scheduler] Scraping youtube channel: Krik"}
+{"timestamp":"2026-02-26T06:00:06.059Z","level":"info","message":"[Scheduler] Channel Krik: found 0, saved 0 new videos"}
+{"timestamp":"2026-02-26T06:00:06.680Z","level":"info","message":"[Scheduler] Scrape job completed. Scraped 3/3 channels in batch. Errors: 0. Remaining due: 0"}
+{"timestamp":"2026-02-26T12:00:00.057Z","level":"info","message":"[Scheduler] Starting scrape job..."}
+{"timestamp":"2026-02-26T12:00:01.831Z","level":"info","message":"[Scheduler] Incremental batch: 2/2 channels due (total channels: 22, cutoff: 6h)"}
+{"timestamp":"2026-02-26T12:00:02.694Z","level":"info","message":"[Scheduler] Scraping youtube channel: Studenti U Blokadi"}
+{"timestamp":"2026-02-26T12:00:04.769Z","level":"info","message":"[Scheduler] Channel Studenti U Blokadi: found 0, saved 0 new videos"}
+{"timestamp":"2026-02-26T12:00:05.755Z","level":"info","message":"[Scheduler] Scraping youtube channel: RTV Vojvodina"}
+{"timestamp":"2026-02-26T12:00:09.005Z","level":"info","message":"[Scheduler] Channel RTV Vojvodina: found 16, saved 1 new videos"}
+{"timestamp":"2026-02-26T12:00:09.590Z","level":"info","message":"[Scheduler] Scrape job completed. Scraped 2/2 channels in batch. Errors: 0. Remaining due: 0"}
+{"timestamp":"2026-02-26T18:00:00.154Z","level":"info","message":"[Scheduler] Starting scrape job..."}
+{"timestamp":"2026-02-26T18:00:00.885Z","level":"info","message":"[Scheduler] Incremental batch: 0/0 channels due (total channels: 22, cutoff: 6h)"}
+{"timestamp":"2026-02-26T18:00:01.182Z","level":"info","message":"[Scheduler] Scrape job completed. Scraped 0/0 channels in batch. Errors: 0. Remaining due: 0"}

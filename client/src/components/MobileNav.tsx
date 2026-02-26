@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { useTranslation } from "react-i18next";
-import { Home, Grid3x3, Tags, TrendingUp, Settings, Smartphone } from "lucide-react";
+import { Home, Grid3x3, Tags, TrendingUp, Settings, Smartphone, Tv } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -22,6 +22,12 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
       label: t("nav.browse"),
       icon: Home,
       testId: "link-mobile-browse",
+    },
+    {
+      href: "/channels",
+      label: t("nav.channels"),
+      icon: Tv,
+      testId: "link-mobile-channels",
     },
     {
       href: "/categories",

@@ -243,7 +243,7 @@ export async function recordError(input: ErrorEventInput) {
       return memoryEvents.get(fingerprint);
     }
 
-    console.error("[error-logs] recordError failed:", error);
+    console.error("[error-logs] recordError failed", error);
     return null;
   }
 }

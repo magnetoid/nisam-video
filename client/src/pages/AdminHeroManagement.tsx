@@ -50,12 +50,16 @@ export default function AdminHeroManagement() {
   const [isImageEditOpen, setIsImageEditOpen] = useState(false);
 
   const { data: videos = [], isLoading: videosLoading } = useQuery<VideoWithRelations[]>({
-    queryKey: ['/api/videos', { search: searchTerm, type: filterType }],
+    queryKey: ['/api/videos', { search: searchTerm, filterType }],
     queryFn: async () => {
+      if (filterType === 'popular') {
+        const res = await apiRequest('GET', `/api/videos/carousels?limit=50&lang=en`);
+        const data = await res.json();
+        return (data?.trending || []) as VideoWithRelations[];
+      }
       const params = new URLSearchParams();
       if (searchTerm) params.append('search', searchTerm);
-      if (filterType !== 'all') params.append('type', filterType);
-      params.append('limit', '50');
+      params.append('limit', '200');
       const res = await apiRequest('GET', `/api/videos?${params.toString()}`);
       return res.json();
     },
@@ -294,10 +298,20 @@ export default function AdminHeroManagement() {
     setEditingImage(null);
   };
 
-  const filteredVideos = videos.filter(v => 
-    !heroItems.some(s => s.videoId === v.id) &&
-    (searchTerm === '' || v.title.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const filteredVideos = videos
+    .filter((v) => !heroItems.some((s) => s.videoId === v.id))
+    .filter((v) => (searchTerm === '' || v.title.toLowerCase().includes(searchTerm.toLowerCase())))
+    .filter((v) => {
+      if (filterType === 'all' || filterType === 'popular') return true;
+      return v.videoType === filterType;
+    });
+
+  const handleClearHeroVideos = useCallback(() => {
+    if (!confirm('Remove all custom hero videos? Home page will use fallback mode instead.')) return;
+    setIsSaving(true);
+    setHeroItems([]);
+    updateVideoMutation.mutate([]);
+  }, [updateVideoMutation]);
 
   const VideoItem = ({ video, onSelect }: { video: VideoWithRelations; onSelect: (v: VideoWithRelations) => void }) => (
     <Card className="flex gap-4 p-4 hover:shadow-md transition-shadow cursor-pointer" onClick={() => onSelect(video)} role="button" tabIndex={0} aria-label={`Select ${video.title}`}>
@@ -477,19 +491,27 @@ export default function AdminHeroManagement() {
 
           <div className="flex gap-8">
             <div className="flex items-center space-x-2">
-              <Switch 
-                checked={settingsForm.watch('enableRandom') || false}
+              <Switch
+                checked={settingsForm.watch('enableRandom') !== false}
                 onCheckedChange={(checked) => settingsForm.setValue('enableRandom', checked)}
               />
-              <Label>Enable Random Selection</Label>
+              <Label>Fallback Mode: Random</Label>
             </div>
             <div className="flex items-center space-x-2">
-              <Switch 
-                checked={settingsForm.watch('enableImages') || false}
-                onCheckedChange={(checked) => settingsForm.setValue('enableImages', checked)}
+              <Switch
+                checked={settingsForm.watch('enableRandom') === false}
+                onCheckedChange={(checked) => settingsForm.setValue('enableRandom', !checked)}
               />
-              <Label>Use Image Slider (vs Videos)</Label>
+              <Label>Fallback Mode: Popular</Label>
             </div>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <Switch 
+              checked={settingsForm.watch('enableImages') || false}
+              onCheckedChange={(checked) => settingsForm.setValue('enableImages', checked)}
+            />
+            <Label>Use Image Slider (vs Videos)</Label>
           </div>
 
           <Button onClick={onSubmit} className="w-full">
@@ -525,16 +547,13 @@ export default function AdminHeroManagement() {
   };
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <AdminSidebar />
-      <main className="flex-1 p-8 ml-[240px] pt-16">
-        <div className="max-w-7xl mx-auto space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold">Hero Management</h1>
-              <p className="text-muted-foreground">Configure videos, images, and slider settings</p>
-            </div>
-          </div>
+    <div className="max-w-7xl mx-auto space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Hero Management</h1>
+          <p className="text-muted-foreground">Configure videos, images, and slider settings</p>
+        </div>
+      </div>
 
           <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as HeroTab)} className="space-y-4">
             <TabsList className="grid w-full grid-cols-3">
@@ -562,6 +581,13 @@ export default function AdminHeroManagement() {
                 <div className="flex gap-2">
                   <Button onClick={() => setIsDialogOpen(true)} className="gap-2">
                     <Plus className="h-4 w-4" /> Add Video
+                  </Button>
+                  <Button
+                    onClick={handleClearHeroVideos}
+                    disabled={isSaving || heroItems.length === 0}
+                    variant="outline"
+                  >
+                    Remove All Custom
                   </Button>
                   <Button onClick={handleSaveVideos} disabled={isSaving || heroItems.length === 0} variant="default">
                     {isSaving ? 'Saving...' : 'Save Videos'}
@@ -627,6 +653,7 @@ export default function AdminHeroManagement() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">All Videos</SelectItem>
+                          <SelectItem value="popular">Popular</SelectItem>
                           <SelectItem value="regular">Regular</SelectItem>
                           <SelectItem value="youtube_short">Shorts</SelectItem>
                         </SelectContent>
@@ -908,8 +935,6 @@ export default function AdminHeroManagement() {
               <SettingsForm />
             </TabsContent>
           </Tabs>
-        </div>
-      </main>
     </div>
   );
 }

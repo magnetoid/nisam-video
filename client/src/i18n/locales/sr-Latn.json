@@ -5,11 +5,30 @@
   },
   "nav": {
     "browse": "Pretraži",
+    "channels": "Kanali",
     "categories": "Kategorije",
     "tags": "Tagovi",
     "popular": "Popularno",
     "donate": "Podrži",
     "admin": "Admin"
+  },
+  "channelsDirectory": {
+    "subtitle": "Pregled svih kanala",
+    "searchPlaceholder": "Pretraži kanale…",
+    "youtubeRail": "YouTube kanali",
+    "tiktokRail": "TikTok profili",
+    "allRail": "Svi kanali",
+    "videosCount": "{{count}} video",
+    "videosCount_plural": "{{count}} videa",
+    "emptyTitle": "Nema dostupnih kanala",
+    "emptyBody": "Kanali će se pojaviti ovde nakon što budu dodati.",
+    "errorTitle": "Nije moguće učitati kanale",
+    "retry": "Pokušaj ponovo"
+  },
+  "channelPage": {
+    "back": "Nazad na kanale",
+    "openExternal": "Otvori kanal",
+    "videosTitle": "Videi"
   },
   "search": {
     "placeholder": "Pretraži video sadržaj...",

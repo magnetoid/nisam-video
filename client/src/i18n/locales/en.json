@@ -5,11 +5,30 @@
   },
   "nav": {
     "browse": "Browse",
+    "channels": "Channels",
     "categories": "Categories",
     "tags": "Tags",
     "popular": "Popular",
     "donate": "Support",
     "admin": "Admin"
+  },
+  "channelsDirectory": {
+    "subtitle": "Browse all channels",
+    "searchPlaceholder": "Search channels…",
+    "youtubeRail": "YouTube Channels",
+    "tiktokRail": "TikTok Profiles",
+    "allRail": "All Channels",
+    "videosCount": "{{count}} video",
+    "videosCount_plural": "{{count}} videos",
+    "emptyTitle": "No channels available",
+    "emptyBody": "Channels will appear here once they are added.",
+    "errorTitle": "Couldn't load channels",
+    "retry": "Retry"
+  },
+  "channelPage": {
+    "back": "Back to Channels",
+    "openExternal": "Open Channel",
+    "videosTitle": "Videos"
   },
   "search": {
     "placeholder": "Search videos...",

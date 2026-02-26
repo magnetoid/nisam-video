@@ -8,6 +8,9 @@ import {
   type VideoWithLocalizedRelations,
   type HeroVideoWithVideo,
   type InsertHeroVideo,
+  type HeroSettings,
+  type HeroImage,
+  type InsertHeroImage,
   type LocalizedCategory,
   type InsertCategory,
   type InsertCategoryTranslation,
@@ -66,6 +69,7 @@ export interface IStorage {
     lang?: string;
     limit?: number;
     offset?: number;
+    sort?: "publishDate" | "createdAt";
   }): Promise<VideoWithLocalizedRelations[]>;
   updateVideo(id: string, data: Partial<Video>): Promise<Video | undefined>;
   deleteVideo(id: string): Promise<void>;
@@ -84,6 +88,10 @@ export interface IStorage {
   getActiveHeroVideos(): Promise<HeroVideoWithVideo[]>;
   getHomeHeroVideos(limit: number, lang?: string): Promise<VideoWithLocalizedRelations[]>;
   updateHeroVideos(heroVideos: InsertHeroVideo[]): Promise<HeroVideoWithVideo[]>;
+  getHeroSettings(): Promise<HeroSettings | null>;
+  updateHeroSettings(data: Partial<HeroSettings>): Promise<HeroSettings>;
+  getHeroImages(): Promise<HeroImage[]>;
+  upsertHeroImage(image: InsertHeroImage): Promise<HeroImage>;
   
   // Shorts (YouTube Shorts and TikTok)
   getShorts(filters?: { type?: "youtube_short" | "tiktok"; limit?: number; offset?: number; lang?: string }): Promise<VideoWithLocalizedRelations[]>;
@@ -144,6 +152,7 @@ export interface IStorage {
   // Scrape Jobs
   createScrapeJob(job: InsertScrapeJob): Promise<ScrapeJob>;
   getScrapeJob(id: string): Promise<ScrapeJob | undefined>;
+  getRecentScrapeJobs(limit: number): Promise<ScrapeJob[]>;
   getActiveScrapeJob(): Promise<ScrapeJob | undefined>;
   updateScrapeJob(
     id: string,

@@ -247,137 +247,133 @@ export default function AdminCategories() {
   };
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <AdminSidebar />
-
-      <main className="flex-1 p-8 ml-[240px] pt-16">
-        <div className="max-w-6xl mx-auto space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold" data-testid="text-page-title">
-                Categories Management
-              </h1>
-              <p className="text-muted-foreground mt-1">
-                Manage AI-generated and custom categories (Multilingual)
-              </p>
-            </div>
-            <Button
-              onClick={openCreateDialog}
-              className="gap-2"
-              data-testid="button-create-category"
-            >
-              <Plus className="h-4 w-4" />
-              Create Category
-            </Button>
+    <>
+      <div className="max-w-6xl mx-auto space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold" data-testid="text-page-title">
+              Categories Management
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              Manage AI-generated and custom categories (Multilingual)
+            </p>
           </div>
-
-          {isLoading ? (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <p className="text-muted-foreground">Loading categories...</p>
-              </CardContent>
-            </Card>
-          ) : categories.length === 0 ? (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <FolderTree className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3
-                  className="text-lg font-semibold mb-2"
-                  data-testid="text-empty-state"
-                >
-                  No categories yet
-                </h3>
-                <p className="text-muted-foreground mb-4">
-                  Create categories manually or let AI generate them from video
-                  content
-                </p>
-                <Button onClick={openCreateDialog} variant="outline">
-                  Create First Category
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <Card>
-              <CardHeader>
-                <CardTitle>All Categories</CardTitle>
-                <CardDescription>
-                  {categories.length} total categories
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name (EN)</TableHead>
-                      <TableHead>Description (EN)</TableHead>
-                      <TableHead className="text-center">Translations</TableHead>
-                      <TableHead className="text-center">Videos</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {categories.map((category) => (
-                      <TableRow
-                        key={category.id}
-                        data-testid={`row-category-${category.id}`}
-                      >
-                        <TableCell
-                          className="font-medium"
-                          data-testid="text-category-name"
-                        >
-                          {getDisplayName(category)}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground max-w-md">
-                          {getDisplayDescription(category) || (
-                            <span className="italic">No description</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-center">
-                            <div className="flex gap-1 justify-center">
-                                {category.translations.map(t => (
-                                    <Badge key={t.languageCode} variant="outline" className="text-xs">
-                                        {t.languageCode}
-                                    </Badge>
-                                ))}
-                            </div>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Badge
-                            variant="secondary"
-                            data-testid="badge-video-count"
-                          >
-                            {category.videoCount}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex gap-2 justify-end">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => openEditDialog(category)}
-                              data-testid={`button-edit-${category.id}`}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => setDeletingCategory(category)}
-                              data-testid={`button-delete-${category.id}`}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          )}
+          <Button
+            onClick={openCreateDialog}
+            className="gap-2"
+            data-testid="button-create-category"
+          >
+            <Plus className="h-4 w-4" />
+            Create Category
+          </Button>
         </div>
-      </main>
+
+        {isLoading ? (
+          <Card>
+            <CardContent className="py-12 text-center">
+              <p className="text-muted-foreground">Loading categories...</p>
+            </CardContent>
+          </Card>
+        ) : categories.length === 0 ? (
+          <Card>
+            <CardContent className="py-12 text-center">
+              <FolderTree className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3
+                className="text-lg font-semibold mb-2"
+                data-testid="text-empty-state"
+              >
+                No categories yet
+              </h3>
+              <p className="text-muted-foreground mb-4">
+                Create categories manually or let AI generate them from video
+                content
+              </p>
+              <Button onClick={openCreateDialog} variant="outline">
+                Create First Category
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card>
+            <CardHeader>
+              <CardTitle>All Categories</CardTitle>
+              <CardDescription>
+                {categories.length} total categories
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name (EN)</TableHead>
+                    <TableHead>Description (EN)</TableHead>
+                    <TableHead className="text-center">Translations</TableHead>
+                    <TableHead className="text-center">Videos</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {categories.map((category) => (
+                    <TableRow
+                      key={category.id}
+                      data-testid={`row-category-${category.id}`}
+                    >
+                      <TableCell
+                        className="font-medium"
+                        data-testid="text-category-name"
+                      >
+                        {getDisplayName(category)}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground max-w-md">
+                        {getDisplayDescription(category) || (
+                          <span className="italic">No description</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-center">
+                          <div className="flex gap-1 justify-center">
+                              {category.translations.map(t => (
+                                  <Badge key={t.languageCode} variant="outline" className="text-xs">
+                                      {t.languageCode}
+                                  </Badge>
+                              ))}
+                          </div>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Badge
+                          variant="secondary"
+                          data-testid="badge-video-count"
+                        >
+                          {category.videoCount}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex gap-2 justify-end">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openEditDialog(category)}
+                            data-testid={`button-edit-${category.id}`}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setDeletingCategory(category)}
+                            data-testid={`button-delete-${category.id}`}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        )}
+      </div>
 
       {/* Create/Edit Dialog */}
       <Dialog
@@ -492,6 +488,6 @@ export default function AdminCategories() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </>
   );
 }

@@ -1,9 +1,20 @@
 import { Router } from "express";
 import { storage } from "../storage/index.js";
 import { db } from "../db.js";
-import { tags } from "../../shared/schema.js";
+import { tags, tagTranslations } from "../../shared/schema.js";
+import { eq } from "drizzle-orm";
 
 const router = Router();
+
+function safeParseDate(value: unknown): Date | null {
+  if (!value) return null;
+  if (value instanceof Date) {
+    return isNaN(value.getTime()) ? null : value;
+  }
+  if (typeof value !== "string") return null;
+  const d = new Date(value);
+  return isNaN(d.getTime()) ? null : d;
+}
 
 // Analytics Events Public Routes
 router.get("/events", async (req, res) => {
@@ -22,12 +33,17 @@ router.get("/events", async (req, res) => {
 router.get("/", async (req, res) => {
   try {
     const { days } = req.query;
-    const daysFilter = days ? parseInt(days as string) : undefined;
+    const daysFilterRaw = typeof days === "string" ? parseInt(days, 10) : undefined;
+    const daysFilter = typeof daysFilterRaw === "number" && !isNaN(daysFilterRaw) ? daysFilterRaw : undefined;
 
     // Get total counts
     const channels = await storage.getAllChannels();
     const allVideos = await storage.getAllVideos();
-    const allTags = await db.select().from(tags);
+    const allTags = await db
+      .select({ videoId: tags.videoId, tagName: tagTranslations.tagName })
+      .from(tags)
+      .innerJoin(tagTranslations, eq(tags.id, tagTranslations.tagId))
+      .where(eq(tagTranslations.languageCode, "en"));
 
     // Filter by date if specified
     let filteredVideos = allVideos;
@@ -35,9 +51,11 @@ router.get("/", async (req, res) => {
       const cutoffDate = new Date();
       cutoffDate.setDate(cutoffDate.getDate() - daysFilter);
       filteredVideos = allVideos.filter((v) => {
-        if (!v.publishDate) return false;
-        const publishDate = new Date(v.publishDate);
-        return publishDate >= cutoffDate;
+        const publishDate = safeParseDate(v.publishDate);
+        const createdAt = safeParseDate((v as any).createdAt);
+        const effective = publishDate || createdAt;
+        if (!effective) return false;
+        return effective >= cutoffDate;
       });
     }
 
@@ -75,6 +93,7 @@ router.get("/", async (req, res) => {
     // Tag frequency (only from filtered videos)
     const tagFrequency = new Map<string, number>();
     for (const tag of allTags) {
+      if (!tag.tagName) continue;
       if (filteredVideoIds.has(tag.videoId)) {
         const count = tagFrequency.get(tag.tagName) || 0;
         tagFrequency.set(tag.tagName, count + 1);
@@ -89,6 +108,20 @@ router.get("/", async (req, res) => {
     const categoryDistribution = Array.from(categoryVideoCount.values()).sort(
       (a, b) => b.count - a.count,
     );
+
+    // Videos per day
+    const videosPerDay = new Map<string, number>();
+    for (const video of filteredVideos) {
+      const publishDate = safeParseDate(video.publishDate);
+      const createdAt = safeParseDate((video as any).createdAt);
+      const effective = publishDate || createdAt;
+      if (!effective) continue;
+      const date = effective.toISOString().split("T")[0];
+      videosPerDay.set(date, (videosPerDay.get(date) || 0) + 1);
+    }
+    const dailyGrowth = Array.from(videosPerDay.entries())
+      .map(([date, count]) => ({ date, count }))
+      .sort((a, b) => a.date.localeCompare(b.date));
 
     // Calculate filtered totals
     const uniqueChannelIds = new Set(filteredVideos.map((v) => v.channelId));
@@ -119,6 +152,7 @@ router.get("/", async (req, res) => {
       ),
       categoryDistribution,
       topTags,
+      dailyGrowth,
     });
   } catch (error) {
     console.error("Analytics error:", error);

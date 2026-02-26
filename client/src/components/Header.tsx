@@ -24,7 +24,7 @@ export function Header({ onSearchClick }: HeaderProps) {
               variant="ghost"
               onClick={() => setMobileNavOpen(true)}
               data-testid="button-hamburger"
-              className="lg:hidden hover-elevate active-elevate-2 min-h-[44px] min-w-[44px]"
+              className="md:hidden hover-elevate active-elevate-2 min-h-[44px] min-w-[44px]"
             >
               <Menu className="h-5 w-5" />
             </Button>
@@ -39,13 +39,24 @@ export function Header({ onSearchClick }: HeaderProps) {
               </span>
             </Link>
 
-            <nav className="hidden lg:flex items-center gap-6">
-              <Link href="/">
+            <div className="md:hidden">
+              <Link href="/channels">
                 <span
                   className="text-sm font-medium text-foreground hover:text-primary transition-colors cursor-pointer"
-                  data-testid="link-browse"
+                  data-testid="link-channels-mobile-top"
                 >
-                  {t("nav.browse")}
+                  {t("nav.channels")}
+                </span>
+              </Link>
+            </div>
+
+            <nav className="hidden md:flex items-center gap-6">
+              <Link href="/channels">
+                <span
+                  className="text-sm font-medium text-foreground hover:text-primary transition-colors cursor-pointer"
+                  data-testid="link-channels"
+                >
+                  {t("nav.channels")}
                 </span>
               </Link>
               <Link href="/categories">

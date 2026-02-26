@@ -13,6 +13,7 @@ import { fileURLToPath } from "url";
 import { errorMonitor, asyncHandler } from "./error-monitor.js";
 import { recordError } from "./error-log-service.js";
 import { recordRequestMetric } from "./performance-metrics.js";
+import { runMigrations } from "./migrate.js";
 
 const app = express();
 
@@ -70,6 +71,35 @@ app.use(compression({
     return compression.filter(req, res);
   }
 }));
+
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  // Record the error
+  recordError({
+    level: "critical",
+    type: "unhandled_promise_rejection",
+    message: reason instanceof Error ? reason.message : String(reason),
+    stack: reason instanceof Error ? reason.stack : undefined,
+    module: "process",
+  });
+});
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+  // Record the error
+  recordError({
+    level: "critical",
+    type: "uncaught_exception",
+    message: error.message,
+    stack: error.stack,
+    module: "process",
+  });
+  
+  // Exit gracefully
+  process.exit(1);
+});
 
 // Trust proxy for Cloudflare and other reverse proxies
 // Cloudflare sets CF-Connecting-IP header
@@ -236,11 +266,20 @@ app.use((req, res, next) => {
 });
 
 // Global error handler - moved to top level for early catching
-app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   const status = err.status || err.statusCode || 500;
   const message = err.message || "Internal Server Error";
-
-  console.error("Error handler caught:", err);
+  
+  // Log the error with more context
+  console.error("Global error handler caught:", {
+    message,
+    stack: err?.stack,
+    url: req.url,
+    method: req.method,
+    status
+  });
+  
+  // Record the error in our error log system
   recordError({
     level: "error",
     type: "server_runtime",
@@ -248,14 +287,35 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     stack: err?.stack,
     module: "express",
     statusCode: typeof status === "number" ? status : 500,
+    url: req.url,
+    method: req.method,
   });
-  res.status(status).json({ message });
+  
+  // Always return JSON response
+  res.status(status).json({ 
+    error: {
+      code: status,
+      message: status >= 500 ? "A server error has occurred" : message
+    }
+  });
 });
 
 // Create startup function
 async function startServer() {
   const initStart = Date.now();
   log("Starting server initialization...");
+
+  // Run database migrations on startup
+  if (process.env.VERCEL !== "1") {
+    try {
+      log("Checking for pending migrations...");
+      await runMigrations();
+    } catch (error: any) {
+      log(`Migration check failed: ${error.message}`);
+    }
+  } else {
+    log("Skipping migrations in Vercel environment");
+  }
 
   log("Registering routes...");
   const routesStart = Date.now();

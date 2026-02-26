@@ -12,9 +12,10 @@ const router = Router();
 
 router.get("/", async (req, res) => {
   try {
-    const { channelId, categoryId, search, limit, offset, lang, tagName } = req.query;
+    const { channelId, categoryId, search, limit, offset, lang, tagName, sort } = req.query;
     const limitNum = limit ? parseInt(limit as string, 10) || 20 : undefined;
     const offsetNum = offset ? parseInt(offset as string, 10) || 0 : undefined;
+    const sortValue = sort === "createdAt" ? "createdAt" : "publishDate";
     const filters = {
       channelId: channelId as string | undefined,
       categoryId: categoryId as string | undefined,
@@ -23,6 +24,7 @@ router.get("/", async (req, res) => {
       lang: lang as string | undefined,
       limit: limitNum,
       offset: limitNum ? offsetNum : undefined,
+      sort: sortValue as "publishDate" | "createdAt",
     };
     const videosList = await storage.getAllVideos(filters);
     res.json(videosList);
@@ -115,9 +117,10 @@ router.get("/carousels", async (req, res) => {
 router.get("/:idOrSlug", async (req, res) => {
   try {
     const { idOrSlug } = req.params;
-    let video = await storage.getVideoWithRelationsBySlug(idOrSlug);
+    const lang = (req.query.lang as string) || "en";
+    let video = await storage.getVideoWithRelationsBySlug(idOrSlug, lang);
     if (!video) {
-      video = await storage.getVideoWithRelations(idOrSlug);
+      video = await storage.getVideoWithRelations(idOrSlug, lang);
     }
     if (!video) {
       return res.status(404).json({ error: "Video not found" });
@@ -192,29 +195,92 @@ router.post("/:id/categorize", requireAuth, async (req, res) => {
     await storage.removeVideoCategories(video.id);
     await storage.deleteTagsByVideoId(video.id);
 
-    for (const categoryName of result.categories) {
-      const slug = categoryName.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+    const categoriesEn = result.categories.en || [];
+    const categoriesSr = result.categories.sr || [];
+    const maxCategories = Math.max(categoriesEn.length, categoriesSr.length);
+
+    for (let i = 0; i < maxCategories; i++) {
+      const nameEn = categoriesEn[i];
+      const nameSr = categoriesSr[i];
+      
+      if (!nameEn) continue;
+
+      const slug = nameEn.toLowerCase().replace(/[^a-z0-9]+/g, "-");
       let category = await storage.getLocalizedCategoryBySlug(slug, "en");
 
       if (!category) {
-        category = await storage.createCategory(
-          { videoCount: 0 },
-          [{ languageCode: "en", name: categoryName, slug, description: "" }]
-        );
+        const translations = [];
+        translations.push({
+          languageCode: "en",
+          name: nameEn,
+          slug,
+          description: ""
+        });
+
+        if (nameSr) {
+          translations.push({
+            languageCode: "sr-Latn",
+            name: nameSr,
+            slug,
+            description: ""
+          });
+        }
+
+        category = await storage.createCategory({ videoCount: 0 }, translations);
+      } else if (nameSr) {
+         try {
+            await storage.addCategoryTranslation(category.id, {
+              categoryId: category.id,
+              languageCode: "sr-Latn",
+              name: nameSr,
+              slug,
+              description: ""
+            }).catch(() => {});
+         } catch (e) {
+           // Ignore
+         }
       }
 
       await storage.addVideoCategory(video.id, category.id);
     }
 
-    for (const tagName of result.tags) {
-      await storage.createTag(
-        { videoId: video.id },
-        [{ languageCode: "en", tagName }]
-      );
+    const tagsEn = result.tags.en || [];
+    const tagsSr = result.tags.sr || [];
+    const maxTags = Math.max(tagsEn.length, tagsSr.length);
+
+    for (let i = 0; i < maxTags; i++) {
+      const tagEn = tagsEn[i];
+      const tagSr = tagsSr[i];
+      
+      if (!tagEn) continue;
+
+      const translations = [{
+        languageCode: "en",
+        tagName: tagEn
+      }];
+
+      if (tagSr) {
+        translations.push({
+          languageCode: "sr-Latn",
+          tagName: tagSr
+        });
+      }
+
+      await storage.createTag({ videoId: video.id }, translations);
     }
 
     res.json({ success: true, result });
   } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to categorize video";
+    if (
+      message.includes("Cannot connect to localhost Ollama") ||
+      message.includes("Ollama")
+    ) {
+      return res.status(400).json({
+        error: message,
+        code: "AI_PROVIDER_UNAVAILABLE",
+      });
+    }
     console.error("Categorize video error:", error);
     res.status(500).json({ error: "Failed to categorize video" });
   }
@@ -264,7 +330,8 @@ router.post("/bulk/categorize", requireAuth, async (req, res) => {
         results.successful++;
       } catch (error) {
         results.failed++;
-        results.errors.push(`Failed to categorize video ${videoId}: ${error instanceof Error ? error.message : "Unknown error"}`);
+        const message = error instanceof Error ? error.message : "Unknown error";
+        results.errors.push(`Failed to categorize video ${videoId}: ${message}`);
       }
     }
 

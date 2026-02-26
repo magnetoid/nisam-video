@@ -2,6 +2,7 @@ import { videos, type InsertVideo, type Video } from "../shared/schema.js";
 import { storage } from "./storage.js";
 import { generateSlug } from "./utils.js";
 import { categorizeVideo as aiCategorizeVideo } from "./ai-service.js";
+import { logger } from "./lib/logger.js";
 
 interface ScrapedVideo {
   videoId: string;
@@ -119,7 +120,7 @@ export async function processScrapedVideos(
       result.errors.push(
         `Failed to save video ${scrapedVideo.videoId}: ${errorMessage}`
       );
-      console.error(
+      logger.error(
         `[video-ingestion] Error processing video ${scrapedVideo.videoId}:`,
         error
       );
@@ -148,36 +149,97 @@ async function categorizeNewVideos(videoIds: string[]): Promise<void> {
         video.description || ""
       );
 
-      // Create/find categories and link them (same pattern as routes.ts)
-      for (const categoryName of categorizationResult.categories) {
-        const categorySlug = categoryName
+      // Process Categories
+      // We attempt to match English and Serbian categories by index
+      const maxCategories = Math.max(
+        categorizationResult.categories.en.length,
+        categorizationResult.categories.sr.length
+      );
+
+      for (let i = 0; i < maxCategories; i++) {
+        const nameEn = categorizationResult.categories.en[i];
+        const nameSr = categorizationResult.categories.sr[i];
+
+        // Skip if no English name (we use it as primary identifier for slug)
+        if (!nameEn) continue;
+
+        const categorySlug = nameEn
           .toLowerCase()
           .replace(/[^a-z0-9]+/g, "-");
+        
         let category = await storage.getLocalizedCategoryBySlug(categorySlug, 'en');
 
         if (!category) {
-          category = await storage.createCategory({}, [{
+          const translations = [];
+          translations.push({
             languageCode: 'en',
-            name: categoryName,
+            name: nameEn,
             slug: categorySlug,
             description: null
-          }]);
+          });
+
+          if (nameSr) {
+            translations.push({
+              languageCode: 'sr-Latn',
+              name: nameSr,
+              slug: categorySlug, // Share slug or generate new? Using same slug for simplicity
+              description: null
+            });
+          }
+
+          category = await storage.createCategory({}, translations);
+        } else if (nameSr) {
+          // If category exists but might miss Serbian translation, try to add it
+          try {
+             // Check if translation exists (this logic would be in storage but we can try adding)
+             // For now, we assume if it exists we use it. 
+             // Ideally we'd update it, but let's keep it simple.
+             await storage.addCategoryTranslation(category.id, {
+                categoryId: category.id,
+                languageCode: 'sr-Latn',
+                name: nameSr,
+                slug: categorySlug,
+                description: null
+             }).catch(() => {}); // Ignore if exists
+          } catch (e) {
+            // Ignore unique constraint errors
+          }
         }
 
         await storage.addVideoCategory(video.id, category.id);
       }
 
-      // Create tags (same pattern as routes.ts)
-      for (const tagName of categorizationResult.tags) {
-        await storage.createTag({ videoId: video.id }, [{
+      // Process Tags
+      // We match English and Serbian tags by index
+      const maxTags = Math.max(
+        categorizationResult.tags.en.length,
+        categorizationResult.tags.sr.length
+      );
+
+      for (let i = 0; i < maxTags; i++) {
+        const tagEn = categorizationResult.tags.en[i];
+        const tagSr = categorizationResult.tags.sr[i];
+
+        if (!tagEn) continue;
+
+        const translations = [{
           languageCode: 'en',
-          tagName
-        }]);
+          tagName: tagEn
+        }];
+
+        if (tagSr) {
+          translations.push({
+            languageCode: 'sr-Latn',
+            tagName: tagSr
+          });
+        }
+
+        await storage.createTag({ videoId: video.id }, translations);
       }
 
-      console.log(`[video-ingestion] Categorized: ${video.title}`);
+      logger.info(`[video-ingestion] Categorized: ${video.title}`);
     } catch (error) {
-      console.error(
+      logger.error(
         `[video-ingestion] Failed to categorize video ${videoId}:`,
         error
       );

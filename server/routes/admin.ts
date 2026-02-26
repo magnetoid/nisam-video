@@ -27,72 +27,111 @@ router.use(invalidateCacheOnMutation("^http-private:"));
 // Admin-only SQL Migration Runner
 router.post("/run-migration", requireAuth, async (req, res) => {
   try {
-    const migrationSql = `
-      CREATE TABLE IF NOT EXISTS "ai_settings" (
-        "id" varchar PRIMARY KEY DEFAULT gen_random_uuid(),
-        "provider" text DEFAULT 'openai' NOT NULL,
-        "openai_api_key" text,
-        "openai_base_url" text,
-        "openai_model" text DEFAULT 'gpt-5',
-        "ollama_url" text DEFAULT 'http://localhost:11434',
-        "ollama_model" text,
-        "updated_at" timestamp DEFAULT now() NOT NULL
-      );
-
-      CREATE TABLE IF NOT EXISTS "ai_models" (
-        "id" varchar PRIMARY KEY DEFAULT gen_random_uuid(),
-        "provider" text NOT NULL,
-        "name" text NOT NULL,
-        "size" varchar,
-        "digest" text,
-        "family" text,
-        "format" text,
-        "parameter_size" text,
-        "quantization_level" text,
-        "is_active" boolean DEFAULT true NOT NULL,
-        "last_synced_at" timestamp DEFAULT now() NOT NULL,
-        CONSTRAINT "ai_models_provider_name_unique" UNIQUE("provider", "name")
-      );
-
-      CREATE TABLE IF NOT EXISTS "seo_meta_tags" (
-        "id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-        "page_url" text NOT NULL,
-        "page_type" text NOT NULL,
-        "title" text,
-        "description" text,
-        "keywords" text,
-        "og_title" text,
-        "og_description" text,
-        "og_image" text,
-        "twitter_title" text,
-        "twitter_description" text,
-        "twitter_image" text,
-        "canonical_url" text,
-        "schema_markup" json,
-        "is_active" boolean DEFAULT true NOT NULL,
-        "seo_score" integer DEFAULT 0 NOT NULL,
-        "created_at" timestamp DEFAULT now() NOT NULL,
-        "updated_at" timestamp DEFAULT now() NOT NULL
-      );
-
-      CREATE INDEX IF NOT EXISTS "seo_meta_tags_page_type_idx" ON "seo_meta_tags" USING btree ("page_type");
-      CREATE INDEX IF NOT EXISTS "seo_meta_tags_is_active_idx" ON "seo_meta_tags" USING btree ("is_active");
-      CREATE INDEX IF NOT EXISTS "seo_meta_tags_created_at_idx" ON "seo_meta_tags" USING btree ("created_at");
-      CREATE INDEX IF NOT EXISTS "seo_meta_tags_page_url_idx" ON "seo_meta_tags" USING btree ("page_url");
-
-      CREATE TABLE IF NOT EXISTS "kv_store" (
-        "key" text PRIMARY KEY,
-        "value" json,
-        "expires_at" timestamp
-      );
+    // Check if tables already exist before attempting to create them
+    const tableCheckSql = `
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public' 
+      AND table_name IN ('ai_settings', 'ai_models', 'seo_meta_tags', 'kv_store')
     `;
-
-    await db.execute(sql.raw(migrationSql));
+    
+    const existingTables = await db.execute(sql.raw(tableCheckSql));
+    const existingTableNames = existingTables.rows.map((row: any) => row.table_name);
+    
+    // Only create tables that don't already exist
+    const tablesToCreate = ['ai_settings', 'ai_models', 'seo_meta_tags', 'kv_store'].filter(
+      tableName => !existingTableNames.includes(tableName)
+    );
+    
+    if (tablesToCreate.length === 0) {
+      return res.json({ success: true, message: "All tables already exist" });
+    }
+    
+    let migrationSql = '';
+    
+    if (tablesToCreate.includes('ai_settings')) {
+      migrationSql += `
+        CREATE TABLE IF NOT EXISTS "ai_settings" (
+          "id" varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+          "provider" text DEFAULT 'openai' NOT NULL,
+          "openai_api_key" text,
+          "openai_base_url" text,
+          "openai_model" text DEFAULT 'gpt-5',
+          "ollama_url" text DEFAULT 'http://localhost:11434',
+          "ollama_model" text,
+          "updated_at" timestamp DEFAULT now() NOT NULL
+        );
+      `;
+    }
+    
+    if (tablesToCreate.includes('ai_models')) {
+      migrationSql += `
+        CREATE TABLE IF NOT EXISTS "ai_models" (
+          "id" varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+          "provider" text NOT NULL,
+          "name" text NOT NULL,
+          "size" varchar,
+          "digest" text,
+          "family" text,
+          "format" text,
+          "parameter_size" text,
+          "quantization_level" text,
+          "is_active" boolean DEFAULT true NOT NULL,
+          "last_synced_at" timestamp DEFAULT now() NOT NULL,
+          CONSTRAINT "ai_models_provider_name_unique" UNIQUE("provider", "name")
+        );
+      `;
+    }
+    
+    if (tablesToCreate.includes('seo_meta_tags')) {
+      migrationSql += `
+        CREATE TABLE IF NOT EXISTS "seo_meta_tags" (
+          "id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+          "page_url" text NOT NULL,
+          "page_type" text NOT NULL,
+          "title" text,
+          "description" text,
+          "keywords" text,
+          "og_title" text,
+          "og_description" text,
+          "og_image" text,
+          "twitter_title" text,
+          "twitter_description" text,
+          "twitter_image" text,
+          "canonical_url" text,
+          "schema_markup" json,
+          "is_active" boolean DEFAULT true NOT NULL,
+          "seo_score" integer DEFAULT 0 NOT NULL,
+          "created_at" timestamp DEFAULT now() NOT NULL,
+          "updated_at" timestamp DEFAULT now() NOT NULL
+        );
+        
+        CREATE INDEX IF NOT EXISTS "seo_meta_tags_page_type_idx" ON "seo_meta_tags" USING btree ("page_type");
+        CREATE INDEX IF NOT EXISTS "seo_meta_tags_is_active_idx" ON "seo_meta_tags" USING btree ("is_active");
+        CREATE INDEX IF NOT EXISTS "seo_meta_tags_created_at_idx" ON "seo_meta_tags" USING btree ("created_at");
+        CREATE UNIQUE INDEX IF NOT EXISTS "seo_meta_tags_page_url_idx" ON "seo_meta_tags" USING btree ("page_url");
+      `;
+    }
+    
+    if (tablesToCreate.includes('kv_store')) {
+      migrationSql += `
+        CREATE TABLE IF NOT EXISTS "kv_store" (
+          "key" text PRIMARY KEY,
+          "value" json,
+          "expires_at" timestamp
+        );
+      `;
+    }
+    
+    if (migrationSql.trim() !== '') {
+      await db.execute(sql.raw(migrationSql));
+    }
     
     res.json({ success: true, message: "Migration applied successfully" });
   } catch (error: any) {
     console.error("Migration error:", error);
-    res.status(500).json({ error: error.message || "Failed to run migration" });
+    // Don't expose internal error details to client
+    res.status(500).json({ error: "Failed to run migration" });
   }
 });
 
@@ -263,7 +302,7 @@ router.post("/regenerate", requireAuth, async (req, res) => {
 
     const offset = Math.max(0, parseInt((req.query.offset as string) || "0", 10) || 0);
     const limit = Math.min(
-      5,
+      100,
       Math.max(1, parseInt((req.query.limit as string) || "1", 10) || 1),
     );
 
@@ -306,34 +345,51 @@ router.post("/regenerate", requireAuth, async (req, res) => {
         );
 
         if (type === "all" || type === "categories") {
-          const categoryNames = Array.isArray(categorizeResult.categories)
-            ? categorizeResult.categories
-            : [];
-
-          const normalized = Array.from(
-            new Set(
-              categoryNames
-                .map((c) => (typeof c === "string" ? c.trim() : ""))
-                .filter(Boolean),
-            ),
-          );
-
-          const finalNames = normalized.length > 0 ? normalized.slice(0, 3) : ["Uncategorized"];
+          const categoriesEn = categorizeResult.categories.en || [];
+          const categoriesSr = categorizeResult.categories.sr || [];
+          const maxCategories = Math.max(categoriesEn.length, categoriesSr.length);
           const categoryIds: string[] = [];
 
-          for (const categoryName of finalNames) {
-            const slug = generateSlug(categoryName);
+          for (let i = 0; i < maxCategories; i++) {
+            const nameEn = categoriesEn[i];
+            const nameSr = categoriesSr[i];
+
+            if (!nameEn) continue;
+
+            const slug = generateSlug(nameEn);
             let category = await storage.getLocalizedCategoryBySlug(slug, 'en');
+
             if (!category) {
-              category = await storage.createCategory(
-                {}, 
-                [{
-                  languageCode: 'en',
-                  name: categoryName,
-                  slug,
-                  description: null,
-                }]
-              );
+               const translations = [];
+               translations.push({
+                 languageCode: 'en',
+                 name: nameEn,
+                 slug,
+                 description: null
+               });
+
+               if (nameSr) {
+                 translations.push({
+                   languageCode: 'sr-Latn',
+                   name: nameSr,
+                   slug, 
+                   description: null
+                 });
+               }
+
+               category = await storage.createCategory({}, translations);
+            } else if (nameSr) {
+               try {
+                  await storage.addCategoryTranslation(category.id, {
+                    categoryId: category.id,
+                    languageCode: 'sr-Latn',
+                    name: nameSr,
+                    slug,
+                    description: null
+                  }).catch(() => {}); 
+               } catch (e) {
+                 // Ignore
+               }
             }
             categoryIds.push(category.id);
           }
@@ -348,23 +404,32 @@ router.post("/regenerate", requireAuth, async (req, res) => {
         }
 
         if (type === "all" || type === "tags") {
-          const tagNames = Array.isArray(categorizeResult.tags)
-            ? categorizeResult.tags
-            : [];
+          const tagsEn = categorizeResult.tags.en || [];
+          const tagsSr = categorizeResult.tags.sr || [];
+          const maxTags = Math.max(tagsEn.length, tagsSr.length);
 
-          const normalizedTags = Array.from(
-            new Set(
-              tagNames
-                .map((t) => (typeof t === "string" ? t.trim() : ""))
-                .filter(Boolean)
-                .slice(0, 20),
-            ),
-          );
-
-          if (normalizedTags.length > 0) {
+          if (maxTags > 0) {
             await storage.deleteTagsByVideoId(video.id);
-            for (const tagName of normalizedTags) {
-              await storage.createTag({ videoId: video.id }, [{ languageCode: "en", tagName }]);
+            
+            for (let i = 0; i < maxTags; i++) {
+              const tagEn = tagsEn[i];
+              const tagSr = tagsSr[i];
+              
+              if (!tagEn) continue;
+
+              const translations = [{
+                languageCode: 'en',
+                tagName: tagEn
+              }];
+
+              if (tagSr) {
+                translations.push({
+                  languageCode: 'sr-Latn',
+                  tagName: tagSr
+                });
+              }
+
+              await storage.createTag({ videoId: video.id }, translations);
               tagsGenerated++;
             }
           }
@@ -716,10 +781,7 @@ router.post("/hero", requireAuth, async (req, res) => {
 // Hero Config Routes
 router.get("/hero/config", requireAuth, async (_req, res) => {
   try {
-    const settings =
-      typeof (storage as any).getHeroSettings === "function"
-        ? await (storage as any).getHeroSettings()
-        : null;
+    const settings = await storage.getHeroSettings();
     res.json(settings || { 
       fallbackImages: [], 
       rotationInterval: 4000, 
@@ -737,15 +799,13 @@ router.get("/hero/config", requireAuth, async (_req, res) => {
 router.post("/hero/config", requireAuth, async (req, res) => {
   try {
     const data = insertHeroSettingsSchema.partial().parse(req.body);
-    const updated =
-      typeof (storage as any).updateHeroSettings === "function"
-        ? await (storage as any).updateHeroSettings(data)
-        : data;
+    const updated = await storage.updateHeroSettings(data);
     res.json({ success: true, settings: updated });
   } catch (error: any) {
-    console.error("Error updating hero config:", error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error("Error updating hero config:", errorMessage);
     res.status(error instanceof z.ZodError ? 400 : 500).json({ 
-      error: error.message || "Failed to update hero config",
+      error: errorMessage || "Failed to update hero config",
       details: error instanceof z.ZodError ? error.errors : undefined
     });
   }
@@ -754,10 +814,7 @@ router.post("/hero/config", requireAuth, async (req, res) => {
 // Hero Images Routes
 router.get("/hero/images", requireAuth, async (_req, res) => {
   try {
-    const images =
-      typeof (storage as any).getHeroImages === "function"
-        ? await (storage as any).getHeroImages()
-        : [];
+    const images = await storage.getHeroImages();
     res.json(images);
   } catch (error) {
     console.error("Error fetching hero images:", error);
@@ -768,15 +825,13 @@ router.get("/hero/images", requireAuth, async (_req, res) => {
 router.post("/hero/images", requireAuth, async (req, res) => {
   try {
     const images = z.array(insertHeroImageSchema).parse(req.body);
-    const results =
-      typeof (storage as any).upsertHeroImage === "function"
-        ? await Promise.all(images.map((img) => (storage as any).upsertHeroImage(img)))
-        : images;
+    const results = await Promise.all(images.map((img) => storage.upsertHeroImage(img)));
     res.json({ success: true, images: results });
   } catch (error: any) {
-    console.error("Error updating hero images:", error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error("Error updating hero images:", errorMessage);
     res.status(error instanceof z.ZodError ? 400 : 500).json({ 
-      error: error.message || "Failed to update hero images",
+      error: errorMessage || "Failed to update hero images",
       details: error instanceof z.ZodError ? error.errors : undefined
     });
   }
@@ -871,6 +926,51 @@ router.delete("/analytics/events/:id", requireAuth, async (req, res) => {
   } catch (error) {
     console.error("Error deleting analytics event:", error);
     res.status(500).json({ error: "Failed to delete analytics event" });
+  }
+});
+
+router.get("/debug/system-health", requireAuth, async (req, res) => {
+  try {
+    // 1. DB Status
+    let dbStatus = "connected";
+    try {
+      await db.execute(sql`SELECT 1`);
+    } catch (e) {
+      dbStatus = "disconnected";
+    }
+
+    // 2. Recent Critical Errors (last 1 hour)
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    const criticalErrors = await listErrorEvents({
+      level: "critical",
+      from: oneHourAgo,
+      limit: 100
+    });
+    
+    // 3. Cache Stats
+    const { cache: cacheModule } = await import("../cache.js");
+    const cacheStats = cacheModule.getStats();
+
+    // 4. Memory
+    const memory = process.memoryUsage();
+
+    res.json({
+      database: dbStatus,
+      criticalErrorsLastHour: criticalErrors.items.length,
+      cache: {
+        keys: cacheStats.keys,
+        hits: cacheStats.hits,
+        misses: cacheStats.misses
+      },
+      memory: {
+        rss: Math.round(memory.rss / 1024 / 1024) + "MB",
+        heapUsed: Math.round(memory.heapUsed / 1024 / 1024) + "MB"
+      },
+      uptime: Math.round(process.uptime()) + "s"
+    });
+  } catch (error) {
+    console.error("System health check failed", error);
+    res.status(500).json({ error: "Health check failed" });
   }
 });
 

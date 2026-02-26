@@ -1,4 +1,4 @@
-CREATE TABLE "activity_logs" (
+CREATE TABLE IF NOT EXISTS "activity_logs" (
 	"id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"action" text NOT NULL,
 	"entity_type" text NOT NULL,
@@ -9,7 +9,7 @@ CREATE TABLE "activity_logs" (
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "analytics_events" (
+CREATE TABLE IF NOT EXISTS "analytics_events" (
 	"id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"event_name" text NOT NULL,
 	"trigger_type" text NOT NULL,
@@ -20,13 +20,13 @@ CREATE TABLE "analytics_events" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "categories" (
+CREATE TABLE IF NOT EXISTS "categories" (
 	"id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"video_count" integer DEFAULT 0 NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "category_translations" (
+CREATE TABLE IF NOT EXISTS "category_translations" (
 	"id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"category_id" varchar NOT NULL,
 	"language_code" varchar(10) NOT NULL,
@@ -39,7 +39,7 @@ CREATE TABLE "category_translations" (
 	CONSTRAINT "category_translations_slug_language_code_unique" UNIQUE("slug","language_code")
 );
 --> statement-breakpoint
-CREATE TABLE "channels" (
+CREATE TABLE IF NOT EXISTS "channels" (
 	"id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"name" text NOT NULL,
 	"url" text NOT NULL,
@@ -52,7 +52,7 @@ CREATE TABLE "channels" (
 	CONSTRAINT "channels_url_unique" UNIQUE("url")
 );
 --> statement-breakpoint
-CREATE TABLE "hero_videos" (
+CREATE TABLE IF NOT EXISTS "hero_videos" (
 	"id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"display_order" integer DEFAULT 0 NOT NULL,
 	"video_id" varchar,
@@ -70,7 +70,7 @@ CREATE TABLE "hero_videos" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "playlist_videos" (
+CREATE TABLE IF NOT EXISTS "playlist_videos" (
 	"playlist_id" varchar NOT NULL,
 	"video_id" varchar NOT NULL,
 	"position" integer DEFAULT 0 NOT NULL,
@@ -78,7 +78,7 @@ CREATE TABLE "playlist_videos" (
 	CONSTRAINT "playlist_videos_playlist_id_video_id_pk" PRIMARY KEY("playlist_id","video_id")
 );
 --> statement-breakpoint
-CREATE TABLE "playlists" (
+CREATE TABLE IF NOT EXISTS "playlists" (
 	"id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"name" text NOT NULL,
 	"description" text,
@@ -86,7 +86,7 @@ CREATE TABLE "playlists" (
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "scheduler_settings" (
+CREATE TABLE IF NOT EXISTS "scheduler_settings" (
 	"id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"is_enabled" integer DEFAULT 0 NOT NULL,
 	"interval_hours" integer DEFAULT 6 NOT NULL,
@@ -95,7 +95,7 @@ CREATE TABLE "scheduler_settings" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "scrape_jobs" (
+CREATE TABLE IF NOT EXISTS "scrape_jobs" (
 	"id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"status" text DEFAULT 'pending' NOT NULL,
 	"total_channels" integer DEFAULT 0 NOT NULL,
@@ -107,7 +107,7 @@ CREATE TABLE "scrape_jobs" (
 	"error_message" text
 );
 --> statement-breakpoint
-CREATE TABLE "seo_settings" (
+CREATE TABLE IF NOT EXISTS "seo_settings" (
 	"id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"site_name" text DEFAULT 'nisam.video' NOT NULL,
 	"site_description" text DEFAULT 'AI-powered video aggregation hub featuring curated YouTube content organized by intelligent categorization' NOT NULL,
@@ -116,13 +116,13 @@ CREATE TABLE "seo_settings" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "session" (
+CREATE TABLE IF NOT EXISTS "session" (
 	"sid" varchar PRIMARY KEY NOT NULL,
 	"sess" json NOT NULL,
 	"expire" timestamp (6) NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "system_settings" (
+CREATE TABLE IF NOT EXISTS "system_settings" (
 	"id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"maintenance_mode" integer DEFAULT 0 NOT NULL,
 	"maintenance_message" text,
@@ -144,7 +144,7 @@ CREATE TABLE "system_settings" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "tag_images" (
+CREATE TABLE IF NOT EXISTS "tag_images" (
 	"id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"tag_name" text NOT NULL,
 	"image_url" text NOT NULL,
@@ -153,7 +153,7 @@ CREATE TABLE "tag_images" (
 	CONSTRAINT "tag_images_tag_name_unique" UNIQUE("tag_name")
 );
 --> statement-breakpoint
-CREATE TABLE "tag_translations" (
+CREATE TABLE IF NOT EXISTS "tag_translations" (
 	"id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"tag_id" varchar NOT NULL,
 	"language_code" varchar(10) NOT NULL,
@@ -164,33 +164,33 @@ CREATE TABLE "tag_translations" (
 	CONSTRAINT "tag_translations_name_lang_unique" UNIQUE("tag_name","language_code")
 );
 --> statement-breakpoint
-CREATE TABLE "tags" (
+CREATE TABLE IF NOT EXISTS "tags" (
 	"id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"video_id" varchar NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "video_categories" (
+CREATE TABLE IF NOT EXISTS "video_categories" (
 	"video_id" varchar NOT NULL,
 	"category_id" varchar NOT NULL,
 	CONSTRAINT "video_categories_video_id_category_id_pk" PRIMARY KEY("video_id","category_id")
 );
 --> statement-breakpoint
-CREATE TABLE "video_likes" (
+CREATE TABLE IF NOT EXISTS "video_likes" (
 	"video_id" varchar NOT NULL,
 	"user_identifier" text NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "video_likes_video_id_user_identifier_pk" PRIMARY KEY("video_id","user_identifier")
 );
 --> statement-breakpoint
-CREATE TABLE "video_views" (
+CREATE TABLE IF NOT EXISTS "video_views" (
 	"id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"video_id" varchar NOT NULL,
 	"user_identifier" text NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "videos" (
+CREATE TABLE IF NOT EXISTS "videos" (
 	"id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"channel_id" varchar NOT NULL,
 	"video_id" text NOT NULL,

@@ -10,12 +10,89 @@ export interface ScrapedVideo {
   viewCount?: string;
   publishDate?: string;
   videoType: "regular" | "youtube_short" | "tiktok";
+export interface ScrapedChannelInfo {
+  channelName?: string;
+  channelId?: string;
+  description?: string;
+  thumbnailUrl?: string;
+  bannerUrl?: string;
+} bannerUrl?: string;
 }
 
-export interface ScrapedChannelInfo {
-  channelId?: string;
-  channelName?: string;
-  thumbnailUrl?: string;
+export async function scrapeYouTubeChannelAbout(channelUrl: string): Promise<ScrapedChannelInfo> {
+  const normalized = channelUrl.replace(/\/+$/, "");
+  const response = await fetch(normalized, {
+    headers: {
+      "User-Agent":
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+      "Accept-Language": "en-US,en;q=0.9",
+    },
+    signal: AbortSignal.timeout(20000),
+  });
+
+  if (!response.ok) {
+    const err = new Error(`Failed to fetch channel: ${response.status} ${response.statusText}`) as any;
+    err.statusCode = response.status;
+    throw err;
+  }
+
+  const html = await response.text();
+  const $ = cheerio.load(html);
+
+  const channelInfo: ScrapedChannelInfo = {};
+
+  const scriptTags = $("script").toArray();
+  let initialData: any = null;
+  for (const script of scriptTags) {
+    const scriptContent = $(script).html() || "";
+    const match = scriptContent.match(
+      /(?:var\s+ytInitialData|window\["ytInitialData"\]|window\.ytInitialData)\s*=\s*({.*?});/,
+    );
+    if (match && match[1]) {
+      try {
+        initialData = JSON.parse(match[1]);
+        break;
+      } catch {
+        continue;
+      }
+    }
+  }
+
+  const metaDesc = $("meta[name=\"description\"]").attr("content") || $("meta[property=\"og:description\"]").attr("content");
+  if (metaDesc) {
+    channelInfo.description = metaDesc;
+  }
+
+  if (initialData) {
+    const header = initialData?.header?.c4TabbedHeaderRenderer || initialData?.header?.pageHeaderRenderer;
+    if (header) {
+      channelInfo.channelName = header.title || header.pageTitle;
+      channelInfo.channelId = header.channelId;
+
+      const avatarThumbs = header.avatar?.thumbnails || header.content?.image?.thumbnails;
+      if (avatarThumbs?.length > 0) {
+        channelInfo.thumbnailUrl = avatarThumbs[0].url;
+      }
+
+      const bannerThumbs = header.banner?.thumbnails || header.content?.banner?.thumbnails;
+      if (bannerThumbs?.length > 0) {
+        channelInfo.bannerUrl = bannerThumbs[bannerThumbs.length - 1].url;
+      }
+    }
+
+    const metadataDesc =
+      initialData?.metadata?.channelMetadataRenderer?.description ||
+      initialData?.microformat?.microformatDataRenderer?.description;
+    if (typeof metadataDesc === "string" && metadataDesc.trim()) {
+      channelInfo.description = metadataDesc;
+    }
+  }
+
+  if (channelInfo.bannerUrl) {
+    console.log(`[Scraper] Found banner URL for ${channelInfo.channelName}: ${channelInfo.bannerUrl}`);
+  }
+
+  return channelInfo;
 }
 
 function detectYouTubeShort(videoRenderer: any): boolean {
@@ -62,7 +139,11 @@ export async function scrapeYouTubeChannel(
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to fetch channel: ${response.status} ${response.statusText}`);
+      const err = new Error(
+        `Failed to fetch channel: ${response.status} ${response.statusText}`,
+      ) as any;
+      err.statusCode = response.status;
+      throw err;
     }
 
     const html = await response.text();
@@ -120,6 +201,19 @@ export async function scrapeYouTubeChannel(
         if (thumbnails?.length > 0) {
           channelInfo.thumbnailUrl = thumbnails[0].url;
         }
+
+        const bannerThumbs = header.banner?.thumbnails || header.content?.banner?.thumbnails;
+        if (bannerThumbs?.length > 0) {
+          channelInfo.bannerUrl = bannerThumbs[bannerThumbs.length - 1].url;
+          console.log(`[Scraper] Found banner URL for ${channelInfo.channelName}: ${channelInfo.bannerUrl}`);
+        }
+      }
+
+      const metadataDesc =
+        initialData?.metadata?.channelMetadataRenderer?.description ||
+        initialData?.microformat?.microformatDataRenderer?.description;
+      if (typeof metadataDesc === "string" && metadataDesc.trim()) {
+        channelInfo.description = metadataDesc.replace(/\s+/g, " ").trim();
       }
 
       // Extract videos from tabs
@@ -206,17 +300,35 @@ export async function scrapeYouTubeChannel(
 
     return { channelInfo, videos };
   } catch (error: any) {
-    console.error("Scraping error:", error);
-    await recordError({
+    const statusCode = typeof error?.statusCode === "number" ? error.statusCode : undefined;
+    const message = error instanceof Error ? error.message : String(error);
+    const isNotFound = statusCode === 404 || message.includes("Failed to fetch channel: 404");
+
+    if (isNotFound) {
+      console.warn("Scrape warning:", { channelUrl, statusCode, message });
+      await recordError({
+        level: "warn",
+        type: "scraper_not_found",
+        message,
+        module: "scraper",
+        url: channelUrl,
+        statusCode,
+      });
+    } else {
+      console.error("Scraping error:", error);
+      await recordError({
         level: "error",
         type: "scraper_failed",
-        message: error.message,
-        stack: error.stack,
+        message,
+        stack: error?.stack,
         module: "scraper",
-        url: channelUrl
-    });
-    throw new Error(
-      `Failed to scrape channel: ${error instanceof Error ? error.message : "Unknown error"}`,
-    );
+        url: channelUrl,
+        statusCode,
+      });
+    }
+
+    const wrapped = new Error(`Failed to scrape channel: ${message}`) as any;
+    wrapped.statusCode = statusCode;
+    throw wrapped;
   }
 }
