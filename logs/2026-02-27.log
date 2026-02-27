@@ -1,0 +1,7 @@
+{"timestamp":"2026-02-27T00:00:00.602Z","level":"info","message":"[Scheduler] Starting scrape job..."}
+{"timestamp":"2026-02-27T00:00:01.366Z","level":"info","message":"[Scheduler] Incremental batch: 2/2 channels due (total channels: 23, cutoff: 6h)"}
+{"timestamp":"2026-02-27T00:00:02.117Z","level":"info","message":"[Scheduler] Scraping youtube channel: N1 Info"}
+{"timestamp":"2026-02-27T00:00:05.121Z","level":"info","message":"[Scheduler] Channel N1 Info: found 4, saved 4 new videos"}
+{"timestamp":"2026-02-27T00:00:06.080Z","level":"info","message":"[Scheduler] Scraping youtube channel: NovaS TV"}
+{"timestamp":"2026-02-27T00:00:10.895Z","level":"info","message":"[Scheduler] Channel NovaS TV: found 11, saved 11 new videos"}
+{"timestamp":"2026-02-27T00:00:11.452Z","level":"info","message":"[Scheduler] Scrape job completed. Scraped 2/2 channels in batch. Errors: 0. Remaining due: 0"}

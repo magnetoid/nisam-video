@@ -92,7 +92,7 @@ export function LikeButton({
     },
     onError: (err, variables, context) => {
       // Rollback on error
-      if (context?.previousStatus) {
+      if (context && context.previousStatus) {
         queryClient.setQueryData(
           ["/api/videos", videoId, "like-status"],
           context.previousStatus,
@@ -154,7 +154,7 @@ export function LikeButton({
     },
     onError: (err, variables, context) => {
       // Rollback on error
-      if (context?.previousStatus) {
+      if (context && context.previousStatus) {
         queryClient.setQueryData(
           ["/api/videos", videoId, "like-status"],
           context.previousStatus,
