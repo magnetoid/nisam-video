@@ -30,24 +30,16 @@ RUN adduser --system --uid 1001 nodejs
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/.env ./.env
-COPY --from=builder /app/server ./server
-COPY --from=builder /app/shared ./shared
-COPY --from=builder /app/api ./api
-
-# Instaliraj produkcione dependency-je
-COPY package.json package-lock.json* ./
-RUN npm install --production --ignore-scripts
-
-# Kopiraj migracije POSLE npm install da ih ne pregazimo
+# Migrations are needed for runtime migration check
 COPY --from=builder /app/migrations ./migrations
 
-# Instaliraj tsx globalno da bi bio dostupan u PATH-u
-RUN npm install -g tsx
-RUN npm install ioredis --ignore-scripts
+# Install production dependencies
+COPY package.json package-lock.json* ./
+RUN npm install --production --ignore-scripts
 
 USER nodejs
 
 EXPOSE 3000
 
-# Pokreni server koristeci globalni tsx
-CMD ["tsx", "server/index.ts"]
+# Start server using the built bundle
+CMD ["npm", "start"]
