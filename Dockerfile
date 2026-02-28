@@ -5,6 +5,7 @@ RUN apk add --no-cache libc6-compat python3 make g++
 WORKDIR /app
 
 COPY package.json package-lock.json* ./
+# Instaliraj sve (ukljucujuci devDependencies za build)
 RUN npm install --ignore-scripts
 
 FROM base AS builder
@@ -12,6 +13,7 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
+# Sada ce raditi jer imamo vite iz devDependencies
 RUN npm run build
 
 FROM base AS runner
@@ -24,13 +26,15 @@ RUN adduser --system --uid 1001 nodejs
 
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/.env ./.env
 COPY --from=builder /app/server ./server
 COPY --from=builder /app/shared ./shared
 COPY --from=builder /app/api ./api
 
-RUN npm install tsx --ignore-scripts
+# Instaliraj produkcione dependency-je + tsx za runtime
+COPY package.json package-lock.json* ./
+RUN npm install --production --ignore-scripts
+RUN npm install tsx --no-save --ignore-scripts
 
 USER nodejs
 
