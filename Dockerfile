@@ -33,6 +33,7 @@ COPY --from=builder /app/.env ./.env
 COPY --from=builder /app/server ./server
 COPY --from=builder /app/shared ./shared
 COPY --from=builder /app/api ./api
+COPY --from=builder /app/migrations ./migrations
 
 # Instaliraj produkcione dependency-je
 COPY package.json package-lock.json* ./
