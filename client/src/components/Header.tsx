@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { Link } from "wouter";
-import { Search, Bell, User, Menu } from "lucide-react";
+import { Search, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";
 import { MobileNav } from "@/components/MobileNav";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { NotificationsDropdown } from "@/components/NotificationsDropdown";
+import { UserMenu } from "@/components/UserMenu";
 
 interface HeaderProps {
   onSearchClick?: () => void;
@@ -114,24 +116,12 @@ export function Header({ onSearchClick }: HeaderProps) {
             </Button>
 
             <ThemeToggle />
+            
+            <div className="hidden md:flex">
+              <NotificationsDropdown />
+            </div>
 
-            <Button
-              size="icon"
-              variant="ghost"
-              data-testid="button-notifications"
-              className="hidden md:flex hover-elevate active-elevate-2 min-h-[44px] min-w-[44px]"
-            >
-              <Bell className="h-5 w-5" />
-            </Button>
-
-            <Button
-              size="icon"
-              variant="ghost"
-              data-testid="button-profile"
-              className="hover-elevate active-elevate-2 min-h-[44px] min-w-[44px]"
-            >
-              <User className="h-5 w-5" />
-            </Button>
+            <UserMenu />
           </div>
         </div>
       </header>

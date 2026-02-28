@@ -1,10 +1,8 @@
 import { useState, memo, useRef, useEffect } from "react";
 import { Link } from "wouter";
 import { Play } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { LikeButton } from "./LikeButton";
 import type { VideoWithRelations } from "@shared/schema";
-import { formatViewCount } from "@/lib/formatters";
 import { getOptimizedThumbnail } from "@/lib/video";
 
 interface VideoCardProps {
@@ -42,21 +40,20 @@ export const VideoCard = memo(function VideoCard({ video, onClick, variant = "ca
 
   const content = (
     <div
-      className={`group relative ${widthClass} cursor-pointer transition-all duration-200 ease-out will-change-transform`}
+      className={`group relative ${widthClass} cursor-pointer transition-shadow duration-200 ease-out`}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       onClick={onClick}
       data-testid={`card-video-${video.id}`}
       style={{
-        transform: isHovered ? "scale(1.03)" : "scale(1)",
         zIndex: isHovered ? 10 : 1,
       }}
     >
-      <div className="relative aspect-video rounded-md overflow-hidden bg-muted group-hover:shadow-lg transition-all duration-300">
+      <div className="relative aspect-video rounded-md overflow-hidden bg-muted group-hover:shadow-lg transition-shadow duration-300">
         {/* Banner Background Layer - Only visible if banner exists */}
         {video.channel?.bannerUrl && (
            <div 
-             className="absolute inset-0 z-0 opacity-50 blur-lg scale-110 transition-transform duration-700 group-hover:scale-125"
+             className="absolute inset-0 z-0 opacity-50 blur-lg scale-110 transition-transform duration-700 group-hover:scale-115"
              style={{
                backgroundImage: `url(${video.channel.bannerUrl})`,
                backgroundSize: 'cover',
@@ -73,54 +70,15 @@ export const VideoCard = memo(function VideoCard({ video, onClick, variant = "ca
         <img
           src={optimizedThumbnail}
           alt={video.title}
-          className={`w-full h-full object-cover relative z-1 transition-all duration-300 ${video.channel?.bannerUrl ? 'opacity-85 group-hover:opacity-100 scale-95 group-hover:scale-100 rounded-sm' : ''}`}
+          className="w-full h-full object-cover relative z-1 transform-gpu transition-transform duration-300 ease-out group-hover:scale-105"
           loading="lazy"
           data-testid="img-thumbnail"
           onError={() => setImgError(true)}
         />
 
-        <div
-          className={`absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent transition-all duration-200 ease-out z-10 ${
-            isHovered ? "opacity-100" : "opacity-0"
-          }`}
-        >
-          <div className="absolute bottom-0 left-0 right-0 p-4 space-y-2 z-20">
-            <h3
-              className="font-semibold text-base line-clamp-2"
-              data-testid="text-title"
-            >
-              {video.title}
-            </h3>
+        <div className="absolute inset-0 z-10 bg-black/0 transition-colors duration-200 group-hover:bg-black/25" />
 
-            <div className="flex items-center gap-2 text-xs text-foreground/70">
-              <span data-testid="text-channel-name">{video.channel.name}</span>
-              {video.viewCount && (
-                <>
-                  <span>•</span>
-                  <span data-testid="text-view-count">{formatViewCount(video.viewCount)}</span>
-                </>
-              )}
-            </div>
-
-            {video.tags && video.tags.length > 0 && (
-              <div className="flex flex-wrap gap-1">
-                {video.tags
-                  .filter(tag => tag.tagName.toLowerCase() !== 'youtube') // Filter out "youtube" tag
-                  .slice(0, 3)
-                  .map((tag) => (
-                  <Badge
-                    key={tag.id}
-                    variant="secondary"
-                    className="text-xs px-2 py-0 h-5"
-                    data-testid={`badge-tag-${tag.id}`}
-                  >
-                    {tag.tagName}
-                  </Badge>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+        <div className="absolute inset-0 z-10 bg-gradient-to-t from-black/70 via-black/10 to-transparent opacity-0 transition-opacity duration-200 ease-out group-hover:opacity-100" />
 
         <div
           className={`absolute inset-0 flex items-center justify-center transition-all duration-200 ease-out z-10 ${
@@ -139,30 +97,28 @@ export const VideoCard = memo(function VideoCard({ video, onClick, variant = "ca
         )}
       </div>
 
-      {!isHovered && (
-        <div className="mt-2 space-y-1 relative z-20">
-          <h3
-            className="font-medium text-sm line-clamp-2"
-            data-testid="text-title-static"
+      <div className="mt-2 space-y-1 relative z-20">
+        <h3
+          className="font-medium text-sm line-clamp-2"
+          data-testid="text-title-static"
+        >
+          {video.title}
+        </h3>
+        <div className="flex items-center justify-between gap-2">
+          <p
+            className="text-xs text-muted-foreground"
+            data-testid="text-channel-static"
           >
-            {video.title}
-          </h3>
-          <div className="flex items-center justify-between gap-2">
-            <p
-              className="text-xs text-muted-foreground"
-              data-testid="text-channel-static"
-            >
-              {video.channel.name}
-            </p>
-            <LikeButton
-              videoId={video.id}
-              size="sm"
-              variant="ghost"
-              showCount={true}
-            />
-          </div>
+            {video.channel?.name || 'Unknown Channel'}
+          </p>
+          <LikeButton
+            videoId={video.id}
+            size="sm"
+            variant="ghost"
+            showCount={true}
+          />
         </div>
-      )}
+      </div>
     </div>
   );
 

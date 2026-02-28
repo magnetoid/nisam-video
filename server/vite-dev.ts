@@ -19,8 +19,14 @@ export async function setupVite(app: Express, server: Server) {
     allowedHosts: true as const,
   };
 
+  // Handle async function config from vite.config.ts
+  let config = viteConfig;
+  if (typeof config === 'function') {
+    config = await config({ command: 'serve', mode: 'development' });
+  }
+
   const vite = await createViteServer({
-    ...viteConfig,
+    ...config,
     configFile: false,
     customLogger: {
       ...viteLogger,

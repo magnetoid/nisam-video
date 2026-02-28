@@ -85,7 +85,7 @@ export default function Popular() {
       <Header />
 
       {/* Spacer for fixed header */}
-      <div className="h-16" />
+      <div className="h-20" />
 
       {/* Hero Section with #1 Most Popular */}
       {topVideo && (
@@ -101,7 +101,7 @@ export default function Popular() {
             <div className="absolute inset-0 bg-gradient-to-r from-background via-transparent to-transparent" />
           </div>
 
-          <div className="relative h-full flex items-end pb-24 px-4 sm:px-8 md:px-16">
+          <div className="relative h-full flex items-center px-4 sm:px-8 md:px-16">
             <div className="max-w-2xl space-y-4">
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2 bg-primary px-4 py-2 rounded-full">

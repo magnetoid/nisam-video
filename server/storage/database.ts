@@ -631,12 +631,22 @@ export class DatabaseStorage implements IStorage {
       return videoList.map((video) => {
         const channel = channelMap.get(video.channelId);
         if (!channel) return null as any;
+
+        const rawCategories = categoriesByVideoId.get(video.id) || [];
+        const primaryCategoryId = (video as any).primaryCategoryId as string | null | undefined;
+        const orderedCategories =
+          primaryCategoryId && rawCategories.length > 1
+            ? [
+                ...rawCategories.filter((c) => c.id === primaryCategoryId),
+                ...rawCategories.filter((c) => c.id !== primaryCategoryId),
+              ]
+            : rawCategories;
         
         return {
           ...video,
           channel,
           tags: tagsByVideoId.get(video.id) || [],
-          categories: categoriesByVideoId.get(video.id) || [],
+          categories: orderedCategories,
         };
       }).filter(Boolean) as VideoWithLocalizedRelations[];
     } catch (error) {
@@ -1199,6 +1209,7 @@ export class DatabaseStorage implements IStorage {
           defaultPlaceholderUrl: null,
           enableRandom: true,
           enableImages: true,
+          slideCount: 5,
           updatedAt: sql`now()`,
         }).returning();
         settings = newSettings;

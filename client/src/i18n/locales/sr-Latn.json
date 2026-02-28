@@ -3,6 +3,13 @@
     "name": "nisam.video",
     "tagline": "AI agregator video sadržaja"
   },
+  "home": {
+    "recent": "Nedavno dodato",
+    "trending": "U trendu",
+    "noVideos": "Nema dostupnih videa",
+    "adminPrompt": "Posetite admin panel da dodate YouTube kanale i počnete sa agregacijom videa",
+    "loading": "Učitavanje videa..."
+  },
   "nav": {
     "browse": "Pretraži",
     "channels": "Kanali",
@@ -10,7 +17,8 @@
     "tags": "Tagovi",
     "popular": "Popularno",
     "donate": "Podrži",
-    "admin": "Admin"
+    "admin": "Admin",
+    "settings": "Podešavanja"
   },
   "channelsDirectory": {
     "subtitle": "Pregled svih kanala",

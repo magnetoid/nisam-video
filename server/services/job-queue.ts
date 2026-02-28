@@ -1,7 +1,7 @@
 import { db } from "../db.js";
 import { scrapeJobs, channels, type ScrapeJob } from "../../shared/schema.js";
 import { eq } from "drizzle-orm";
-import { scrapeYouTubeChannel } from "../scraper.js";
+import { scrapeYouTubeChannel } from "../youtube-scraper.js";
 import { scrapeTikTokProfile } from "../tiktok-scraper.js"; // Added TikTok support
 import { recordError } from "../error-log-service.js";
 import { storage } from "../storage/index.js";
@@ -152,7 +152,8 @@ export class JobQueue {
     } else {
       const { videos: ytVideos } = await scrapeYouTubeChannel(channel.url, {
         existingVideoIds: existingIds,
-        incremental
+        incremental,
+        maxItems: 60,
       });
       scrapedVideos = ytVideos;
     }

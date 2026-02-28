@@ -69,6 +69,18 @@ async function ensureHeroTables() {
       "updated_at" timestamp DEFAULT now() NOT NULL
     );
   `);
+    
+  await pool.query(
+    `ALTER TABLE "hero_settings" ADD COLUMN IF NOT EXISTS "slide_count" integer DEFAULT 5;`
+  );
+}
+
+async function ensureVideosColumns() {
+  if (!pool) return;
+
+  await pool.query(
+    `ALTER TABLE "videos" ADD COLUMN IF NOT EXISTS "primary_category_id" varchar;`,
+  );
 }
 
 export async function runMigrations() {
@@ -84,6 +96,11 @@ export async function runMigrations() {
       await ensureHeroTables();
     } catch (e) {
       console.error("[migrate] hero bootstrap failed:", e);
+    }
+    try {
+      await ensureVideosColumns();
+    } catch (e) {
+      console.error("[migrate] videos bootstrap failed:", e);
     }
 
     // Determine the migrations folder path

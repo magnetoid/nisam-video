@@ -1,11 +1,11 @@
 import { Router, Request } from "express";
 import { storage } from "../storage/index.js";
 import { db } from "../db.js";
-import { videos, videoLikes, videoViews, tags } from "../../shared/schema.js";
+import { videos, videoLikes, videoViews, tags, videoCategories } from "../../shared/schema.js";
 import { categorizeVideo } from "../ai-service.js";
 import { requireAuth } from "../middleware/auth.js";
 import { kvService } from "../kv-service.js";
-import { eq, and, sql as sqlOp, inArray } from "drizzle-orm";
+import { eq, and, sql as sqlOp, inArray, isNull } from "drizzle-orm";
 import { getUserIdentifier } from "../utils.js";
 
 const router = Router();
@@ -154,6 +154,9 @@ router.patch("/:id", requireAuth, async (req, res) => {
       for (const categoryId of categoryIds) {
         await storage.addVideoCategory(req.params.id, categoryId);
       }
+      await storage.updateVideo(req.params.id, {
+        primaryCategoryId: Array.isArray(categoryIds) && categoryIds.length > 0 ? categoryIds[0] : null,
+      });
     }
 
     if (tagNames !== undefined) {
@@ -199,6 +202,8 @@ router.post("/:id/categorize", requireAuth, async (req, res) => {
     const categoriesSr = result.categories.sr || [];
     const maxCategories = Math.max(categoriesEn.length, categoriesSr.length);
 
+    let primaryCategoryId: string | null = null;
+
     for (let i = 0; i < maxCategories; i++) {
       const nameEn = categoriesEn[i];
       const nameSr = categoriesSr[i];
@@ -242,7 +247,10 @@ router.post("/:id/categorize", requireAuth, async (req, res) => {
       }
 
       await storage.addVideoCategory(video.id, category.id);
+      if (!primaryCategoryId) primaryCategoryId = category.id;
     }
+
+    await storage.updateVideo(video.id, { primaryCategoryId });
 
     const tagsEn = result.tags.en || [];
     const tagsSr = result.tags.sr || [];
@@ -274,7 +282,8 @@ router.post("/:id/categorize", requireAuth, async (req, res) => {
     const message = error instanceof Error ? error.message : "Failed to categorize video";
     if (
       message.includes("Cannot connect to localhost Ollama") ||
-      message.includes("Ollama")
+      message.includes("Ollama") ||
+      message.includes("ECONNREFUSED")
     ) {
       return res.status(400).json({
         error: message,
@@ -283,6 +292,112 @@ router.post("/:id/categorize", requireAuth, async (req, res) => {
     }
     console.error("Categorize video error:", error);
     res.status(500).json({ error: "Failed to categorize video" });
+  }
+});
+
+router.post("/bulk/categorize-missing", requireAuth, async (req, res) => {
+  try {
+    const limitRaw = req.body?.limit;
+    const limitNum = Math.max(1, Math.min(200, parseInt(String(limitRaw ?? "60"), 10) || 60));
+
+    const missingRows = await db
+      .select({ id: videos.id, title: videos.title, description: videos.description })
+      .from(videos)
+      .leftJoin(videoCategories, eq(videoCategories.videoId, videos.id))
+      .leftJoin(tags, eq(tags.videoId, videos.id))
+      .where(and(isNull(videoCategories.videoId), isNull(tags.id)))
+      .limit(limitNum);
+
+    const results = {
+      total: missingRows.length,
+      successful: 0,
+      failed: 0,
+      errors: [] as string[],
+    };
+
+    for (const row of missingRows) {
+      try {
+        const result = await categorizeVideo(row.title, row.description || "");
+        await storage.removeVideoCategories(row.id);
+        await storage.deleteTagsByVideoId(row.id);
+
+        const categoriesEn = result.categories.en || [];
+        const categoriesSr = result.categories.sr || [];
+        const maxCategories = Math.max(categoriesEn.length, categoriesSr.length);
+
+        let primaryCategoryId: string | null = null;
+
+        for (let i = 0; i < maxCategories; i++) {
+          const nameEn = categoriesEn[i];
+          const nameSr = categoriesSr[i];
+
+          if (!nameEn) continue;
+          const slug = nameEn.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+          let category = await storage.getLocalizedCategoryBySlug(slug, "en");
+
+          if (!category) {
+            const translations: any[] = [
+              { languageCode: "en", name: nameEn, slug, description: "" },
+            ];
+            if (nameSr) {
+              translations.push({
+                languageCode: "sr-Latn",
+                name: nameSr,
+                slug,
+                description: "",
+              });
+            }
+            category = await storage.createCategory({ videoCount: 0 }, translations);
+          } else if (nameSr) {
+            await storage
+              .addCategoryTranslation(category.id, {
+                categoryId: category.id,
+                languageCode: "sr-Latn",
+                name: nameSr,
+                slug,
+                description: "",
+              })
+              .catch(() => {});
+          }
+
+          await storage.addVideoCategory(row.id, category.id);
+          if (!primaryCategoryId) primaryCategoryId = category.id;
+        }
+
+        await storage.updateVideo(row.id, { primaryCategoryId });
+
+        const tagsEn = result.tags.en || [];
+        const tagsSr = result.tags.sr || [];
+        const maxTags = Math.max(tagsEn.length, tagsSr.length);
+
+        for (let i = 0; i < maxTags; i++) {
+          const tagEn = tagsEn[i];
+          const tagSr = tagsSr[i];
+
+          if (!tagEn) continue;
+          const translations: any[] = [{ languageCode: "en", tagName: tagEn }];
+          if (tagSr) {
+            translations.push({ languageCode: "sr-Latn", tagName: tagSr });
+          }
+          await storage.createTag({ videoId: row.id }, translations);
+        }
+
+        results.successful++;
+      } catch (error) {
+        results.failed++;
+        const message = error instanceof Error ? error.message : "Unknown error";
+        results.errors.push(`Failed to categorize video ${row.id}: ${message}`);
+      }
+    }
+
+    res.json(results);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to categorize missing videos";
+    if (message.includes("Ollama") || message.includes("ECONNREFUSED")) {
+      return res.status(400).json({ error: message, code: "AI_PROVIDER_UNAVAILABLE" });
+    }
+    console.error("Bulk categorize missing error:", error);
+    res.status(500).json({ error: "Failed to categorize missing videos" });
   }
 });
 
@@ -308,23 +423,67 @@ router.post("/bulk/categorize", requireAuth, async (req, res) => {
         await storage.removeVideoCategories(video.id);
         await storage.deleteTagsByVideoId(video.id);
 
-        for (const categoryName of result.categories) {
-          const slug = categoryName.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+        const categoriesEn = result.categories.en || [];
+        const categoriesSr = result.categories.sr || [];
+        const maxCategories = Math.max(categoriesEn.length, categoriesSr.length);
+
+        let primaryCategoryId: string | null = null;
+
+        for (let i = 0; i < maxCategories; i++) {
+          const nameEn = categoriesEn[i];
+          const nameSr = categoriesSr[i];
+
+          if (!nameEn) continue;
+
+          const slug = nameEn.toLowerCase().replace(/[^a-z0-9]+/g, "-");
           let category = await storage.getLocalizedCategoryBySlug(slug, "en");
+
           if (!category) {
-            category = await storage.createCategory(
-              { videoCount: 0 },
-              [{ languageCode: "en", name: categoryName, slug, description: "" }]
-            );
+            const translations: any[] = [
+              { languageCode: "en", name: nameEn, slug, description: "" },
+            ];
+            if (nameSr) {
+              translations.push({
+                languageCode: "sr-Latn",
+                name: nameSr,
+                slug,
+                description: "",
+              });
+            }
+            category = await storage.createCategory({ videoCount: 0 }, translations);
+          } else if (nameSr) {
+            await storage
+              .addCategoryTranslation(category.id, {
+                categoryId: category.id,
+                languageCode: "sr-Latn",
+                name: nameSr,
+                slug,
+                description: "",
+              })
+              .catch(() => {});
           }
+
           await storage.addVideoCategory(video.id, category.id);
+          if (!primaryCategoryId) primaryCategoryId = category.id;
         }
 
-        for (const tagName of result.tags) {
-          await storage.createTag(
-            { videoId: video.id },
-            [{ languageCode: "en", tagName }]
-          );
+        await storage.updateVideo(video.id, { primaryCategoryId });
+
+        const tagsEn = result.tags.en || [];
+        const tagsSr = result.tags.sr || [];
+        const maxTags = Math.max(tagsEn.length, tagsSr.length);
+
+        for (let i = 0; i < maxTags; i++) {
+          const tagEn = tagsEn[i];
+          const tagSr = tagsSr[i];
+
+          if (!tagEn) continue;
+
+          const translations: any[] = [{ languageCode: "en", tagName: tagEn }];
+          if (tagSr) {
+            translations.push({ languageCode: "sr-Latn", tagName: tagSr });
+          }
+          await storage.createTag({ videoId: video.id }, translations);
         }
 
         results.successful++;

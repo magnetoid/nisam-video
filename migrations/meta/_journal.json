@@ -15,6 +15,13 @@
       "when": 1769814577466,
       "tag": "0001_lucky_xavin",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1772154063209,
+      "tag": "0002_chief_punisher",
+      "breakpoints": true
     }
   ]
 }

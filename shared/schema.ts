@@ -60,6 +60,7 @@ export const videos = pgTable("videos", {
   channelId: varchar("channel_id")
     .notNull()
     .references(() => channels.id, { onDelete: "cascade" }),
+  primaryCategoryId: varchar("primary_category_id"),
   videoId: text("video_id").notNull().unique(), // YouTube video ID or TikTok video ID
   slug: text("slug").unique(), // SEO-friendly URL slug (nullable for backward compatibility)
   title: text("title").notNull(),
@@ -496,6 +497,7 @@ export const heroSettings = pgTable("hero_settings", {
   defaultPlaceholderUrl: text("default_placeholder_url"),
   enableRandom: boolean("enable_random").default(true),
   enableImages: boolean("enable_images").default(true),
+  slideCount: integer("slide_count").default(5),
   updatedAt: timestamp("updated_at")
     .notNull()
     .default(sql`now()`),
@@ -944,6 +946,7 @@ export const insertHeroSettingsSchema = createInsertSchemaAny(heroSettings).omit
 }).extend({
   animationType: z.enum(["fade", "slide"]).optional().default("fade"),
   fallbackImages: z.array(z.string()).optional().default([]),
+  slideCount: z.number().min(1).max(20).optional().default(5),
 });
 
 export type HeroSettings = typeof heroSettings.$inferSelect;

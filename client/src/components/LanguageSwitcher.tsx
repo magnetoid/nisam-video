@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+import { useLocation } from "wouter";
 import {
   Select,
   SelectContent,
@@ -9,11 +10,26 @@ import {
 import { Globe } from "lucide-react";
 
 export function LanguageSwitcher() {
-  const { i18n, t } = useTranslation();
+  const { i18n } = useTranslation();
+  const [location, setLocation] = useLocation();
 
   const changeLanguage = (lng: string) => {
     i18n.changeLanguage(lng);
     localStorage.setItem("language", lng);
+
+    const currentPath = window.location.pathname;
+
+    if (lng === "en") {
+      if (!currentPath.startsWith("/en")) {
+        const newPath = `/en${currentPath === "/" ? "" : currentPath}`;
+        window.location.href = newPath;
+      }
+    } else {
+      if (currentPath.startsWith("/en")) {
+        const newPath = currentPath.replace(/^\/en/, "") || "/";
+        window.location.href = newPath;
+      }
+    }
   };
 
   return (
@@ -21,7 +37,7 @@ export function LanguageSwitcher() {
       <Globe className="w-4 h-4 text-muted-foreground" />
       <Select value={i18n.language} onValueChange={changeLanguage}>
         <SelectTrigger className="w-[140px] h-8" data-testid="select-language">
-          <SelectValue />
+          <SelectValue placeholder={i18n.language === "en" ? "English" : "Srpski"} />
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="sr-Latn" data-testid="option-serbian">

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { categorizeVideo } from "../server/ai-service";
-import { scrapeYouTubeChannel } from "../server/scraper";
+import { scrapeYouTubeChannel } from "../server/youtube-scraper";
 
 // Mock database
 vi.mock("../server/db.js", () => ({
@@ -42,8 +42,8 @@ describe("AI Service Validation", () => {
     });
 
     const result = await categorizeVideo("Test Video", "Description");
-    expect(result.categories).toEqual(["Technology"]);
-    expect(result.tags).toEqual(["AI", "Coding"]);
+    expect(result.categories).toEqual({ en: ["Technology"], sr: [] });
+    expect(result.tags).toEqual({ en: ["AI", "Coding"], sr: [] });
   });
 
   it("should clean up and parse markdown-wrapped JSON", async () => {
@@ -57,8 +57,8 @@ describe("AI Service Validation", () => {
     });
 
     const result = await categorizeVideo("Test Video", "Description");
-    expect(result.categories).toEqual(["Tech"]);
-    expect(result.tags).toEqual(["Code"]);
+    expect(result.categories).toEqual({ en: ["Tech"], sr: [] });
+    expect(result.tags).toEqual({ en: ["Code"], sr: [] });
   });
 
   it("should throw error for invalid schema types", async () => {

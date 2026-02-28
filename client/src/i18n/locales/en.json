@@ -3,6 +3,13 @@
     "name": "nisam.video",
     "tagline": "AI-Powered Video Aggregator"
   },
+  "home": {
+    "recent": "Recently Added",
+    "trending": "Trending",
+    "noVideos": "No videos available",
+    "adminPrompt": "Visit the admin panel to add YouTube channels and start aggregating videos",
+    "loading": "Loading videos..."
+  },
   "nav": {
     "browse": "Browse",
     "channels": "Channels",
@@ -10,7 +17,8 @@
     "tags": "Tags",
     "popular": "Popular",
     "donate": "Support",
-    "admin": "Admin"
+    "admin": "Admin",
+    "settings": "Settings"
   },
   "channelsDirectory": {
     "subtitle": "Browse all channels",

@@ -251,6 +251,28 @@ export default function AdminVideos() {
     },
   });
 
+  const categorizeMissingMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("POST", "/api/videos/bulk/categorize-missing", { limit: 60 });
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/videos"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
+      toast({
+        title: "AI Categorization complete",
+        description: `Categorized ${data.successful} of ${data.total} missing videos. ${data.failed > 0 ? `Failed: ${data.failed}` : ""}`,
+      });
+    },
+    onError: (error: any) => {
+      const message = error?.message || "Failed to categorize missing videos";
+      toast({
+        title: "Error",
+        description: message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleToggleSelect = (videoId: string) => {
     setSelectedVideoIds((prev) =>
       prev.includes(videoId)
@@ -315,6 +337,7 @@ export default function AdminVideos() {
         onBulkCategorize={handleBulkCategorize}
         onBulkTag={handleBulkTag}
         onBulkDelete={handleBulkDelete}
+        onCategorizeMissing={() => categorizeMissingMutation.mutate()}
         onChannelFilterChange={setChannelFilter}
         onCategoryFilterChange={setCategoryFilter}
         onPageChange={setPage}
@@ -325,6 +348,7 @@ export default function AdminVideos() {
           bulkTagMutation.isPending ||
           bulkDeleteMutation.isPending
         }
+        isCategorizeMissingProcessing={categorizeMissingMutation.isPending}
       />
 
       <VideoDetailModal

@@ -1,7 +1,7 @@
 import * as cron from "node-cron";
 import pRetry from "p-retry";
 import { CronExpressionParser } from "cron-parser";
-import { scrapeYouTubeChannel } from "./scraper.js";
+import { scrapeYouTubeChannel } from "./youtube-scraper.js";
 import { scrapeTikTokProfile } from "./tiktok-scraper.js";
 import { storage } from "./storage.js";
 import { processScrapedVideos } from "./video-ingestion.js";
@@ -215,13 +215,7 @@ class SchedulerService {
                 const { videos: ytVideos } = await scrapeYouTubeChannel(channel.url, {
                   existingVideoIds,
                   incremental: true,
-                  knownStreakLimit: Math.max(
-                    1,
-                    Math.min(
-                      50,
-                      parseInt(process.env.SCRAPE_KNOWN_STREAK_LIMIT || "12", 10) || 12,
-                    ),
-                  ),
+                  maxItems: 60,
                 });
                 scrapedVideos = ytVideos;
               }

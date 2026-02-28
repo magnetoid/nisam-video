@@ -1,13 +1,22 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Eye, Play } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { clampIndex } from '@/utils/heroSlider';
+import { Button } from '@/components/ui/button';
+import { Link } from 'wouter';
 
 type HeroSlideItem = {
   id: string;
   title: string;
   imageUrl: string | null | undefined;
+  slug?: string;
+  buttonLink?: string;
+  primaryCategory?: string;
+  secondaryCategories?: string[];
+  viewCount?: string | null;
+  publishDate?: string | null;
+  description?: string | null;
 };
 
 const FALLBACK_SLIDES: Array<{ id: string; title: string; imageUrl: string }> = [
@@ -31,26 +40,26 @@ type Props = {
 
 const HeroImageSlider: React.FC<Props> = ({ items, ariaLabel = 'Featured titles' }) => {
   const reducedMotion = prefersReducedMotion();
-  const slideCount = 5;
-  const textShadowStyle = useMemo(() => ({ textShadow: '1px 1px 2px rgba(0, 0, 0, 0.3)' }), []);
+  const textShadowStyle = useMemo(() => ({ textShadow: '1px 1px 2px rgba(0, 0, 0, 0.35)' }), []);
 
   const slides = useMemo(() => {
     const primary = (items || [])
       .filter((it) => typeof it?.title === 'string' && it.title.trim().length > 0)
-      .slice(0, slideCount)
       .map((it, idx) => ({
         id: it.id || `primary-${idx}`,
         title: it.title,
         imageUrl: it.imageUrl || null,
+        slug: it.slug,
+        buttonLink: it.buttonLink
       }));
 
-    const filled: HeroSlideItem[] = [...primary];
-    for (let i = filled.length; i < slideCount; i += 1) {
-      // Always use the first (and only) fallback slide, but give unique IDs
-      const fb = FALLBACK_SLIDES[0];
-      filled.push({ id: `${fb.id}-${i}`, title: fb.title, imageUrl: fb.imageUrl });
+    if (primary.length === 0) {
+       // Only show fallback if absolutely no content
+       const fb = FALLBACK_SLIDES[0];
+       return [{ id: fb.id, title: fb.title, imageUrl: fb.imageUrl, slug: '', buttonLink: '' }];
     }
-    return filled;
+    
+    return primary;
   }, [items]);
 
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -153,17 +162,67 @@ const HeroImageSlider: React.FC<Props> = ({ items, ariaLabel = 'Featured titles'
             }}
           />
 
-          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/55 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-r from-background via-transparent to-transparent" />
 
-          <div className="absolute inset-0 z-10 flex items-center justify-start py-8 pl-16 pr-16 md:py-12 md:pl-24 md:pr-24">
+          <div className="absolute inset-0 z-10 flex items-center justify-start px-4 sm:px-8 md:px-16">
             <div className="w-full max-w-4xl text-left">
+              {activeSlide?.primaryCategory && (
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-sm font-semibold uppercase tracking-wider text-primary">
+                    {activeSlide.primaryCategory}
+                  </span>
+                  {activeSlide.secondaryCategories && activeSlide.secondaryCategories.length > 0 && (
+                    <>
+                      <span className="text-muted-foreground">•</span>
+                      <span className="text-sm text-muted-foreground line-clamp-1">
+                        {activeSlide.secondaryCategories.slice(0, 3).join(" • ")}
+                      </span>
+                    </>
+                  )}
+                </div>
+              )}
+
               <h1
-                className="text-white font-extrabold tracking-tight text-4xl sm:text-5xl md:text-6xl lg:text-7xl translate-x-4"
+                className="text-4xl md:text-6xl font-bold text-foreground mb-4"
                 aria-live="polite"
                 style={textShadowStyle}
               >
                 {activeSlide?.title}
               </h1>
+
+              {(activeSlide?.viewCount || activeSlide?.publishDate) && (
+                <div className="flex items-center gap-4 text-foreground/90 mb-4">
+                  {activeSlide.viewCount && (
+                    <div className="flex items-center gap-2">
+                      <Eye className="h-5 w-5" />
+                      <span className="text-lg font-semibold">{activeSlide.viewCount}</span>
+                    </div>
+                  )}
+                  {activeSlide.publishDate && (
+                    <>
+                      <span>•</span>
+                      <span>{activeSlide.publishDate}</span>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {activeSlide?.description && (
+                <p className="text-base md:text-lg text-foreground/90 line-clamp-3 mb-6">
+                  {activeSlide.description}
+                </p>
+              )}
+              
+              {activeSlide?.title && (
+                <div className="flex gap-4">
+                  <Link href={activeSlide.buttonLink || `/video/${activeSlide.slug || activeSlide.id}`}>
+                    <Button size="lg" className="gap-2 bg-white text-black hover:bg-white/90 border-none font-semibold px-8">
+                      <Play className="h-5 w-5 fill-current" /> Watch Video
+                    </Button>
+                  </Link>
+                </div>
+              )}
             </div>
           </div>
         </motion.div>

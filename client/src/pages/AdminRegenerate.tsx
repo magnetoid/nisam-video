@@ -64,6 +64,7 @@ export default function AdminRegenerate() {
       const batchSize = 1;
       let offset = 0;
       let total = 0;
+      let initialTotal = 0;
       let processedTotal = 0;
       let categoriesGeneratedTotal = 0;
       let tagsGeneratedTotal = 0;
@@ -82,25 +83,44 @@ export default function AdminRegenerate() {
 
         const data = await response.json();
 
+        if (initialTotal === 0 && data.total > 0) {
+          initialTotal = data.total;
+        }
+
         total = typeof data.total === "number" ? data.total : total;
         processedTotal += data.processed || 0;
         categoriesGeneratedTotal += data.categoriesGenerated || 0;
         tagsGeneratedTotal += data.tagsGenerated || 0;
 
-        offset = typeof data.nextOffset === "number" ? data.nextOffset : offset + batchSize;
-
-        if (total > 0) {
-          const pct = Math.min(100, Math.round((offset / total) * 100));
-          setProgress(pct);
-          const end = Math.min(total, offset);
-          setCurrentStep(`Processing ${end} of ${total} videos...`);
+        if (regenerationMode === "missing") {
+          offset = 0;
         } else {
-          setCurrentStep("Processing...");
+          offset = typeof data.nextOffset === "number" ? data.nextOffset : offset + batchSize;
+        }
+
+        if (regenerationMode === "missing") {
+          if (initialTotal > 0) {
+            const pct = Math.min(100, Math.round((processedTotal / initialTotal) * 100));
+            setProgress(pct);
+            setCurrentStep(`Processing ${processedTotal} of ${initialTotal} (missing)...`);
+          }
+        } else {
+          if (total > 0) {
+            const pct = Math.min(100, Math.round((offset / total) * 100));
+            setProgress(pct);
+            const end = Math.min(total, offset);
+            setCurrentStep(`Processing ${end} of ${total} videos...`);
+          } else {
+            setCurrentStep("Processing...");
+          }
         }
 
         if (data.done) {
           break;
         }
+
+        // Small delay to prevent overwhelming the server
+        await new Promise((resolve) => setTimeout(resolve, 500));
       }
 
       setProgress(100);

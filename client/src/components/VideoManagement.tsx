@@ -53,12 +53,14 @@ interface VideoManagementProps {
   onBulkCategorize?: () => void;
   onBulkTag?: (tags: string[]) => void;
   onBulkDelete?: () => void;
+  onCategorizeMissing?: () => void;
   onChannelFilterChange?: (channelId: string | undefined) => void;
   onCategoryFilterChange?: (categoryId: string | undefined) => void;
   onPageChange?: (page: number) => void;
   onPageSizeChange?: (pageSize: number) => void;
   processingVideoIds?: Set<string>;
   isBulkProcessing?: boolean;
+  isCategorizeMissingProcessing?: boolean;
 }
 
 export function VideoManagement({
@@ -84,12 +86,14 @@ export function VideoManagement({
   onBulkCategorize,
   onBulkTag,
   onBulkDelete,
+  onCategorizeMissing,
   onChannelFilterChange,
   onCategoryFilterChange,
   onPageChange,
   onPageSizeChange,
   processingVideoIds = new Set(),
   isBulkProcessing = false,
+  isCategorizeMissingProcessing = false,
 }: VideoManagementProps) {
   const allSelected =
     videos.length > 0 && selectedVideoIds.length === videos.length;
@@ -107,6 +111,20 @@ export function VideoManagement({
             Manage and categorize aggregated videos
           </p>
         </div>
+
+        {onCategorizeMissing && (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={onCategorizeMissing}
+            disabled={isCategorizeMissingProcessing}
+            data-testid="button-ai-categorize-missing"
+            className="gap-2"
+          >
+            <Sparkles className="h-4 w-4" />
+            {isCategorizeMissingProcessing ? "Processing..." : "AI Categorize Missing"}
+          </Button>
+        )}
 
         {selectedVideoIds.length > 0 && (
           <div className="flex items-center gap-3">

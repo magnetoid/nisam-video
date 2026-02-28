@@ -1,5 +1,6 @@
 import { Link } from "wouter";
 import { useTranslation } from "react-i18next";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { Home, Grid3x3, Tags, TrendingUp, Settings, Smartphone, Tv } from "lucide-react";
 import {
   Sheet,
@@ -79,11 +80,11 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
           </SheetTitle>
         </SheetHeader>
 
-        <nav className="flex flex-col gap-2 mt-8" data-testid="mobile-nav-menu">
+        <nav className="flex flex-col gap-2 mt-8">
           {navItems.map((item) => (
             <Link key={item.href} href={item.href} onClick={onClose}>
               <div
-                className="flex items-center gap-3 px-4 py-3 rounded-md hover-elevate active-elevate-2 cursor-pointer"
+                className="flex items-center gap-3 px-4 py-3 rounded-md hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors"
                 data-testid={item.testId}
               >
                 <item.icon className="h-5 w-5 text-muted-foreground" />
@@ -91,6 +92,16 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
               </div>
             </Link>
           ))}
+          
+          <div className="mt-6 px-4 pt-6 border-t">
+            <p className="text-sm font-medium text-muted-foreground mb-4">
+              {t("nav.settings") || "Settings"}
+            </p>
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">Language</span>
+              <LanguageSwitcher />
+            </div>
+          </div>
         </nav>
       </SheetContent>
     </Sheet>

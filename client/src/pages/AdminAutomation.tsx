@@ -169,10 +169,17 @@ export default function AdminAutomation() {
       queryClient.invalidateQueries({ queryKey: ["/api/automation/jobs"] });
       queryClient.invalidateQueries({ queryKey: ["/api/automation/jobs/active"] });
       invalidateContentQueries();
-      toast.success("Incremental batch started");
+      toast({
+        title: "Incremental batch started",
+        description: "The scraping job has been queued.",
+      });
     },
     onError: (error) => {
-      toast.error(`Failed to start job: ${error instanceof Error ? error.message : "Unknown error"}`);
+      toast({
+        title: "Action Failed",
+        description: `Failed to start job: ${error instanceof Error ? error.message : "Unknown error"}`,
+        variant: "destructive",
+      });
     }
   });
 
@@ -182,11 +189,18 @@ export default function AdminAutomation() {
       return res.json();
     },
     onSuccess: (data) => {
-      toast.success(`Regenerated metadata for ${data.processed} videos`);
+      toast({
+        title: "Regeneration Complete",
+        description: `Regenerated metadata for ${data.processed} videos`,
+      });
       invalidateContentQueries();
     },
     onError: (error) => {
-      toast.error(`Failed to regenerate: ${error instanceof Error ? error.message : "Unknown error"}`);
+      toast({
+        title: "Regeneration Failed",
+        description: `Failed to regenerate: ${error instanceof Error ? error.message : "Unknown error"}`,
+        variant: "destructive",
+      });
     }
   });
 
@@ -248,7 +262,10 @@ export default function AdminAutomation() {
       const onJobComplete = (ev: MessageEvent) => {
         try {
           const { status } = JSON.parse(ev.data);
-          toast.success(`Job completed with status: ${status}`);
+          toast({
+            title: "Job Completed",
+            description: `Job finished with status: ${status}`,
+          });
           queryClient.invalidateQueries({ queryKey: ['/api/automation/jobs'] });
           queryClient.invalidateQueries({ queryKey: ['/api/automation/jobs/active'] });
           invalidateContentQueries();
@@ -263,14 +280,22 @@ export default function AdminAutomation() {
         console.error('SSE error:', ev);
         source.close();
         streamRef.current = null;
-        toast.error('Connection lost. Reconnecting...');
+        toast({
+          title: "Connection Lost",
+          description: "Reconnecting to event stream...",
+          variant: "destructive",
+        });
 
         if (retryCount < maxRetries) {
           retryCount++;
           const delay = baseDelay * Math.pow(2, retryCount - 1); // Exponential backoff
           setTimeout(createStream, delay);
         } else {
-          toast.error('Failed to reconnect. Falling back to polling.');
+          toast({
+            title: "Connection Failed",
+            description: "Failed to reconnect. Falling back to polling.",
+            variant: "destructive",
+          });
           // Trigger query refetch as fallback
           queryClient.invalidateQueries({ queryKey: ['/api/automation/jobs/active'] });
         }

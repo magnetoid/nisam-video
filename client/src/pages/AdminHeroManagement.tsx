@@ -226,6 +226,7 @@ export default function AdminHeroManagement() {
       defaultPlaceholderUrl: '',
       enableRandom: true,
       enableImages: true,
+      slideCount: 5,
     },
   });
 
@@ -437,6 +438,22 @@ export default function AdminHeroManagement() {
           <CardTitle>Slider Configuration</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
+          <div className="space-y-4">
+            <Label>Number of Slides to Show</Label>
+            <div className="flex items-center gap-4">
+              <Slider
+                defaultValue={[5]}
+                min={1}
+                max={20}
+                step={1}
+                value={[settingsForm.watch('slideCount') || 5]}
+                onValueChange={(value) => settingsForm.setValue('slideCount', value[0])}
+                className="w-full"
+              />
+              <span className="w-8 text-center">{settingsForm.watch('slideCount') || 5}</span>
+            </div>
+          </div>
+
           <div className="space-y-4">
             <Label>Rotation Interval (seconds)</Label>
             <div className="flex items-center gap-4">

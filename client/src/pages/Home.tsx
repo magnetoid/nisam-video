@@ -62,10 +62,16 @@ export default function Home() {
 
   const heroItems = useMemo(() => {
     const primary = featuredVideos.length > 0 ? featuredVideos : recentVideos;
-    return primary.slice(0, 5).map((v) => ({
+    return primary.map((v) => ({
       id: v.id,
       title: v.title,
       imageUrl: v.thumbnailUrl || null,
+      slug: v.slug || v.id,
+      primaryCategory: v.categories?.[0]?.name || v.categories?.[0]?.translations?.[0]?.name || undefined,
+      secondaryCategories: (v.categories || []).slice(1).map((c) => c.name || c.translations?.[0]?.name).filter(Boolean) as string[],
+      viewCount: v.viewCount || null,
+      publishDate: v.publishDate || null,
+      description: v.description || null,
     }));
   }, [featuredVideos, recentVideos]);
 
@@ -121,7 +127,7 @@ export default function Home() {
             <HeroImageSlider items={heroItems} />
 
             {recentVideos.length > 0 && (
-              <CarouselRow title="Recently Added" videos={recentVideos} />
+              <CarouselRow title={t("home.recent")} videos={recentVideos} />
             )}
 
             {Object.entries(videosByCategory).slice(0, 6).map(
@@ -135,7 +141,7 @@ export default function Home() {
             )}
 
             {trendingVideos.length > 0 && (
-              <CarouselRow title="Trending" videos={trendingVideos} />
+              <CarouselRow title={t("home.trending")} videos={trendingVideos} />
             )}
           </div>
         </LikeStatusBatchProvider>
@@ -144,11 +150,10 @@ export default function Home() {
           <div className="flex flex-col items-center justify-center min-h-[50vh] px-4">
             <div className="text-center space-y-4">
               <h2 className="text-3xl font-bold" data-testid="text-empty-state">
-                No videos available
+                {t("home.noVideos")}
               </h2>
               <p className="text-muted-foreground max-w-md">
-                Visit the admin panel to add YouTube channels and start
-                aggregating videos
+                {t("home.adminPrompt")}
               </p>
             </div>
           </div>
@@ -158,7 +163,7 @@ export default function Home() {
           <div className="flex flex-col items-center justify-center min-h-[50vh] px-4">
             <div className="text-center space-y-4" data-testid="loading-state">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-              <p className="text-muted-foreground">Loading videos...</p>
+              <p className="text-muted-foreground">{t("home.loading")}</p>
             </div>
           </div>
         )}

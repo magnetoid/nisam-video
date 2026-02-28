@@ -166,7 +166,7 @@ export function VideoDetailModal({
                   className="font-medium text-foreground"
                   data-testid="text-channel-name"
                 >
-                  {video.channel.name}
+                  {video.channel?.name || 'Unknown Channel'}
                 </span>
                 {video.viewCount && (
                   <>

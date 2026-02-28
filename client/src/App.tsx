@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, LazyExoticComponent, ComponentType, Component, ReactNode } from "react";
-import { Switch, Route, Router as WouterRouter } from "wouter";
+import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
 import { queryClient, prefetchHomeData } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -21,6 +21,8 @@ import Popular from "@/pages/Popular";
 import Shorts from "@/pages/Shorts";
 import Donate from "@/pages/Donate";
 import Login from "@/pages/Login";
+import Register from "@/pages/Register";
+import Settings from "@/pages/Settings";
 import About from "@/pages/About";
 import PublicLog from "@/pages/PublicLog";
 import PublicErrorLogs from "@/pages/PublicErrorLogs";
@@ -225,6 +227,7 @@ function LanguageWrapper({ lang, children }: { lang: string, children: ReactNode
     if (i18n.language !== lang) {
       i18n.changeLanguage(lang);
     }
+    localStorage.setItem("language", lang);
   }, [lang, i18n]);
   return <>{children}</>;
 }
@@ -246,6 +249,8 @@ function AppRoutes() {
       <Route path="/about" component={About} />
       <Route path="/donate" component={Donate} />
       <Route path="/login" component={Login} />
+      <Route path="/register" component={Register} />
+      <Route path="/settings" component={Settings} />
       <Route path="/admin/login" component={Login} />
       <Route path="/public/error-logs" component={PublicErrorLogs} />
       {adminRoutes.map(({ path, page }) => (
@@ -259,24 +264,22 @@ function AppRoutes() {
 }
 
 function Router() {
-  return (
-    <Switch>
-      {/* English Routes */}
-      <Route path="/en/:rest*">
-        <WouterRouter base="/en">
-          <LanguageWrapper lang="en">
-            <AppRoutes />
-          </LanguageWrapper>
-        </WouterRouter>
-      </Route>
+  const [location] = useLocation();
 
-      {/* Default (Serbian) Routes */}
-      <Route path="/:rest*">
-        <LanguageWrapper lang="sr-Latn">
+  if (location.startsWith("/en")) {
+    return (
+      <WouterRouter base="/en">
+        <LanguageWrapper lang="en">
           <AppRoutes />
         </LanguageWrapper>
-      </Route>
-    </Switch>
+      </WouterRouter>
+    );
+  }
+
+  return (
+    <LanguageWrapper lang="sr-Latn">
+      <AppRoutes />
+    </LanguageWrapper>
   );
 }
 

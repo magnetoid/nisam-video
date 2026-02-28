@@ -1,6 +1,6 @@
 import { useRoute, Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { ArrowLeft, Sparkles, Eye } from "lucide-react";
+import { ArrowLeft, Sparkles, Eye, Play, Maximize } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -10,12 +10,13 @@ import { Footer } from "@/components/Footer";
 import { VideoCard } from "@/components/VideoCard";
 import { LikeButton } from "@/components/LikeButton";
 import { useTranslation } from "react-i18next";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import type { VideoWithLocalizedRelations } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 
 export default function VideoPage() {
   const { t, i18n } = useTranslation();
+  const [isPlaying, setIsPlaying] = useState(false);
   const [, params] = useRoute("/video/:slug");
   const videoSlug = params?.slug;
 
@@ -102,7 +103,7 @@ export default function VideoPage() {
   const isTikTok = video.videoType === "tiktok";
   const embedUrl = isTikTok 
     ? (video.embedUrl || `https://www.tiktok.com/embed/v2/${video.videoId}`)
-    : `https://www.youtube.com/embed/${video.videoId}`;
+    : `https://www.youtube.com/embed/${video.videoId}?autoplay=1`;
 
   const similarVideos = allVideos
     .filter(
@@ -230,15 +231,48 @@ export default function VideoPage() {
 
         {/* Video player - full width */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 pb-8">
-          <div className="aspect-video w-full bg-black rounded-lg overflow-hidden">
-            <iframe
-              src={embedUrl}
-              title={video.title}
-              className="w-full h-full"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-              data-testid="iframe-video-player"
-            />
+          <div id="video-player-container" className="aspect-video w-full bg-black rounded-lg overflow-hidden relative group">
+            {!isPlaying ? (
+              <div className="absolute inset-0 z-10">
+                <img 
+                  src={video.thumbnailUrl} 
+                  alt={video.title} 
+                  className="w-full h-full object-cover opacity-60"
+                />
+                <div className="absolute inset-0 bg-black/40 flex flex-col sm:flex-row items-center justify-center gap-4">
+                  <Button 
+                    size="lg" 
+                    className="gap-2 min-w-[140px]" 
+                    onClick={() => setIsPlaying(true)}
+                  >
+                    <Play className="h-5 w-5 fill-current" /> {t("video.watch", "Watch")}
+                  </Button>
+                  <Button 
+                    size="lg" 
+                    variant="secondary"
+                    className="gap-2 min-w-[140px]" 
+                    onClick={() => {
+                      const container = document.getElementById('video-player-container');
+                      if (container && container.requestFullscreen) {
+                        container.requestFullscreen().catch(err => console.error("Fullscreen error:", err));
+                      }
+                      setIsPlaying(true);
+                    }}
+                  >
+                    <Maximize className="h-5 w-5" /> {t("video.watchFullscreen", "Watch in Fullscreen")}
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <iframe
+                src={embedUrl}
+                title={video.title}
+                className="w-full h-full"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                data-testid="iframe-video-player"
+              />
+            )}
           </div>
         </div>
 
@@ -260,7 +294,7 @@ export default function VideoPage() {
                     className="font-medium text-foreground"
                     data-testid="text-channel-name"
                   >
-                    {video.channel.name}
+                    {video.channel?.name || "Unknown Channel"}
                   </span>
                   {video.viewCount && (
                     <>

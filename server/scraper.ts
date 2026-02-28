@@ -10,13 +10,14 @@ export interface ScrapedVideo {
   viewCount?: string;
   publishDate?: string;
   videoType: "regular" | "youtube_short" | "tiktok";
+}
+
 export interface ScrapedChannelInfo {
   channelName?: string;
   channelId?: string;
   description?: string;
   thumbnailUrl?: string;
   bannerUrl?: string;
-} bannerUrl?: string;
 }
 
 export async function scrapeYouTubeChannelAbout(channelUrl: string): Promise<ScrapedChannelInfo> {
@@ -218,12 +219,12 @@ export async function scrapeYouTubeChannel(
 
       // Extract videos from tabs
       const tabs = initialData?.contents?.twoColumnBrowseResultsRenderer?.tabs;
-      if (tabs) {
-        const knownStreakLimit = Math.max(1, options.knownStreakLimit ?? 12);
-        let knownStreak = 0;
-        let stop = false;
+          if (tabs) {
+            const knownStreakLimit = Math.max(1, options.knownStreakLimit ?? 60);
+            let knownStreak = 0;
+            let stop = false;
 
-        for (const tab of tabs) {
+            for (const tab of tabs) {
           if (stop) break;
           const tabRenderer = tab.tabRenderer;
           // Check for richGridRenderer (Videos tab) or richListRenderer
@@ -239,8 +240,12 @@ export async function scrapeYouTubeChannel(
                 // Sometimes structured differently
             }
 
+            // Increase limit to 60 items
+            const MAX_ITEMS = 60;
+            let itemCount = 0;
+
             for (const item of items) {
-              if (stop) break;
+              if (stop || itemCount >= MAX_ITEMS) break;
               // Handle richItemRenderer (standard)
               const videoRenderer = item.richItemRenderer?.content?.videoRenderer;
               // Handle itemSectionRenderer (sometimes used in lists)
@@ -286,6 +291,7 @@ export async function scrapeYouTubeChannel(
 
                 if (video.videoId && video.title) {
                   videos.push(video);
+                  itemCount++;
                 }
               }
             }
