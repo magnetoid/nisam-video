@@ -34,13 +34,16 @@ COPY --from=builder /app/server ./server
 COPY --from=builder /app/shared ./shared
 COPY --from=builder /app/api ./api
 
-# Instaliraj produkcione dependency-je + tsx za runtime
+# Instaliraj produkcione dependency-je
 COPY package.json package-lock.json* ./
 RUN npm install --production --ignore-scripts
-RUN npm install tsx --no-save --ignore-scripts
+
+# Instaliraj tsx globalno da bi bio dostupan u PATH-u
+RUN npm install -g tsx
 
 USER nodejs
 
 EXPOSE 3000
 
-CMD ["./node_modules/.bin/tsx", "server/index.ts"]
+# Pokreni server koristeci globalni tsx
+CMD ["tsx", "server/index.ts"]
