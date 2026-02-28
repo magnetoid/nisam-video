@@ -110,6 +110,8 @@ export async function runMigrations() {
       path.join(process.cwd(), "../migrations"), // If CWD is api/
       path.join(path.dirname(fileURLToPath(import.meta.url)), "../migrations"), // Relative to this file
       path.join(path.dirname(fileURLToPath(import.meta.url)), "../../migrations"), // Relative to build output
+      // Dodajem i apsolutnu putanju za Docker
+      "/app/migrations"
     ];
 
     let migrationsFolder = "";

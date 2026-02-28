@@ -33,11 +33,13 @@ COPY --from=builder /app/.env ./.env
 COPY --from=builder /app/server ./server
 COPY --from=builder /app/shared ./shared
 COPY --from=builder /app/api ./api
-COPY --from=builder /app/migrations ./migrations
 
 # Instaliraj produkcione dependency-je
 COPY package.json package-lock.json* ./
 RUN npm install --production --ignore-scripts
+
+# Kopiraj migracije POSLE npm install da ih ne pregazimo
+COPY --from=builder /app/migrations ./migrations
 
 # Instaliraj tsx globalno da bi bio dostupan u PATH-u
 RUN npm install -g tsx
