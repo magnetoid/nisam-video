@@ -4,16 +4,19 @@ FROM base AS deps
 RUN apk add --no-cache libc6-compat python3 make g++
 WORKDIR /app
 
+# Forsiramo development env da bi se instalirali devDependencies (vite)
+ENV NODE_ENV=development
+
 COPY package.json package-lock.json* ./
-# Instaliraj sve (ukljucujuci devDependencies za build)
-RUN npm install --ignore-scripts
+# Instaliraj sve (ukljucujuci devDependencies)
+RUN npm install --include=dev --ignore-scripts
 
 FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Sada ce raditi jer imamo vite iz devDependencies
+# Build assets
 RUN npm run build
 
 FROM base AS runner
