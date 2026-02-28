@@ -7,3 +7,5 @@ vite.config.ts.*
 .vercel
 .env*.local
 .webmcp
+logs/
+*.log
