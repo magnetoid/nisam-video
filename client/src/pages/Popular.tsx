@@ -1,59 +1,58 @@
-import { useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
-import { CarouselRow } from "@/components/CarouselRow";
 import { SEO } from "@/components/SEO";
 import type { VideoWithLocalizedRelations } from "@shared/schema";
-import { TrendingUp, Eye } from "lucide-react";
+import { TrendingUp, Eye, Play, Loader2 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
+import { getOptimizedThumbnail, getMaxResolutionThumbnail } from "@/lib/video";
+import { useIntersectionObserver } from "@/hooks/useIntersectionObserver";
+import { useRef, useEffect } from "react";
+import { Button } from "@/components/ui/button";
 
 export default function Popular() {
   const [, setLocation] = useLocation();
   const { i18n } = useTranslation();
-
-  const { data: videos = [] } = useQuery<VideoWithLocalizedRelations[]>({
-    queryKey: ["/api/videos?limit=500", i18n.language],
-    queryFn: async () => {
-      const res = await apiRequest("GET", `/api/videos?limit=500&lang=${i18n.language}`);
-      return res.json();
-    },
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+  
+  const entry = useIntersectionObserver(loadMoreRef, {
+    threshold: 0.1,
+    rootMargin: "100px",
   });
 
-  const { sortedVideos, mega, high, medium, rising, topVideo } = useMemo(() => {
-    const parseViewCount = (viewCount: string | null): number => {
-      if (!viewCount) return 0;
-      const match = viewCount.match(/[\d,]+/);
-      if (!match) return 0;
-      return parseInt(match[0].replace(/,/g, ""), 10);
-    };
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading,
+  } = useInfiniteQuery<VideoWithLocalizedRelations[]>({
+    queryKey: ["popular-videos", i18n.language],
+    queryFn: async ({ pageParam = 0 }) => {
+      const res = await apiRequest(
+        "GET", 
+        `/api/videos?sort=popularity&limit=24&offset=${pageParam}&lang=${i18n.language}`
+      );
+      return res.json();
+    },
+    getNextPageParam: (lastPage, allPages) => {
+      return lastPage.length === 24 ? allPages.length * 24 : undefined;
+    },
+    initialPageParam: 0,
+    staleTime: 5 * 60 * 1000, // 5 min cache
+  });
 
-    const calculatePopularityScore = (video: VideoWithLocalizedRelations): number => {
-      const externalViews = parseViewCount(video.viewCount);
-      const internalViews = video.internalViewsCount || 0;
-      const likes = video.likesCount || 0;
-      return externalViews * 0.3 + internalViews * 50 + likes * 100;
-    };
+  useEffect(() => {
+    if (entry?.isIntersecting && hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [entry?.isIntersecting, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-    const sorted = [...videos]
-      .map((v) => ({
-        ...v,
-        parsedViews: parseViewCount(v.viewCount),
-        popularityScore: calculatePopularityScore(v),
-      }))
-      .sort((a, b) => b.popularityScore - a.popularityScore);
-
-    return {
-      sortedVideos: sorted,
-      mega: sorted.filter((v) => v.parsedViews >= 1000000),
-      high: sorted.filter((v) => v.parsedViews >= 100000 && v.parsedViews < 1000000),
-      medium: sorted.filter((v) => v.parsedViews >= 10000 && v.parsedViews < 100000),
-      rising: sorted.filter((v) => v.parsedViews > 0 && v.parsedViews < 10000),
-      topVideo: sorted[0],
-    };
-  }, [videos]);
+  const videos = data?.pages.flat() || [];
+  const topVideo = videos[0];
+  const gridVideos = videos.slice(1);
 
   const currentUrl = `${window.location.origin}/popular`;
   const hreflangLinks = [
@@ -62,14 +61,13 @@ export default function Popular() {
     { lang: "x-default", url: currentUrl },
   ];
 
-  // CollectionPage structured data
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
     name: "Popular Videos",
     description: "Watch the most popular and trending videos",
     url: currentUrl,
-    numberOfItems: sortedVideos.length,
+    numberOfItems: videos.length,
   };
 
   return (
@@ -85,132 +83,142 @@ export default function Popular() {
       <Header />
 
       {/* Spacer for fixed header */}
-      <div className="h-20" />
+      <div className="h-16" />
 
-      {/* Hero Section with #1 Most Popular */}
-      {topVideo && (
-        <div className="relative h-[50vh] md:h-[70vh]">
-          <div className="absolute inset-0">
-            <img
-              src={topVideo.thumbnailUrl}
-              alt={topVideo.title}
-              className="w-full h-full object-cover"
-              loading="lazy"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
-            <div className="absolute inset-0 bg-gradient-to-r from-background via-transparent to-transparent" />
-          </div>
-
-          <div className="relative h-full flex items-center px-4 sm:px-8 md:px-16">
-            <div className="max-w-2xl space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2 bg-primary px-4 py-2 rounded-full">
-                  <TrendingUp className="h-5 w-5" />
-                  <span className="font-bold">#1 MOST POPULAR</span>
-                </div>
+      {isLoading && videos.length === 0 ? (
+        <div className="h-[70vh] flex items-center justify-center">
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        </div>
+      ) : (
+        <>
+          {/* Hero Section with #1 Most Popular */}
+          {topVideo && (
+            <div className="relative h-[60vh] md:h-[75vh] w-full overflow-hidden group cursor-pointer" onClick={() => setLocation(`/video/${topVideo.slug || topVideo.id}`)}>
+              <div className="absolute inset-0">
+                <img
+                  src={getMaxResolutionThumbnail(topVideo.thumbnailUrl, topVideo.videoId)}
+                  alt={topVideo.title}
+                  className="w-full h-full object-cover transition-transform duration-[10s] ease-linear group-hover:scale-105"
+                  loading="eager"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-r from-background/80 via-transparent to-transparent" />
               </div>
 
-              <h1
-                className="text-4xl md:text-6xl font-bold"
-                data-testid="text-hero-title"
-              >
-                {topVideo.title}
-              </h1>
+              <div className="absolute bottom-0 left-0 w-full p-6 md:p-16 flex flex-col justify-end items-start z-10">
+                <div className="max-w-4xl space-y-4 md:space-y-6 animate-in fade-in slide-in-from-bottom-10 duration-700">
+                  <div className="flex items-center gap-3">
+                    <span className="bg-primary text-primary-foreground px-3 py-1 text-xs md:text-sm font-bold uppercase tracking-wider rounded-md flex items-center gap-2">
+                      <TrendingUp className="h-3 w-3 md:h-4 md:w-4" />
+                      #1 Trending
+                    </span>
+                  </div>
 
-              <div className="flex items-center gap-4 text-foreground/90">
-                <div className="flex items-center gap-2">
-                  <Eye className="h-5 w-5" />
-                  <span className="text-lg font-semibold">
-                    {topVideo.viewCount}
-                  </span>
+                  <h1 className="text-3xl md:text-5xl lg:text-7xl font-black text-white leading-tight drop-shadow-lg">
+                    {topVideo.title}
+                  </h1>
+
+                  <div className="flex items-center gap-4 text-white/90 font-medium text-sm md:text-lg">
+                    <div className="flex items-center gap-2">
+                      <Eye className="h-5 w-5" />
+                      <span>{topVideo.viewCount} views</span>
+                    </div>
+                    {topVideo.publishDate && (
+                      <>
+                        <span className="text-white/50">•</span>
+                        <span>{topVideo.publishDate}</span>
+                      </>
+                    )}
+                  </div>
+
+                  <p className="text-base md:text-xl text-white/80 line-clamp-2 max-w-2xl hidden md:block">
+                    {topVideo.description}
+                  </p>
+
+                  <div className="pt-4">
+                    <Button 
+                      size="lg" 
+                      className="gap-2 text-base md:text-lg h-12 md:h-14 px-8 bg-white text-black hover:bg-white/90 border-none font-bold shadow-xl shadow-black/20"
+                    >
+                      <Play className="h-5 w-5 fill-current" /> Play Now
+                    </Button>
+                  </div>
                 </div>
-                {topVideo.publishDate && (
-                  <>
-                    <span>•</span>
-                    <span>{topVideo.publishDate}</span>
-                  </>
-                )}
               </div>
+            </div>
+          )}
 
-              {topVideo.description && (
-                <p className="text-base md:text-lg text-foreground/90 line-clamp-3">
-                  {topVideo.description}
+          {/* Grid Layout */}
+          <div className="px-4 sm:px-8 md:px-16 py-12 space-y-8">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl md:text-3xl font-bold flex items-center gap-3">
+                <TrendingUp className="h-6 w-6 md:h-8 md:w-8 text-primary" />
+                Trending Now
+              </h2>
+            </div>
+
+            {gridVideos.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {gridVideos.map((video, index) => (
+                  <div 
+                    key={video.id} 
+                    className="group relative flex flex-col gap-3 cursor-pointer"
+                    onClick={() => setLocation(`/video/${video.slug || video.id}`)}
+                  >
+                    <div className="aspect-video relative rounded-lg overflow-hidden bg-muted">
+                      <img
+                        src={getOptimizedThumbnail(video.thumbnailUrl)}
+                        alt={video.title}
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        loading="lazy"
+                      />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                        <div className="h-12 w-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 scale-50 group-hover:scale-100 transition-all duration-300">
+                          <Play className="h-6 w-6 fill-white text-white" />
+                        </div>
+                      </div>
+                      
+                      <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-md px-2 py-1 rounded text-xs font-bold text-white">
+                        #{index + 2}
+                      </div>
+                      
+                      {video.duration && (
+                        <div className="absolute bottom-2 right-2 bg-black/80 px-1.5 py-0.5 rounded text-xs font-medium text-white">
+                          {video.duration}
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="space-y-1">
+                      <h3 className="font-semibold leading-snug line-clamp-2 group-hover:text-primary transition-colors">
+                        {video.title}
+                      </h3>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <span>{video.viewCount} views</span>
+                        <span>•</span>
+                        <span>{video.publishDate}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-20">
+                <p className="text-muted-foreground text-lg">
+                  No videos found. Check back later!
                 </p>
+              </div>
+            )}
+
+            {/* Load More Trigger */}
+            <div ref={loadMoreRef} className="py-8 flex justify-center">
+              {isFetchingNextPage && (
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               )}
-
-              <button
-                onClick={() =>
-                  setLocation(`/video/${topVideo.slug || topVideo.id}`)
-                }
-                className="px-8 py-3 bg-white text-black font-semibold rounded hover-elevate active-elevate-2 transition-transform"
-                data-testid="button-play-hero"
-              >
-                ▶ Play
-              </button>
             </div>
           </div>
-        </div>
+        </>
       )}
-
-      {/* Popular Video Tiers */}
-      <div className="px-4 sm:px-8 md:px-16 space-y-12 py-12">
-        <div className="space-y-2">
-          <h2 className="text-3xl font-bold">Trending Now</h2>
-          <p className="text-muted-foreground">
-            The most watched videos on nisam.video
-          </p>
-        </div>
-
-        {mega.length > 0 && (
-          <div>
-            <div className="flex items-center gap-3 mb-6">
-              <TrendingUp className="h-6 w-6 text-primary" />
-              <h3 className="text-xl font-bold">Mega Hits (1M+ views)</h3>
-            </div>
-            <CarouselRow title="" videos={mega} />
-          </div>
-        )}
-
-        {high.length > 0 && (
-          <div>
-            <div className="flex items-center gap-3 mb-6">
-              <TrendingUp className="h-6 w-6 text-primary" />
-              <h3 className="text-xl font-bold">
-                Highly Popular (100K+ views)
-              </h3>
-            </div>
-            <CarouselRow title="" videos={high} />
-          </div>
-        )}
-
-        {medium.length > 0 && (
-          <div>
-            <div className="flex items-center gap-3 mb-6">
-              <Eye className="h-6 w-6 text-muted-foreground" />
-              <h3 className="text-xl font-bold">Popular (10K+ views)</h3>
-            </div>
-            <CarouselRow title="" videos={medium} />
-          </div>
-        )}
-
-        {rising.length > 0 && (
-          <div>
-            <div className="flex items-center gap-3 mb-6">
-              <TrendingUp className="h-6 w-6 text-muted-foreground" />
-              <h3 className="text-xl font-bold">Rising Stars</h3>
-            </div>
-            <CarouselRow title="" videos={rising} />
-          </div>
-        )}
-
-        {videos.length === 0 && (
-          <div className="text-center py-16">
-            <p className="text-muted-foreground text-lg">
-              No videos available. Start by scraping some channels!
-            </p>
-          </div>
-        )}
-      </div>
 
       <Footer />
     </div>

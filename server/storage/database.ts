@@ -407,7 +407,7 @@ export class DatabaseStorage implements IStorage {
     lang?: string;
     limit?: number;
     offset?: number;
-    sort?: "publishDate" | "createdAt";
+    sort?: "publishDate" | "createdAt" | "views" | "popularity";
   }): Promise<VideoWithLocalizedRelations[]> {
     const lang = filters?.lang || 'en';
     const cacheKey = `videos:all:${JSON.stringify(filters || {})}`;
@@ -445,10 +445,24 @@ export class DatabaseStorage implements IStorage {
       }
 
       const sort = filters?.sort || "publishDate";
-      query =
-        sort === "createdAt"
-          ? query.orderBy(desc(videos.createdAt))
-          : query.orderBy(desc(videos.publishDate));
+      
+      if (sort === "createdAt") {
+        query = query.orderBy(desc(videos.createdAt));
+      } else if (sort === "views") {
+        query = query.orderBy(
+          sql`CAST(NULLIF(REGEXP_REPLACE(${videos.viewCount}, '[^0-9]', '', 'g'), '') AS INTEGER) DESC NULLS LAST`
+        );
+      } else if (sort === "popularity") {
+        query = query.orderBy(
+          sql`(
+            COALESCE(CAST(NULLIF(REGEXP_REPLACE(${videos.viewCount}, '[^0-9]', '', 'g'), '') AS INTEGER), 0) * 0.3 +
+            COALESCE(${videos.internalViewsCount}, 0) * 50 +
+            COALESCE(${videos.likesCount}, 0) * 100
+          ) DESC`
+        );
+      } else {
+        query = query.orderBy(desc(videos.publishDate));
+      }
 
       if (filters?.limit) {
         query = query.limit(filters.limit);

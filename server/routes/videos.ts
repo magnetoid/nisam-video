@@ -15,7 +15,9 @@ router.get("/", async (req, res) => {
     const { channelId, categoryId, search, limit, offset, lang, tagName, sort } = req.query;
     const limitNum = limit ? parseInt(limit as string, 10) || 20 : undefined;
     const offsetNum = offset ? parseInt(offset as string, 10) || 0 : undefined;
-    const sortValue = sort === "createdAt" ? "createdAt" : "publishDate";
+    const sortValue = ["publishDate", "createdAt", "views", "popularity"].includes(sort as string) 
+      ? (sort as "publishDate" | "createdAt" | "views" | "popularity") 
+      : "publishDate";
     const filters = {
       channelId: channelId as string | undefined,
       categoryId: categoryId as string | undefined,

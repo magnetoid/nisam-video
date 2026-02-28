@@ -151,77 +151,105 @@ const HeroImageSlider: React.FC<Props> = ({ items, ariaLabel = 'Featured titles'
           exit={reducedMotion ? { opacity: 1 } : { opacity: 0.0, scale: 1.0 }}
           transition={{ duration: reducedMotion ? 0 : 0.45, ease: 'easeOut' }}
         >
-          <img
-            src={resolveImageUrl(activeIndex)}
-            alt={activeSlide?.title || 'Featured slide'}
-            className="absolute inset-0 h-full w-full object-cover"
-            loading="eager"
-            decoding="async"
-            onError={() => {
-              setPrimaryFailed((prev) => ({ ...prev, [activeIndex]: true }));
-            }}
-          />
+          <motion.div
+            className="absolute inset-0 h-full w-full"
+            initial={{ scale: 1 }}
+            animate={{ scale: 1.1 }}
+            transition={{ duration: 10, ease: "linear" }} // Ken Burns effect
+          >
+            <img
+              src={resolveImageUrl(activeIndex)}
+              alt={activeSlide?.title || 'Featured slide'}
+              className="h-full w-full object-cover"
+              loading="eager"
+              decoding="async"
+              onError={() => {
+                setPrimaryFailed((prev) => ({ ...prev, [activeIndex]: true }));
+              }}
+            />
+          </motion.div>
 
-          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/55 to-transparent" />
-          <div className="absolute inset-0 bg-gradient-to-r from-background via-transparent to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-r from-background/90 via-background/20 to-transparent" />
 
-          <div className="absolute inset-0 z-10 flex items-center justify-start px-4 sm:px-8 md:px-16">
-            <div className="w-full max-w-4xl text-left">
+          <div className="absolute inset-0 z-10 flex items-end pb-24 md:items-center md:pb-0 justify-start px-4 sm:px-8 md:px-16">
+            <div className="w-full max-w-4xl text-left space-y-4 md:space-y-6">
               {activeSlide?.primaryCategory && (
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="text-sm font-semibold uppercase tracking-wider text-primary">
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className="flex items-center gap-2"
+                >
+                  <span className="text-xs md:text-sm font-bold uppercase tracking-widest text-primary bg-primary/10 px-2 py-1 rounded">
                     {activeSlide.primaryCategory}
                   </span>
                   {activeSlide.secondaryCategories && activeSlide.secondaryCategories.length > 0 && (
-                    <>
-                      <span className="text-muted-foreground">•</span>
-                      <span className="text-sm text-muted-foreground line-clamp-1">
-                        {activeSlide.secondaryCategories.slice(0, 3).join(" • ")}
-                      </span>
-                    </>
+                    <span className="hidden md:inline text-xs md:text-sm text-white/70 font-medium">
+                      {activeSlide.secondaryCategories.slice(0, 2).join(" • ")}
+                    </span>
                   )}
-                </div>
+                </motion.div>
               )}
 
-              <h1
-                className="text-4xl md:text-6xl font-bold text-foreground mb-4"
+              <motion.h1
+                className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-black text-white leading-[0.9] tracking-tighter"
                 aria-live="polite"
                 style={textShadowStyle}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
               >
                 {activeSlide?.title}
-              </h1>
+              </motion.h1>
 
               {(activeSlide?.viewCount || activeSlide?.publishDate) && (
-                <div className="flex items-center gap-4 text-foreground/90 mb-4">
+                <motion.div 
+                  className="flex items-center gap-4 text-white/90 text-sm md:text-base font-medium"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.4 }}
+                >
                   {activeSlide.viewCount && (
-                    <div className="flex items-center gap-2">
-                      <Eye className="h-5 w-5" />
-                      <span className="text-lg font-semibold">{activeSlide.viewCount}</span>
+                    <div className="flex items-center gap-1.5">
+                      <Eye className="h-4 w-4" />
+                      <span>{activeSlide.viewCount} views</span>
                     </div>
                   )}
                   {activeSlide.publishDate && (
                     <>
-                      <span>•</span>
+                      <span className="text-white/40">•</span>
                       <span>{activeSlide.publishDate}</span>
                     </>
                   )}
-                </div>
+                </motion.div>
               )}
 
               {activeSlide?.description && (
-                <p className="text-base md:text-lg text-foreground/90 line-clamp-3 mb-6">
+                <motion.p 
+                  className="hidden md:block text-lg text-white/80 line-clamp-2 max-w-2xl font-medium leading-relaxed"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.5 }}
+                >
                   {activeSlide.description}
-                </p>
+                </motion.p>
               )}
               
               {activeSlide?.title && (
-                <div className="flex gap-4">
-                  <Link href={activeSlide.buttonLink || `/video/${activeSlide.slug || activeSlide.id}`}>
-                    <Button size="lg" className="gap-2 bg-white text-black hover:bg-white/90 border-none font-semibold px-8">
-                      <Play className="h-5 w-5 fill-current" /> Watch Video
+                <motion.div 
+                  className="flex gap-4 pt-2"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.6 }}
+                >
+                  <Link href={`/video/${activeSlide.slug || activeSlide.id}`}>
+                    <Button size="lg" className="h-12 md:h-14 px-8 md:px-10 text-base md:text-lg gap-3 bg-white text-black hover:bg-white/90 hover:scale-105 transition-all duration-300 rounded-lg font-bold shadow-xl shadow-black/20">
+                      <Play className="h-5 w-5 md:h-6 md:w-6 fill-black" /> 
+                      Watch Now
                     </Button>
                   </Link>
-                </div>
+                </motion.div>
               )}
             </div>
           </div>
