@@ -72,6 +72,26 @@ export function SitemapAndRobotsPanel({
     if (robotsText && !robotsDraft) setRobotsDraft(robotsText);
   }, [robotsText, robotsDraft]);
 
+  const regenerateMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest("POST", "/api/seo/enhanced/sitemap/regenerate");
+    },
+    onSuccess: () => {
+      refetchSitemap();
+      toast({
+        title: "Sitemap Regenerated",
+        description: "The sitemap cache has been cleared and rebuilt.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Regeneration failed",
+        description: "Failed to clear sitemap cache.",
+        variant: "destructive",
+      });
+    }
+  });
+
   const saveRobotsMutation = useMutation({
     mutationFn: async () => {
       await apiRequest("PATCH", "/api/seo/enhanced/robots-txt", { content: robotsDraft });
@@ -136,9 +156,9 @@ export function SitemapAndRobotsPanel({
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <Button type="button" variant="outline" className="gap-2" onClick={() => refetchSitemap()} disabled={sitemapFetching}>
-              <RefreshCw className="h-4 w-4" />
-              {sitemapFetching ? "Refreshing…" : "Regenerate"}
+            <Button type="button" variant="outline" className="gap-2" onClick={() => regenerateMutation.mutate()} disabled={sitemapFetching || regenerateMutation.isPending}>
+              <RefreshCw className={`h-4 w-4 ${sitemapFetching || regenerateMutation.isPending ? "animate-spin" : ""}`} />
+              {sitemapFetching || regenerateMutation.isPending ? "Regenerating..." : "Regenerate"}
             </Button>
             <Button
               type="button"

@@ -5,6 +5,7 @@ import { z } from "zod";
 import { seoSettings, seoRedirects, seoMetaTags, seoKeywords, seoAuditLogs, seoABTests, seoCompetitors } from "../../shared/schema.js";
 import { eq, and, desc, asc, sql } from "drizzle-orm";
 import { db, isDbReady } from "../db.js";
+import { clearCache } from "../services/redis.js";
 
 const router = Router();
 
@@ -839,6 +840,17 @@ router.get("/enhanced/sitemap", async (req, res) => {
   } catch (error) {
     console.error("Generate sitemap error:", error);
     res.status(500).json({ error: "Failed to generate sitemap" });
+  }
+});
+
+// Regenerate sitemap (clear cache)
+router.post("/enhanced/sitemap/regenerate", requireAuth, async (req, res) => {
+  try {
+    await clearCache("sitemap:xml:*");
+    res.json({ success: true, message: "Sitemap cache cleared successfully" });
+  } catch (error) {
+    console.error("Regenerate sitemap error:", error);
+    res.status(500).json({ error: "Failed to regenerate sitemap" });
   }
 });
 

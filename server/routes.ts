@@ -6,6 +6,7 @@ import { registerFeatureRoutes } from "./routes/index.js";
 import { db, isDbReady } from "./db.js";
 import { seoSettings } from "../shared/schema.js";
 import { generateSlug } from "./utils.js";
+import { getCache, setCache } from "./services/redis.js";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Register object storage routes
@@ -26,6 +27,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const includeCategories = String((req.query as any)?.includeCategories ?? "1") !== "0";
       const includeTags = String((req.query as any)?.includeTags ?? "1") !== "0";
       const includeChannels = String((req.query as any)?.includeChannels ?? "1") !== "0";
+
+      // Try Redis Cache
+      const cacheKey = `sitemap:xml:${lang}:${maxVideos}:${includeVideos ? 1 : 0}:${includeCategories ? 1 : 0}:${includeTags ? 1 : 0}:${includeChannels ? 1 : 0}`;
+      try {
+        const cachedSitemap = await getCache<string>(cacheKey);
+        if (cachedSitemap) {
+          res.header("Content-Type", "application/xml");
+          res.header("X-Cache", "HIT-REDIS");
+          return res.send(cachedSitemap);
+        }
+      } catch (err) {
+        console.error("Redis cache error:", err);
+      }
 
       const [videos, categories, tags, channels] = await Promise.all([
         includeVideos && maxVideos !== 0
@@ -173,7 +187,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       sitemap += "</urlset>";
 
+      // Cache for 1 hour
+      await setCache(cacheKey, sitemap, 3600);
+
       res.header("Content-Type", "application/xml");
+      res.header("X-Cache", "MISS");
       res.send(sitemap);
     } catch (error) {
       console.error("Sitemap generation error:", error);
