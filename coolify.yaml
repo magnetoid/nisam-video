@@ -1,0 +1,62 @@
+# Coolify Configuration for Nisam Video
+# This file is used by Coolify to deploy your application
+
+id: nisam-video-app
+name: Nisam Video
+icon: github
+
+# Build pack - using dockerfile
+buildPack: dockerfile
+dockerfile: Dockerfile
+
+# Exposed port - the container will expose this port
+exposedPort: 3000
+
+# Environment variables to be set in Coolify
+# These will be available to your container
+env:
+  - key: NODE_ENV
+    value: production
+  - key: PORT
+    value: 3000
+  - key: DATABASE_URL
+    value: ${DB_URL}
+  - key: SUPABASE_URL
+    value: ${SUPABASE_URL}
+  - key: SUPABASE_POSTGRES_URL
+    value: ${SUPABASE_POSTGRES_URL}
+  - key: SUPABASE_SERVICE_ROLE_KEY
+    value: ${SUPABASE_SERVICE_ROLE_KEY}
+  - key: SUPABASE_JWT_SECRET
+    value: ${SUPABASE_JWT_SECRET}
+  - key: ADMIN_USERNAME
+    value: magnetoid
+  - key: ADMIN_PASSWORD
+    value: ${ADMIN_PASSWORD}
+
+# Pre-deployment command (optional)
+# preDeployCommand: "npm run db:push"
+
+# Post-deployment command (optional)
+# postDeployCommand: ""
+
+# Ports to expose from container
+ports:
+  - container: 3000
+    host: 3000
+
+# Resource configuration
+# Adjust these based on your needs
+resources:
+  memory: 1024
+  cpu: 1
+
+# Health check - Coolify will check this endpoint
+healthCheck:
+  enabled: true
+  path: /health
+  port: 3000
+  interval: 30
+  timeout: 10
+  healthyThreshold: 2
+  unhealthyThreshold: 5
