@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
 import { cache } from "./cache.js";
+import { getCache, setCache } from "./services/redis.js";
 import crypto from "crypto";
 
 interface CacheMiddlewareOptions {
@@ -90,7 +91,7 @@ export function cacheMiddleware(options: CacheMiddlewareOptions = {}) {
   const defaultTtl = options.ttl || DEFAULT_TTL;
   const scope: "public" | "private" = options.scope || "public";
 
-  return (req: Request, res: Response, next: NextFunction) => {
+  return async (req: Request, res: Response, next: NextFunction) => {
     if (!shouldCache(req, scope)) {
       if (!res.getHeader("X-Cache")) {
         res.setHeader("X-Cache", "BYPASS");
@@ -100,16 +101,33 @@ export function cacheMiddleware(options: CacheMiddlewareOptions = {}) {
 
     const ttl = getEffectiveTtlMs(req, scope, defaultTtl);
     const edgeTtl = getEdgeTtlSeconds(req, scope);
-
     const cacheKey = getCacheKey(req, scope);
-    const cachedData = cache.get<{ body: unknown; statusCode: number }>(cacheKey);
+
+    // 1. Try Memory Cache
+    let cachedData = cache.get<{ body: unknown; statusCode: number }>(cacheKey);
+    let cacheSource = "MEMORY";
+
+    // 2. Try Redis Cache (if not in memory)
+    if (!cachedData) {
+      try {
+        const redisData = await getCache<{ body: unknown; statusCode: number }>(cacheKey);
+        if (redisData) {
+          cachedData = redisData;
+          cacheSource = "REDIS";
+          // Populate memory cache for faster subsequent access
+          cache.set(cacheKey, redisData, ttl);
+        }
+      } catch (e) {
+        console.error("[Cache] Redis get error:", e);
+      }
+    }
 
     if (cachedData) {
       const etag = generateETag(cachedData.body);
       const clientEtag = req.headers["if-none-match"];
 
       if (clientEtag === etag) {
-        res.setHeader("X-Cache", "HIT");
+        res.setHeader("X-Cache", `HIT-${cacheSource}`);
         res.setHeader("ETag", etag);
         if (scope === "private") {
           res.setHeader("Vary", "Cookie");
@@ -123,7 +141,7 @@ export function cacheMiddleware(options: CacheMiddlewareOptions = {}) {
         return res.status(304).end();
       }
 
-      res.setHeader("X-Cache", "HIT");
+      res.setHeader("X-Cache", `HIT-${cacheSource}`);
       res.setHeader("ETag", etag);
       if (scope === "private") {
         res.setHeader("Vary", "Cookie");
@@ -142,7 +160,14 @@ export function cacheMiddleware(options: CacheMiddlewareOptions = {}) {
     const originalJson = res.json.bind(res);
     res.json = (body: unknown) => {
       if (res.statusCode >= 200 && res.statusCode < 300) {
-        cache.set(cacheKey, { body, statusCode: res.statusCode }, ttl);
+        const data = { body, statusCode: res.statusCode };
+        
+        // Save to Memory
+        cache.set(cacheKey, data, ttl);
+        
+        // Save to Redis (async, don't wait)
+        setCache(cacheKey, data, Math.ceil(ttl / 1000)).catch(console.error);
+
         const etag = generateETag(body);
         res.setHeader("ETag", etag);
         if (scope === "private") {
@@ -169,6 +194,7 @@ export function invalidateCacheOnMutation(pattern?: string) {
       if (_req.method !== "GET" && res.statusCode >= 200 && res.statusCode < 300) {
         if (pattern) {
           cache.invalidatePattern(pattern);
+          // TODO: Invalidate Redis pattern too if needed
         } else {
           cache.invalidatePattern("^http:");
         }

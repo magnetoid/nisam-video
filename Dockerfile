@@ -43,6 +43,7 @@ COPY --from=builder /app/migrations ./migrations
 
 # Instaliraj tsx globalno da bi bio dostupan u PATH-u
 RUN npm install -g tsx
+RUN npm install ioredis --ignore-scripts
 
 USER nodejs
 
