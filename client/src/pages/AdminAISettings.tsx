@@ -431,11 +431,40 @@ export default function AdminAISettings() {
                             )}
                           />
                           
-                          {/* Selected active model display */}
-                          <div className="p-3 bg-muted rounded-md text-sm">
-                            <span className="font-medium">Active Model:</span>{" "}
-                            {form.watch("ollamaModel") || "None selected"}
-                          </div>
+                          <FormField
+                            control={form.control}
+                            name="ollamaModel"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Selected Model</FormLabel>
+                                <Select
+                                  onValueChange={field.onChange}
+                                  value={field.value}
+                                >
+                                  <FormControl>
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select a model" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    {models.length === 0 ? (
+                                       <SelectItem value="_placeholder" disabled>Sync models first</SelectItem>
+                                    ) : (
+                                       models.filter(m => m.isActive).map((m) => (
+                                         <SelectItem key={m.id} value={m.name}>
+                                           {m.name} ({formatSize(m.size)})
+                                         </SelectItem>
+                                       ))
+                                    )}
+                                  </SelectContent>
+                                </Select>
+                                <FormDescription>
+                                  Model used for categorization and tagging.
+                                </FormDescription>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
                         </>
                       )}
 
@@ -500,40 +529,31 @@ export default function AdminAISettings() {
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead className="w-[50px]">Active</TableHead>
                             <TableHead>Name</TableHead>
                             <TableHead>Family</TableHead>
                             <TableHead>Size</TableHead>
                             <TableHead>Params</TableHead>
-                            <TableHead className="text-right">Status</TableHead>
+                            <TableHead className="text-right">Enabled</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {models.length === 0 ? (
                             <TableRow>
-                              <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                              <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                                 No models found. Click "Sync Models" to fetch from server.
                               </TableCell>
                             </TableRow>
                           ) : (
                             models.map((model) => (
                               <TableRow key={model.id}>
-                                <TableCell>
-                                  <div className="flex items-center justify-center">
-                                    <input
-                                      type="radio"
-                                      name="activeModel"
-                                      className="h-4 w-4 text-primary"
-                                      checked={form.watch("ollamaModel") === model.name}
-                                      onChange={() => {
-                                        form.setValue("ollamaModel", model.name, { shouldDirty: true });
-                                        // Auto-save when selecting model? Or require save button?
-                                        // Better to let user click save, but update local state
-                                      }}
-                                    />
+                                <TableCell className="font-medium">
+                                  <div className="flex items-center gap-2">
+                                    {model.name}
+                                    {form.watch("ollamaModel") === model.name && (
+                                      <Badge variant="secondary" className="text-[10px] h-5">Selected</Badge>
+                                    )}
                                   </div>
                                 </TableCell>
-                                <TableCell className="font-medium">{model.name}</TableCell>
                                 <TableCell>{model.family || "-"}</TableCell>
                                 <TableCell>{formatSize(model.size)}</TableCell>
                                 <TableCell>{model.parameterSize || "-"}</TableCell>
