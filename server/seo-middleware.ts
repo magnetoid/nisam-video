@@ -22,9 +22,11 @@ export async function seoMiddleware(req: Request, res: Response, next: NextFunct
     let template = cachedTemplate;
     
     // Defaults
-    let title = "nisam.video - AI Curated Videos";
-    let description = "Discover the best videos curated by AI. Automatically categorized and tagged for your viewing pleasure.";
-    let image = "https://nisam.video/og-image.jpg"; 
+    const settings = await storage.getSeoSettings();
+    let title = settings?.siteTitle || "nisam.video - AI Curated Videos";
+    let description = settings?.siteDescription || "Discover the best videos curated by AI. Automatically categorized and tagged for your viewing pleasure.";
+    let image = settings?.ogImage || "https://nisam.video/og-image.jpg"; 
+    let twitterHandle = settings?.twitterHandle || "@nisamvideo";
     let url = `https://nisam.video${req.path}`;
     let type = "website";
     let structuredData = "";
@@ -72,6 +74,7 @@ export async function seoMiddleware(req: Request, res: Response, next: NextFunct
       
       <!-- Twitter -->
       <meta name="twitter:card" content="summary_large_image">
+      <meta name="twitter:site" content="${twitterHandle}">
       <meta name="twitter:title" content="${title.replace(/"/g, '&quot;')}">
       <meta name="twitter:description" content="${description.replace(/"/g, '&quot;')}">
       <meta name="twitter:image" content="${image}">

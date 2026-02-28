@@ -37,6 +37,7 @@ import {
   ArrowUpRight,
   FileText,
   Settings,
+  Share2,
   Tag,
 } from "lucide-react";
 import { SitemapAndRobotsPanel } from "@/pages/admin-seo/SitemapAndRobotsPanel";
@@ -103,6 +104,7 @@ const seoSettingsSchema = z.object({
   siteDescription: z.string().min(50).max(160),
   ogImage: optionalString(z.string().url()),
   metaKeywords: z.string().optional(),
+  twitterHandle: z.string().optional(),
   googleSearchConsoleApiKey: z.string().optional(),
   bingWebmasterApiKey: z.string().optional(),
   enableAutoSitemapSubmission: z.boolean().optional(),
@@ -166,6 +168,7 @@ export default function AdminSEO() {
       siteDescription:
         "AI-powered video aggregation hub featuring curated content organized by intelligent categorization",
       metaKeywords: "",
+      twitterHandle: "",
       enableSchemaMarkup: true,
       enableHreflang: true,
       defaultLanguage: "en",
@@ -184,6 +187,7 @@ export default function AdminSEO() {
       ...form.getValues(),
       ...settings,
       metaKeywords: settings.metaKeywords || "",
+      twitterHandle: settings.twitterHandle || "",
       googleSearchConsoleApiKey: settings.googleSearchConsoleApiKey || "",
       bingWebmasterApiKey: settings.bingWebmasterApiKey || "",
       businessName: settings.businessName || "",
@@ -383,6 +387,25 @@ export default function AdminSEO() {
                                 <FormControl>
                                   <Input {...field} value={field.value || ""} placeholder="comma,separated" />
                                 </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="twitterHandle"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Twitter Handle</FormLabel>
+                                <FormControl>
+                                  <div className="relative">
+                                    <Share2 className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                                    <Input placeholder="@nisamvideo" {...field} className="pl-9" value={field.value || ""} />
+                                  </div>
+                                </FormControl>
+                                <FormDescription>
+                                  Used for Twitter Cards attribution
+                                </FormDescription>
                                 <FormMessage />
                               </FormItem>
                             )}

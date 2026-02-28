@@ -230,37 +230,29 @@ export default function VideoPage() {
         </div>
 
         {/* Video player - full width */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 pb-8">
+        <div className="w-[calc(100%-40px)] mx-auto pb-8">
           <div id="video-player-container" className="aspect-video w-full bg-black rounded-lg overflow-hidden relative group">
             {!isPlaying ? (
-              <div className="absolute inset-0 z-10">
+              <div 
+                className="absolute inset-0 z-10 cursor-pointer group/overlay"
+                onClick={() => setIsPlaying(true)}
+              >
                 <img 
                   src={video.thumbnailUrl} 
                   alt={video.title} 
-                  className="w-full h-full object-cover opacity-60"
+                  className="w-full h-full object-cover opacity-80 transition-all duration-500 group-hover/overlay:scale-105 group-hover/overlay:opacity-60"
                 />
-                <div className="absolute inset-0 bg-black/40 flex flex-col sm:flex-row items-center justify-center gap-4">
-                  <Button 
-                    size="lg" 
-                    className="gap-2 min-w-[140px]" 
-                    onClick={() => setIsPlaying(true)}
-                  >
-                    <Play className="h-5 w-5 fill-current" /> {t("video.watch", "Watch")}
-                  </Button>
-                  <Button 
-                    size="lg" 
-                    variant="secondary"
-                    className="gap-2 min-w-[140px]" 
-                    onClick={() => {
-                      const container = document.getElementById('video-player-container');
-                      if (container && container.requestFullscreen) {
-                        container.requestFullscreen().catch(err => console.error("Fullscreen error:", err));
-                      }
-                      setIsPlaying(true);
-                    }}
-                  >
-                    <Maximize className="h-5 w-5" /> {t("video.watchFullscreen", "Watch in Fullscreen")}
-                  </Button>
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-60 group-hover/overlay:opacity-80 transition-opacity duration-500" />
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
+                  <div className="relative">
+                    <div className="absolute -inset-4 bg-primary/20 rounded-full blur-xl opacity-0 group-hover/overlay:opacity-100 transition-opacity duration-500" />
+                    <Button 
+                      size="lg" 
+                      className="gap-2 min-w-[140px] h-16 rounded-full text-lg shadow-2xl relative z-10 transform transition-transform duration-300 group-hover/overlay:scale-110" 
+                    >
+                      <Play className="h-8 w-8 fill-current ml-1" /> {t("video.watch", "Watch")}
+                    </Button>
+                  </div>
                 </div>
               </div>
             ) : (

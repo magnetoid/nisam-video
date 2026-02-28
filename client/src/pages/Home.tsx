@@ -12,10 +12,13 @@ import { useTranslation } from "react-i18next";
 import { apiRequest } from "@/lib/queryClient";
 import HeroImageSlider from '@/components/HeroImageSlider';
 
+import { HeroSettings } from "@shared/schema";
+
 interface CarouselData {
   hero: VideoWithLocalizedRelations[];
   recent: VideoWithLocalizedRelations[];
   trending: VideoWithLocalizedRelations[];
+  popular: VideoWithLocalizedRelations[];
   // byCategory removed from main fetch
 }
 
@@ -23,16 +26,31 @@ export default function Home() {
   const [showSearch, setShowSearch] = useState(false);
   const { t, i18n } = useTranslation();
 
+  const { data: heroSettings } = useQuery<HeroSettings>({
+    queryKey: ['/api/admin/hero/config'],
+    queryFn: async () => {
+      const res = await apiRequest('GET', '/api/admin/hero/config');
+      return res.json();
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
   const {
     data: carouselData,
     isLoading: carouselsLoading,
   } = useQuery<CarouselData>({
-    queryKey: ["/api/videos/carousels", i18n.language, "main"],
+    queryKey: ["/api/videos/carousels", i18n.language, "main", heroSettings],
     staleTime: 60 * 1000,
     refetchOnWindowFocus: true,
+    enabled: !!heroSettings,
     queryFn: async () => {
         // Load only main sections initially for speed
-        const res = await apiRequest("GET", `/api/videos/carousels?lang=${i18n.language}&sections=hero,recent,trending`);
+        const sections = ["hero"];
+        if (heroSettings?.showRecent !== false) sections.push("recent");
+        if (heroSettings?.showTrending !== false) sections.push("trending");
+        if (heroSettings?.showPopular) sections.push("popular");
+        
+        const res = await apiRequest("GET", `/api/videos/carousels?lang=${i18n.language}&sections=${sections.join(",")}`);
         return res.json();
     }
   });
@@ -60,6 +78,7 @@ export default function Home() {
   const featuredVideos = carouselData?.hero ?? [];
   const recentVideos = carouselData?.recent ?? [];
   const trendingVideos = carouselData?.trending ?? [];
+  const popularVideos = carouselData?.popular ?? [];
 
   const heroItems = useMemo(() => {
     const primary = featuredVideos.length > 0 ? featuredVideos : recentVideos;
@@ -81,8 +100,9 @@ export default function Home() {
     featuredVideos.forEach(v => ids.push(v.id));
     recentVideos.forEach(v => ids.push(v.id));
     trendingVideos.forEach(v => ids.push(v.id));
+    popularVideos.forEach(v => ids.push(v.id));
     return Array.from(new Set(ids));
-  }, [recentVideos, trendingVideos]);
+  }, [recentVideos, trendingVideos, popularVideos]);
 
   const websiteStructuredData = {
     "@context": "https://schema.org",
@@ -129,6 +149,16 @@ export default function Home() {
 
             {trendingVideos.length > 0 && (
               <CarouselRow title={t("home.trending")} videos={trendingVideos} />
+            )}
+
+            {popularSegments.length > 0 ? (
+              popularSegments.map(segment => (
+                <CarouselRow key={segment.id} title={segment.title} videos={segment.videos} />
+              ))
+            ) : (
+              popularVideos.length > 0 && (
+                <CarouselRow title={t("home.popular") || "Popular Videos"} videos={popularVideos} />
+              )
             )}
 
             {/* Lazy load categories */}

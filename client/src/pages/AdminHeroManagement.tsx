@@ -227,8 +227,37 @@ export default function AdminHeroManagement() {
       enableRandom: true,
       enableImages: true,
       slideCount: 5,
+      showRecent: true,
+      showTrending: true,
+      showPopular: true,
+      popularSegments: [],
     },
   });
+
+  const addSegment = () => {
+    const current = settingsForm.getValues('popularSegments') || [];
+    settingsForm.setValue('popularSegments', [
+      ...current,
+      { 
+        id: Math.random().toString(36).substr(2, 9),
+        title: 'New Segment',
+        minViews: 10000,
+        type: 'views'
+      }
+    ]);
+  };
+
+  const removeSegment = (index: number) => {
+    const current = settingsForm.getValues('popularSegments') || [];
+    settingsForm.setValue('popularSegments', current.filter((_, i) => i !== index));
+  };
+
+  const updateSegment = (index: number, data: any) => {
+    const current = settingsForm.getValues('popularSegments') || [];
+    const updated = [...current];
+    updated[index] = { ...updated[index], ...data };
+    settingsForm.setValue('popularSegments', updated);
+  };
 
   React.useEffect(() => {
     if (heroSettingsData) {
@@ -483,6 +512,33 @@ export default function AdminHeroManagement() {
                 <SelectItem value="slide">Slide</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="space-y-4 border p-4 rounded-md">
+            <Label className="text-base font-medium">Home Page Sections</Label>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="flex items-center space-x-2">
+                <Switch 
+                  checked={settingsForm.watch('showRecent') !== false}
+                  onCheckedChange={(checked) => settingsForm.setValue('showRecent', checked)}
+                />
+                <Label>Show Recent Videos</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Switch 
+                  checked={settingsForm.watch('showTrending') !== false}
+                  onCheckedChange={(checked) => settingsForm.setValue('showTrending', checked)}
+                />
+                <Label>Show Trending Videos</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Switch 
+                  checked={settingsForm.watch('showPopular') !== false}
+                  onCheckedChange={(checked) => settingsForm.setValue('showPopular', checked)}
+                />
+                <Label>Show Popular Videos</Label>
+              </div>
+            </div>
           </div>
 
           <div className="space-y-2">

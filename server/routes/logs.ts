@@ -116,8 +116,14 @@ router.post("/client-logs", async (req, res) => {
     const { error, info, url } = req.body;
     const userIdentifier = getUserIdentifier(req);
 
+    // Determine action type based on info
+    let action = "client_error";
+    if (info && info.type === "perf") {
+      action = "client_perf";
+    }
+
     await db.insert(logsTable).values({
-      action: "client_error",
+      action,
       entityType: "error",
       username: userIdentifier,
       details: JSON.stringify({ error, info, url, userAgent: req.headers["user-agent"] }),

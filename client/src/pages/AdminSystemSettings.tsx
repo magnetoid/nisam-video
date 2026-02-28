@@ -1,9 +1,7 @@
-import { useEffect } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Header } from "@/components/Header";
-import { AdminSidebar } from "@/components/AdminSidebar";
 import {
   Card,
   CardContent,
@@ -24,20 +22,63 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { queryClient, apiRequest } from "@/lib/queryClient";
-import type { SystemSettings } from "@shared/schema";
+import { apiRequest } from "@/lib/queryClient";
+import type { SystemSettings, AnalyticsEvent } from "@shared/schema";
 import { insertSystemSettingsSchema } from "@shared/schema";
-import { Settings, AlertTriangle, Sliders, Code } from "lucide-react";
+import { 
+  Settings, 
+  AlertTriangle, 
+  Sliders, 
+  Code, 
+  BarChart3, 
+  Plus, 
+  Edit, 
+  Trash2,
+  Activity,
+  Smartphone
+} from "lucide-react";
+import { Label } from "@/components/ui/label";
 
 export default function AdminSystemSettings() {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [activeTab, setActiveTab] = useState("general");
 
-  const { data: settings, isLoading } = useQuery<SystemSettings>({
+  // --- System Settings Logic ---
+  const { data: settings, isLoading: isLoadingSettings } = useQuery<SystemSettings>({
     queryKey: ["/api/system/settings"],
   });
 
-  const updateMutation = useMutation({
+  const updateSettingsMutation = useMutation({
     mutationFn: async (data: Partial<SystemSettings>) => {
       const response = await fetch("/api/system/settings", {
         method: "PATCH",
@@ -71,6 +112,9 @@ export default function AdminSystemSettings() {
       allowRegistration: 0,
       itemsPerPage: 24,
       pwaEnabled: 1,
+      clientErrorLogging: 1,
+      gtmId: "",
+      ga4Id: "",
       customHeadCode: "",
       customBodyStartCode: "",
       customBodyEndCode: "",
@@ -86,6 +130,8 @@ export default function AdminSystemSettings() {
         itemsPerPage: settings.itemsPerPage,
         pwaEnabled: settings.pwaEnabled,
         clientErrorLogging: settings.clientErrorLogging,
+        gtmId: settings.gtmId || "",
+        ga4Id: settings.ga4Id || "",
         customHeadCode: settings.customHeadCode || "",
         customBodyStartCode: settings.customBodyStartCode || "",
         customBodyEndCode: settings.customBodyEndCode || "",
@@ -93,307 +139,701 @@ export default function AdminSystemSettings() {
     }
   }, [settings, form]);
 
-  const onSubmit = (data: any) => {
-    updateMutation.mutate(data);
+  const onSettingsSubmit = (data: any) => {
+    updateSettingsMutation.mutate(data);
   };
 
-  if (isLoading) {
+  // --- Analytics Events Logic ---
+  const [isEventDialogOpen, setIsEventDialogOpen] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<AnalyticsEvent | null>(null);
+
+  const { data: events, isLoading: isLoadingEvents } = useQuery<AnalyticsEvent[]>({
+    queryKey: ["/api/admin/analytics/events"],
+  });
+
+  const createEventMutation = useMutation({
+    mutationFn: async (data: any) => {
+      await apiRequest("POST", "/api/admin/analytics/events", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/analytics/events"] });
+      setIsEventDialogOpen(false);
+      toast({ title: "Event created" });
+    },
+    onError: () => {
+      toast({ title: "Failed to create event", variant: "destructive" });
+    },
+  });
+
+  const updateEventMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      await apiRequest("PUT", `/api/admin/analytics/events/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/analytics/events"] });
+      setIsEventDialogOpen(false);
+      setEditingEvent(null);
+      toast({ title: "Event updated" });
+    },
+    onError: () => {
+      toast({ title: "Failed to update event", variant: "destructive" });
+    },
+  });
+
+  const deleteEventMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/api/admin/analytics/events/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/analytics/events"] });
+      toast({ title: "Event deleted" });
+    },
+  });
+
+  if (isLoadingSettings) {
     return (
-      <div className="min-h-screen bg-background">
-        <Header />
-        <AdminSidebar />
-        <main className="ml-60 pt-16 p-8">
-          <div className="flex items-center justify-center h-64">
-            <div className="text-muted-foreground">Loading settings...</div>
-          </div>
-        </main>
+      <div className="flex items-center justify-center h-screen bg-background">
+        <div className="text-muted-foreground">Loading settings...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <AdminSidebar />
+    <div className="max-w-5xl mx-auto space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold flex items-center gap-2">
+                <Settings className="h-8 w-8" />
+                System Settings
+              </h1>
+              <p className="text-muted-foreground mt-1">
+                Configure general application settings, analytics, and events
+              </p>
+            </div>
 
-      <main className="ml-60 pt-16 p-8">
-        <div className="space-y-6 max-w-4xl">
-          <div>
-            <h1
-              className="text-3xl font-bold flex items-center gap-2"
-              data-testid="text-page-title"
-            >
-              <Settings className="h-8 w-8" />
-              System Settings
-            </h1>
-            <p className="text-muted-foreground mt-1">
-              Configure general application settings
-            </p>
-          </div>
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+              <TabsList className="grid w-full grid-cols-4">
+                <TabsTrigger value="general" className="flex items-center gap-2">
+                  <Sliders className="h-4 w-4" />
+                  General
+                </TabsTrigger>
+                <TabsTrigger value="pwa" className="flex items-center gap-2">
+                  <Smartphone className="h-4 w-4" />
+                  PWA & Mobile
+                </TabsTrigger>
+                <TabsTrigger value="analytics" className="flex items-center gap-2">
+                  <BarChart3 className="h-4 w-4" />
+                  GA4 & GTM
+                </TabsTrigger>
+                <TabsTrigger value="events" className="flex items-center gap-2">
+                  <Activity className="h-4 w-4" />
+                  Advanced Events
+                </TabsTrigger>
+              </TabsList>
 
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              {/* Maintenance Mode */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <AlertTriangle className="h-5 w-5" />
-                    Maintenance Mode
-                  </CardTitle>
-                  <CardDescription>
-                    Enable maintenance mode to prevent public access while you
-                    make updates
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="maintenanceMode"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                        <div className="space-y-0.5">
-                          <FormLabel className="text-base">
-                            Enable Maintenance Mode
-                          </FormLabel>
-                          <FormDescription>
-                            When enabled, visitors will see a maintenance
-                            message
-                          </FormDescription>
+              {/* --- General Tab --- */}
+              <TabsContent value="general">
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onSettingsSubmit)} className="space-y-6">
+                    {/* Maintenance Mode */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <AlertTriangle className="h-5 w-5" />
+                          Maintenance Mode
+                        </CardTitle>
+                        <CardDescription>
+                          Prevent public access while you make updates
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <FormField
+                          control={form.control}
+                          name="maintenanceMode"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                              <div className="space-y-0.5">
+                                <FormLabel className="text-base">Enable Maintenance Mode</FormLabel>
+                                <FormDescription>
+                                  Visitors will see a maintenance message
+                                </FormDescription>
+                              </div>
+                              <FormControl>
+                                <Switch
+                                  checked={field.value === 1}
+                                  onCheckedChange={(checked) => field.onChange(checked ? 1 : 0)}
+                                />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="maintenanceMessage"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Maintenance Message</FormLabel>
+                              <FormControl>
+                                <Textarea
+                                  placeholder="We're currently performing maintenance..."
+                                  {...field}
+                                  rows={3}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </CardContent>
+                    </Card>
+
+                    {/* Display Settings */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <Sliders className="h-5 w-5" />
+                          Display & Features
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <FormField
+                            control={form.control}
+                            name="itemsPerPage"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Items Per Page</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    type="number"
+                                    min="12"
+                                    max="48"
+                                    step="6"
+                                    {...field}
+                                    onChange={(e) => field.onChange(parseInt(e.target.value))}
+                                  />
+                                </FormControl>
+                                <FormDescription>Videos per page (12-48)</FormDescription>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
                         </div>
-                        <FormControl>
-                          <Switch
-                            checked={field.value === 1}
-                            onCheckedChange={(checked) =>
-                              field.onChange(checked ? 1 : 0)
-                            }
-                            data-testid="switch-maintenance-mode"
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
 
-                  <FormField
-                    control={form.control}
-                    name="maintenanceMessage"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Maintenance Message</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            placeholder="We're currently performing maintenance. Please check back soon."
-                            {...field}
-                            data-testid="input-maintenance-message"
-                            rows={3}
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          Message displayed to visitors during maintenance
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </CardContent>
-              </Card>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormField
+                            control={form.control}
+                            name="pwaEnabled"
+                            render={({ field }) => (
+                                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                                <div className="space-y-0.5">
+                                    <FormLabel className="text-base">PWA Enabled</FormLabel>
+                                    <FormDescription>Allow mobile installation</FormDescription>
+                                </div>
+                                <FormControl>
+                                    <Switch
+                                    checked={field.value === 1}
+                                    onCheckedChange={(checked) => field.onChange(checked ? 1 : 0)}
+                                    />
+                                </FormControl>
+                                </FormItem>
+                            )}
+                            />
 
-              {/* Display Settings */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Sliders className="h-5 w-5" />
-                    Display Settings
-                  </CardTitle>
-                  <CardDescription>
-                    Configure how content is displayed on the platform
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="itemsPerPage"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Items Per Page</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            min="12"
-                            max="48"
-                            step="6"
-                            {...field}
-                            onChange={(e) =>
-                              field.onChange(parseInt(e.target.value))
-                            }
-                            data-testid="input-items-per-page"
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          Number of videos to display per page (12-48)
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="pwaEnabled"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                        <div className="space-y-0.5">
-                          <FormLabel className="text-base">
-                            Progressive Web App (PWA)
-                          </FormLabel>
-                          <FormDescription>
-                            Enable PWA features for mobile installation
-                          </FormDescription>
+                            <FormField
+                            control={form.control}
+                            name="allowRegistration"
+                            render={({ field }) => (
+                                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                                <div className="space-y-0.5">
+                                    <FormLabel className="text-base">Allow Registration</FormLabel>
+                                    <FormDescription>Public user signup</FormDescription>
+                                </div>
+                                <FormControl>
+                                    <Switch
+                                    checked={field.value === 1}
+                                    onCheckedChange={(checked) => field.onChange(checked ? 1 : 0)}
+                                    />
+                                </FormControl>
+                                </FormItem>
+                            )}
+                            />
                         </div>
-                        <FormControl>
-                          <Switch
-                            checked={field.value === 1}
-                            onCheckedChange={(checked) =>
-                              field.onChange(checked ? 1 : 0)
-                            }
-                            data-testid="switch-pwa-enabled"
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
+                      </CardContent>
+                    </Card>
 
-                  <FormField
-                    control={form.control}
-                    name="allowRegistration"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                        <div className="space-y-0.5">
-                          <FormLabel className="text-base">
-                            Allow User Registration
-                          </FormLabel>
-                          <FormDescription>
-                            Enable public user registration (future feature)
-                          </FormDescription>
+                    <div className="flex justify-end">
+                      <Button type="submit" disabled={updateSettingsMutation.isPending}>
+                        {updateSettingsMutation.isPending ? "Saving..." : "Save General Settings"}
+                      </Button>
+                    </div>
+                  </form>
+                </Form>
+              </TabsContent>
+
+              {/* --- PWA Tab --- */}
+              <TabsContent value="pwa">
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onSettingsSubmit)} className="space-y-6">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <Smartphone className="h-5 w-5" />
+                          Progressive Web App Configuration
+                        </CardTitle>
+                        <CardDescription>
+                          Configure how the app appears when installed on devices (Mobile, TV, Desktop)
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <FormField
+                          control={form.control}
+                          name="pwaEnabled"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                              <div className="space-y-0.5">
+                                <FormLabel className="text-base">Enable PWA</FormLabel>
+                                <FormDescription>
+                                  Allow users to install the app on their devices
+                                </FormDescription>
+                              </div>
+                              <FormControl>
+                                <Switch
+                                  checked={field.value === 1}
+                                  onCheckedChange={(checked) => field.onChange(checked ? 1 : 0)}
+                                />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <FormField
+                            control={form.control}
+                            name="pwaName"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>App Name</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="nisam.video - AI Video Hub" {...field} />
+                                </FormControl>
+                                <FormDescription>Full name of the application</FormDescription>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="pwaShortName"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Short Name</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="nisam.video" {...field} />
+                                </FormControl>
+                                <FormDescription>Used on home screen icons</FormDescription>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
                         </div>
-                        <FormControl>
-                          <Switch
-                            checked={field.value === 1}
-                            onCheckedChange={(checked) =>
-                              field.onChange(checked ? 1 : 0)
+
+                        <FormField
+                          control={form.control}
+                          name="pwaDescription"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Description</FormLabel>
+                              <FormControl>
+                                <Textarea placeholder="App description..." {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <FormField
+                            control={form.control}
+                            name="pwaThemeColor"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Theme Color</FormLabel>
+                                <div className="flex gap-2">
+                                  <div className="w-10 h-10 rounded border" style={{ backgroundColor: field.value }}></div>
+                                  <FormControl>
+                                    <Input placeholder="#E50914" {...field} />
+                                  </FormControl>
+                                </div>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="pwaBackgroundColor"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Background Color</FormLabel>
+                                <div className="flex gap-2">
+                                  <div className="w-10 h-10 rounded border" style={{ backgroundColor: field.value }}></div>
+                                  <FormControl>
+                                    <Input placeholder="#141414" {...field} />
+                                  </FormControl>
+                                </div>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <FormField
+                            control={form.control}
+                            name="pwaIcon192"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Icon 192x192 URL</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="/icon-192.png" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="pwaIcon512"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Icon 512x512 URL</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="/icon-512.png" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <div className="flex justify-end">
+                      <Button type="submit" disabled={updateSettingsMutation.isPending}>
+                        {updateSettingsMutation.isPending ? "Saving..." : "Save PWA Settings"}
+                      </Button>
+                    </div>
+                  </form>
+                </Form>
+              </TabsContent>
+
+              {/* --- Analytics & GTM Tab --- */}
+              <TabsContent value="analytics">
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onSettingsSubmit)} className="space-y-6">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <BarChart3 className="h-5 w-5" />
+                          Google Analytics & Tag Manager
+                        </CardTitle>
+                        <CardDescription>
+                          Configure tracking IDs and custom scripts
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <FormField
+                            control={form.control}
+                            name="gtmId"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Google Tag Manager ID (GTM-XXXXXX)</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="GTM-XXXXXX" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="ga4Id"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Google Analytics 4 ID (G-XXXXXXXXXX)</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="G-XXXXXXXXXX" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <Code className="h-5 w-5" />
+                          Custom Code Injection
+                        </CardTitle>
+                        <CardDescription>
+                          Inject custom scripts into the page
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <FormField
+                          control={form.control}
+                          name="customHeadCode"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Head Code (&lt;head&gt;)</FormLabel>
+                              <FormControl>
+                                <Textarea
+                                  placeholder="<!-- Code for <head> -->"
+                                  {...field}
+                                  rows={5}
+                                  className="font-mono text-xs"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormField
+                            control={form.control}
+                            name="customBodyStartCode"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Body Start (&lt;body&gt;)</FormLabel>
+                                <FormControl>
+                                    <Textarea
+                                    placeholder="<!-- Code after <body> -->"
+                                    {...field}
+                                    rows={5}
+                                    className="font-mono text-xs"
+                                    />
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                            />
+                            <FormField
+                            control={form.control}
+                            name="customBodyEndCode"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Body End (&lt;/body&gt;)</FormLabel>
+                                <FormControl>
+                                    <Textarea
+                                    placeholder="<!-- Code before </body> -->"
+                                    {...field}
+                                    rows={5}
+                                    className="font-mono text-xs"
+                                    />
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                            />
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <div className="flex justify-end">
+                      <Button type="submit" disabled={updateSettingsMutation.isPending}>
+                        {updateSettingsMutation.isPending ? "Saving..." : "Save Analytics Settings"}
+                      </Button>
+                    </div>
+                  </form>
+                </Form>
+              </TabsContent>
+
+              {/* --- Advanced Events Tab --- */}
+              <TabsContent value="events">
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between">
+                    <div>
+                      <CardTitle>Custom Event Tracking</CardTitle>
+                      <CardDescription>
+                        Define custom events to track user interactions
+                      </CardDescription>
+                    </div>
+                    <Dialog open={isEventDialogOpen} onOpenChange={setIsEventDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button onClick={() => setEditingEvent(null)}>
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add Event
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>{editingEvent ? "Edit Event" : "Create Event"}</DialogTitle>
+                        </DialogHeader>
+                        <form
+                          onSubmit={(e) => {
+                            e.preventDefault();
+                            const formData = new FormData(e.target as HTMLFormElement);
+                            const data = {
+                              eventName: formData.get("eventName"),
+                              ga4EventName: formData.get("ga4EventName"),
+                              triggerType: formData.get("triggerType"),
+                              selector: formData.get("selector"),
+                              isActive: formData.get("isActive") === "on" ? 1 : 0,
+                              sendToGa4: formData.get("sendToGa4") === "on",
+                            };
+                            
+                            if (editingEvent) {
+                              updateEventMutation.mutate({ id: editingEvent.id, data });
+                            } else {
+                              createEventMutation.mutate(data);
                             }
-                            data-testid="switch-allow-registration"
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                </CardContent>
-              </Card>
+                          }}
+                          className="space-y-4"
+                        >
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="eventName">Internal Event Name</Label>
+                                <Input
+                                    id="eventName"
+                                    name="eventName"
+                                    defaultValue={editingEvent?.eventName}
+                                    placeholder="e.g. btn_signup_click"
+                                    required
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="ga4EventName">GA4 Event Name (Optional)</Label>
+                                <Input
+                                    id="ga4EventName"
+                                    name="ga4EventName"
+                                    defaultValue={editingEvent?.ga4EventName || ""}
+                                    placeholder="e.g. sign_up"
+                                />
+                            </div>
+                          </div>
 
-              {/* Custom Code Injection */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Code className="h-5 w-5" />
-                    Custom Code Injection
-                  </CardTitle>
-                  <CardDescription>
-                    Add custom HTML, JavaScript, or tracking codes (GTM, analytics, etc.)
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="customHeadCode"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Head Code</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            placeholder="<!-- Google Tag Manager, Analytics, or other <head> code -->"
-                            {...field}
-                            data-testid="input-custom-head-code"
-                            rows={6}
-                            className="font-mono text-sm"
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          Code injected in &lt;head&gt; section (GTM, analytics, meta tags)
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                          <div className="space-y-2">
+                            <Label htmlFor="triggerType">Trigger Type</Label>
+                            <Select name="triggerType" defaultValue={editingEvent?.triggerType || "click"}>
+                               <SelectTrigger>
+                                  <SelectValue />
+                               </SelectTrigger>
+                               <SelectContent>
+                                 <SelectItem value="click">Click</SelectItem>
+                                 <SelectItem value="form_submit">Form Submit</SelectItem>
+                                 <SelectItem value="page_view">Page View</SelectItem>
+                               </SelectContent>
+                            </Select>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <Label htmlFor="selector">CSS Selector / URL Pattern</Label>
+                            <Input
+                              id="selector"
+                              name="selector"
+                              defaultValue={editingEvent?.selector || ""}
+                              placeholder=".btn-primary, #submit-form, or /pricing"
+                            />
+                          </div>
+                          
+                          <div className="flex flex-col gap-3 pt-2">
+                            <div className="flex items-center space-x-2">
+                                <Switch
+                                    id="isActive"
+                                    name="isActive"
+                                    defaultChecked={editingEvent ? editingEvent.isActive === 1 : true}
+                                />
+                                <Label htmlFor="isActive">Active</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <Switch
+                                    id="sendToGa4"
+                                    name="sendToGa4"
+                                    defaultChecked={editingEvent ? editingEvent.sendToGa4 : true}
+                                />
+                                <Label htmlFor="sendToGa4">Send to Google Analytics 4</Label>
+                            </div>
+                          </div>
 
-                  <FormField
-                    control={form.control}
-                    name="customBodyStartCode"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Body Start Code</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            placeholder="<!-- GTM noscript or other code right after <body> -->"
-                            {...field}
-                            data-testid="input-custom-body-start-code"
-                            rows={6}
-                            className="font-mono text-sm"
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          Code injected immediately after &lt;body&gt; tag (GTM noscript)
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
+                          <Button type="submit" className="w-full">
+                            {editingEvent ? "Update Event" : "Create Event"}
+                          </Button>
+                        </form>
+                      </DialogContent>
+                    </Dialog>
+                  </CardHeader>
+                  <CardContent>
+                    {isLoadingEvents ? (
+                      <div className="text-center py-4">Loading events...</div>
+                    ) : (
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Event Name</TableHead>
+                            <TableHead>GA4 Mapping</TableHead>
+                            <TableHead>Type</TableHead>
+                            <TableHead>Selector</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>GA4</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {events?.map((event) => (
+                            <TableRow key={event.id}>
+                              <TableCell className="font-medium">{event.eventName}</TableCell>
+                              <TableCell className="text-muted-foreground text-sm">{event.ga4EventName || "-"}</TableCell>
+                              <TableCell>{event.triggerType}</TableCell>
+                              <TableCell className="font-mono text-xs">{event.selector}</TableCell>
+                              <TableCell>
+                                <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                  event.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-700"
+                                }`}>
+                                  {event.isActive ? "Active" : "Inactive"}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                  event.sendToGa4 ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-700"
+                                }`}>
+                                  {event.sendToGa4 ? "On" : "Off"}
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => {
+                                    setEditingEvent(event);
+                                    setIsEventDialogOpen(true);
+                                  }}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="text-destructive"
+                                  onClick={() => {
+                                    if (confirm("Are you sure?")) {
+                                      deleteEventMutation.mutate(event.id);
+                                    }
+                                  }}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
                     )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="customBodyEndCode"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Body End Code</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            placeholder="<!-- Tracking scripts or code before </body> -->"
-                            {...field}
-                            data-testid="input-custom-body-end-code"
-                            rows={6}
-                            className="font-mono text-sm"
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          Code injected before &lt;/body&gt; tag (tracking, chat widgets)
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </CardContent>
-              </Card>
-
-              <div className="flex justify-end gap-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => form.reset()}
-                  data-testid="button-reset"
-                >
-                  Reset
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={updateMutation.isPending}
-                  data-testid="button-save"
-                >
-                  {updateMutation.isPending ? "Saving..." : "Save Settings"}
-                </Button>
-              </div>
-            </form>
-          </Form>
-        </div>
-      </main>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+      </Tabs>
     </div>
   );
 }

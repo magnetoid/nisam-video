@@ -64,26 +64,65 @@ router.get("/carousels", async (req, res) => {
     if (sections.includes("trending")) {
       promises.push(storage.getTrendingVideos(videosPerCategory, lang).then(v => results.trending = v));
     }
+    if (sections.includes("popular")) {
+      // Check for segments first
+      const heroSettings = await storage.getHeroSettings();
+      // @ts-ignore - popularSegments might not be typed in IStorage yet but it is in schema
+      const segments = heroSettings?.popularSegments as any[];
+      const popularMode = heroSettings?.popularPageMode || 'views';
+      
+      let sort: "popularity" | "views" | "publishDate" = "popularity";
+      if (popularMode === 'likes') sort = "popularity"; // Our popularity logic includes likes heavily
+      else if (popularMode === 'recent') sort = "publishDate";
+      else sort = "views";
+
+      if (segments && Array.isArray(segments) && segments.length > 0) {
+        const segmentPromises = segments.map(async (seg) => {
+          try {
+            const videos = await storage.getAllVideos({ 
+              limit: seg.limit || videosPerCategory, 
+              lang, 
+              minViews: seg.minViews,
+              sort: "views" 
+            });
+            return {
+              id: seg.id,
+              title: seg.title,
+              videos
+            };
+          } catch (e) {
+            return null;
+          }
+        });
+        
+        promises.push(Promise.all(segmentPromises).then(segs => {
+          results.popularSegments = segs.filter(s => s && s.videos.length > 0);
+        }));
+      }
+      
+      // Always fetch standard popular list too, using the mode
+      promises.push(storage.getAllVideos({ limit: videosPerCategory, lang, sort }).then(v => results.popular = v));
+    }
     
     // Wait for main sections
     await Promise.allSettled(promises);
 
     // Handle categories separately if requested
     if (sections.includes("categories")) {
-      const allCategories = await storage.getAllLocalizedCategories(lang);
+      // Get TOP 10 categories instead of all
+      // @ts-ignore
+      const topCategories = await storage.getTopCategories(10, lang);
       
-      // Process categories with individual error handling
-      const limitedCategories = allCategories.slice(0, 10);
-      const categoryPromises = limitedCategories.map(async (category) => {
+      const categoryPromises = topCategories.map(async (category) => {
         try {
           const videos = await storage.getVideosByCategory(category.id, videosPerCategory, lang);
           return {
-            name: category.translations[0]?.name || 'Unnamed',
+            name: category.translations[0]?.name || category.name || 'Unnamed',
             videos: videos || [],
           };
         } catch (error) {
           return {
-            name: category.translations[0]?.name || 'Unnamed',
+            name: category.translations[0]?.name || category.name || 'Unnamed',
             videos: [],
           };
         }
@@ -101,6 +140,7 @@ router.get("/carousels", async (req, res) => {
         byCategory[result.name] = result.videos;
       }
       results.byCategory = byCategory;
+      results.topCategories = topCategories; // Return metadata too
     }
 
     res.json({
@@ -108,10 +148,11 @@ router.get("/carousels", async (req, res) => {
       recent: results.recent || [],
       trending: results.trending || [],
       byCategory: results.byCategory || {},
+      popularSegments: results.popularSegments || [],
     });
   } catch (error) {
     console.error(`[carousels] Critical error [params=${JSON.stringify(req.query)}]:`, error);
-    res.json({ hero: [], recent: [], trending: [], byCategory: {} });
+    res.json({ hero: [], recent: [], trending: [], byCategory: {}, popularSegments: [] });
   }
 });
 

@@ -7,6 +7,7 @@ import { MobileNav } from "@/components/MobileNav";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { NotificationsDropdown } from "@/components/NotificationsDropdown";
 import { UserMenu } from "@/components/UserMenu";
+import { InstallPrompt } from "@/components/InstallPrompt";
 
 interface HeaderProps {
   onSearchClick?: () => void;
@@ -136,6 +137,7 @@ export function Header({ onSearchClick, onMenuClick }: HeaderProps) {
       </header>
 
       <MobileNav open={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
+      <InstallPrompt />
     </>
   );
 }

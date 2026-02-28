@@ -41,6 +41,9 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
+  getAllUsers(): Promise<User[]>;
+  updateUserRole(id: string, role: string): Promise<User | undefined>;
+  deleteUser(id: string): Promise<void>;
 
   // Channels
   createChannel(channel: InsertChannel): Promise<Channel>;

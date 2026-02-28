@@ -39,19 +39,18 @@ const adminPages = {
   tags: lazy(() => import("@/pages/AdminTags")),
   automation: lazy(() => import("@/pages/AdminAutomation")),
   analytics: lazy(() => import("@/pages/AdminAnalytics")),
-  analyticsConfig: lazy(() => import("@/pages/AdminAnalyticsConfig")),
   playlists: lazy(() => import("@/pages/AdminPlaylists")),
   seo: lazy(() => import("@/pages/AdminSEO")),
   seoEnhanced: lazy(() => import("@/pages/AdminSEOEnhanced")),
   export: lazy(() => import("@/pages/AdminDataExport")),
   settings: lazy(() => import("@/pages/AdminSystemSettings")),
-  logs: lazy(() => import("@/pages/AdminActivityLogs")),
+  logs: lazy(() => import("@/pages/AdminLogs")),
   cache: lazy(() => import("@/pages/AdminCacheSettings")),
   about: lazy(() => import("@/pages/AdminAbout")),
   tiktok: lazy(() => import("@/pages/AdminTikTok")),
   hero: lazy(() => import("@/pages/AdminHeroManagement")),
   aiSettings: lazy(() => import("@/pages/AdminAISettings")),
-  debug: lazy(() => import("@/pages/AdminDebugDashboard")),
+  users: lazy(() => import("@/pages/AdminUsers")),
 };
 
 type AdminPageKey = keyof typeof adminPages;
@@ -67,7 +66,6 @@ const adminRoutes: AdminRouteConfig[] = [
   { path: "/admin/categories", page: "categories" },
   { path: "/admin/automation", page: "automation" },
   { path: "/admin/analytics", page: "analytics" },
-  { path: "/admin/analytics/config", page: "analyticsConfig" },
   { path: "/admin/playlists", page: "playlists" },
   { path: "/admin/seo", page: "seo" },
   { path: "/admin/seo/enhanced", page: "seoEnhanced" },
@@ -82,7 +80,8 @@ const adminRoutes: AdminRouteConfig[] = [
   { path: "/admin/tiktok", page: "tiktok" },
   { path: "/admin/hero", page: "hero" },
   { path: "/admin/ai-settings", page: "aiSettings" },
-  { path: "/admin/debug", page: "debug" },
+  { path: "/admin/debug", page: "logs" },
+  { path: "/admin/users", page: "users" },
   { path: "/admin", page: "dashboard" },
 ];
 

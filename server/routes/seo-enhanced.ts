@@ -124,6 +124,8 @@ router.get("/enhanced/settings", async (req, res) => {
         businessHours: enhanced.businessHours,
         latitude: enhanced.latitude,
         longitude: enhanced.longitude,
+        twitterHandle: enhanced.twitterHandle,
+        socialLinks: enhanced.socialLinks,
       });
     } else {
       res.json(settings);

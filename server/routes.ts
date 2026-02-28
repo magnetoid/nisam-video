@@ -237,6 +237,68 @@ Crawl-delay: 1
     res.send(robotsTxt);
   });
 
+  app.get("/manifest.json", async (req, res) => {
+    try {
+      let settings = {
+        pwaName: "nisam.video - AI Video Hub",
+        pwaShortName: "nisam.video",
+        pwaDescription: "AI-powered YouTube video aggregation hub with curated content",
+        pwaThemeColor: "#E50914",
+        pwaBackgroundColor: "#141414",
+        pwaIcon192: "/icon-192.png",
+        pwaIcon512: "/icon-512.png",
+      };
+
+      if (isDbReady()) {
+        const dbSettings = await storage.getSystemSettings();
+        if (dbSettings) {
+          settings = {
+            pwaName: dbSettings.pwaName || settings.pwaName,
+            pwaShortName: dbSettings.pwaShortName || settings.pwaShortName,
+            pwaDescription: dbSettings.pwaDescription || settings.pwaDescription,
+            pwaThemeColor: dbSettings.pwaThemeColor || settings.pwaThemeColor,
+            pwaBackgroundColor: dbSettings.pwaBackgroundColor || settings.pwaBackgroundColor,
+            pwaIcon192: dbSettings.pwaIcon192 || settings.pwaIcon192,
+            pwaIcon512: dbSettings.pwaIcon512 || settings.pwaIcon512,
+          };
+        }
+      }
+
+      const manifest = {
+        name: settings.pwaName,
+        short_name: settings.pwaShortName,
+        description: settings.pwaDescription,
+        start_url: "/",
+        display: "standalone",
+        background_color: settings.pwaBackgroundColor,
+        theme_color: settings.pwaThemeColor,
+        orientation: "any",
+        icons: [
+          {
+            src: settings.pwaIcon192,
+            sizes: "192x192",
+            type: "image/png",
+            purpose: "any maskable"
+          },
+          {
+            src: settings.pwaIcon512,
+            sizes: "512x512",
+            type: "image/png",
+            purpose: "any maskable"
+          }
+        ],
+        categories: ["entertainment", "video", "multimedia"],
+        screenshots: []
+      };
+
+      res.header("Content-Type", "application/manifest+json");
+      res.send(JSON.stringify(manifest, null, 2));
+    } catch (error) {
+      console.error("Manifest generation error:", error);
+      res.status(500).send("Error generating manifest");
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;

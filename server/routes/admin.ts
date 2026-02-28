@@ -25,6 +25,38 @@ router.use(invalidateCacheOnMutation("^http-private:"));
 // ... (existing code)
 
 // Admin-only SQL Migration Runner
+router.get("/users", requireAuth, async (_req, res) => {
+  try {
+    const users = await storage.getAllUsers();
+    res.json(users);
+  } catch (error) {
+    console.error("Error fetching users:", error);
+    res.status(500).json({ error: "Failed to fetch users" });
+  }
+});
+
+router.delete("/users/:id", requireAuth, async (req, res) => {
+  try {
+    await storage.deleteUser(req.params.id);
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Error deleting user:", error);
+    res.status(500).json({ error: "Failed to delete user" });
+  }
+});
+
+router.patch("/users/:id/role", requireAuth, async (req, res) => {
+  try {
+    const { role } = req.body;
+    if (!role) return res.status(400).json({ error: "Role is required" });
+    const user = await storage.updateUserRole(req.params.id, role);
+    res.json(user);
+  } catch (error) {
+    console.error("Error updating user role:", error);
+    res.status(500).json({ error: "Failed to update user role" });
+  }
+});
+
 router.post("/run-migration", requireAuth, async (req, res) => {
   try {
     // Check if tables already exist before attempting to create them

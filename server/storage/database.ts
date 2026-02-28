@@ -160,6 +160,37 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  async getAllUsers(): Promise<User[]> {
+    try {
+      return await db.select().from(users);
+    } catch (error) {
+      console.error("[storage] getAllUsers failed:", error);
+      return [];
+    }
+  }
+
+  async updateUserRole(id: string, role: string): Promise<User | undefined> {
+    try {
+      const [user] = await db
+        .update(users)
+        .set({ role })
+        .where(eq(users.id, id))
+        .returning();
+      return user || undefined;
+    } catch (error) {
+      console.error(`[storage] updateUserRole failed for id ${id}:`, error);
+      return undefined;
+    }
+  }
+
+  async deleteUser(id: string): Promise<void> {
+    try {
+      await db.delete(users).where(eq(users.id, id));
+    } catch (error) {
+      console.error(`[storage] deleteUser failed for id ${id}:`, error);
+    }
+  }
+
   /**
    * Creates a new channel in the database
    */
@@ -438,6 +469,11 @@ export class DatabaseStorage implements IStorage {
           .innerJoin(tagTranslations, eq(tags.id, tagTranslations.tagId))
           .where(sql`${tagTranslations.tagName} ILIKE ${filters.tagName}`);
         conditions.push(inArray(videos.id, sub));
+      }
+      if (filters?.minViews) {
+        conditions.push(
+          sql`CAST(NULLIF(REGEXP_REPLACE(${videos.viewCount}, '[^0-9]', '', 'g'), '') AS INTEGER) >= ${filters.minViews}`
+        );
       }
 
       if (conditions.length > 0) {
@@ -1088,25 +1124,47 @@ export class DatabaseStorage implements IStorage {
       const now = new Date();
       const heroSettings = await this.getHeroSettings();
       const enableRandom = heroSettings?.enableRandom ?? true;
+      const mode = heroSettings?.homeHeroMode || 'primary';
 
-      const configured = await db
-        .select({ video: videos })
-        .from(heroVideos)
-        .innerJoin(videos, eq(heroVideos.videoId, videos.id))
-        .where(
-          and(
-            eq(heroVideos.isActive, 1),
-            or(isNull(heroVideos.startDate), lte(heroVideos.startDate, now)),
-            or(isNull(heroVideos.endDate), gte(heroVideos.endDate, now)),
-          ),
-        )
-        .orderBy(heroVideos.displayOrder)
-        .limit(limit);
+      // 1. Primary (Manual) - Always fetch these first if mode is 'primary'
+      let selectedVideos: Video[] = [];
+      
+      if (mode === 'primary') {
+        const configured = await db
+          .select({ video: videos })
+          .from(heroVideos)
+          .innerJoin(videos, eq(heroVideos.videoId, videos.id))
+          .where(
+            and(
+              eq(heroVideos.isActive, 1),
+              or(isNull(heroVideos.startDate), lte(heroVideos.startDate, now)),
+              or(isNull(heroVideos.endDate), gte(heroVideos.endDate, now)),
+            ),
+          )
+          .orderBy(heroVideos.displayOrder)
+          .limit(limit);
+        selectedVideos = configured.map((r) => r.video);
+      } else if (mode === 'latest') {
+        selectedVideos = await db.select().from(videos).orderBy(desc(videos.publishDate)).limit(limit);
+      } else if (mode === 'popular') {
+        selectedVideos = await db.select().from(videos).orderBy(
+          sql`(
+            COALESCE(CAST(NULLIF(REGEXP_REPLACE(${videos.viewCount}, '[^0-9]', '', 'g'), '') AS INTEGER), 0) * 0.3 +
+            COALESCE(${videos.internalViewsCount}, 0) * 50 +
+            COALESCE(${videos.likesCount}, 0) * 100
+          ) DESC`
+        ).limit(limit);
+      } else if (mode === 'trending') {
+        // Simple trending: recent + views
+        selectedVideos = await db.select().from(videos).orderBy(desc(videos.publishDate), desc(videos.viewCount)).limit(limit);
+      } else if (mode === 'random') {
+        selectedVideos = await db.select().from(videos).orderBy(sql`RANDOM()`).limit(limit);
+      }
 
-      let selectedVideos = configured.map((r) => r.video);
-
+      // Fill with fallbacks if needed (for primary mode or if others fail to return enough)
       if (selectedVideos.length < limit) {
         const excludeIds = selectedVideos.map((v) => v.id);
+        // Fallback logic similar to before...
         if (enableRandom) {
           const randomFill = await db
             .select()
@@ -1122,8 +1180,10 @@ export class DatabaseStorage implements IStorage {
 
           selectedVideos = [...selectedVideos, ...randomFill];
         } else {
-          const trending = await this.getTrendingVideos(Math.max(limit, 10), lang).catch(() => []);
-          const popularFillIds = trending
+           // ... existing fallback logic
+           const trending = await this.getTrendingVideos(Math.max(limit, 10), lang).catch(() => []);
+           // ...
+           const popularFillIds = trending
             .filter((v) => v.videoType !== "youtube_short" && v.videoType !== "tiktok")
             .map((v) => v.id)
             .filter((id) => !excludeIds.includes(id));
@@ -1138,22 +1198,6 @@ export class DatabaseStorage implements IStorage {
             const ordered = popularIds.map((id) => rowById.get(id)).filter(Boolean) as any[];
             selectedVideos = [...selectedVideos, ...ordered];
           }
-
-          if (selectedVideos.length < limit) {
-            const newExclude = selectedVideos.map((v) => v.id);
-            const latestFill = await db
-              .select()
-              .from(videos)
-              .where(
-                and(
-                  notInArray(videos.videoType, ["youtube_short", "tiktok"]),
-                  newExclude.length > 0 ? notInArray(videos.id, newExclude) : undefined,
-                ),
-              )
-              .orderBy(desc(videos.createdAt))
-              .limit(limit - selectedVideos.length);
-            selectedVideos = [...selectedVideos, ...latestFill];
-          }
         }
       }
 
@@ -1166,6 +1210,34 @@ export class DatabaseStorage implements IStorage {
       return [];
     }
   }
+
+  async getTopCategories(limit: number = 10, lang: string = 'en'): Promise<LocalizedCategory[]> {
+    const cacheKey = `categories:top:${limit}:${lang}`;
+    const cached = cache.get<LocalizedCategory[]>(cacheKey);
+    if (cached) return cached;
+
+    try {
+      const topCats = await db
+        .select()
+        .from(categories)
+        .orderBy(desc(categories.videoCount))
+        .limit(limit);
+
+      // Hydrate with translations
+      const result: LocalizedCategory[] = [];
+      for (const cat of topCats) {
+        const localized = await this.getLocalizedCategory(cat.id, lang);
+        if (localized) result.push(localized);
+      }
+
+      cache.set(cacheKey, result, 600000); // 10 min
+      return result;
+    } catch (error) {
+      console.error("[storage] getTopCategories failed:", error);
+      return [];
+    }
+  }
+
 
   /**
    * Updates hero video configuration

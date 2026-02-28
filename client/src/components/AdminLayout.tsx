@@ -10,12 +10,14 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="h-screen bg-background flex flex-col overflow-hidden">
       <Header onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
-      <AdminSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      <main className="md:ml-60 pt-16 p-4 md:p-8 min-h-[calc(100vh-64px)] transition-all duration-300">
-        {children}
-      </main>
+      <div className="flex flex-1 pt-16 overflow-hidden relative">
+        <AdminSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-background relative w-0 min-w-0">
+          {children}
+        </main>
+      </div>
     </div>
   );
 }

@@ -258,6 +258,8 @@ export const seoSettings = pgTable("seo_settings", {
       "AI-powered video aggregation hub featuring curated YouTube content organized by intelligent categorization",
     ),
   ogImage: text("og_image"),
+  twitterHandle: text("twitter_handle"),
+  socialLinks: json("social_links").default(sql`'{}'::jsonb`),
   metaKeywords: text("meta_keywords"),
   updatedAt: timestamp("updated_at")
     .notNull()
@@ -498,6 +500,11 @@ export const heroSettings = pgTable("hero_settings", {
   enableRandom: boolean("enable_random").default(true),
   enableImages: boolean("enable_images").default(true),
   slideCount: integer("slide_count").default(5),
+  homeHeroMode: text("home_hero_mode").default("primary"),
+  popularPageMode: text("popular_page_mode").default("views"),
+  showRecent: boolean("show_recent").default(true),
+  showTrending: boolean("show_trending").default(true),
+  showPopular: boolean("show_popular").default(true),
   updatedAt: timestamp("updated_at")
     .notNull()
     .default(sql`now()`),
@@ -752,6 +759,13 @@ export const systemSettings = pgTable("system_settings", {
   cacheApiTTL: integer("cache_api_ttl").notNull().default(180), // seconds (3 minutes)
   // PWA settings
   pwaEnabled: integer("pwa_enabled").notNull().default(1), // 0 = disabled, 1 = enabled
+  pwaName: text("pwa_name").default("nisam.video - AI Video Hub"),
+  pwaShortName: text("pwa_short_name").default("nisam.video"),
+  pwaDescription: text("pwa_description").default("AI-powered YouTube video aggregation hub with curated content"),
+  pwaThemeColor: text("pwa_theme_color").default("#E50914"),
+  pwaBackgroundColor: text("pwa_background_color").default("#141414"),
+  pwaIcon192: text("pwa_icon_192").default("/icon-192.png"),
+  pwaIcon512: text("pwa_icon_512").default("/icon-512.png"),
   clientErrorLogging: integer("client_error_logging").notNull().default(1), // 0 = disabled, 1 = enabled
   // About page
   aboutPageContent: text("about_page_content"),
@@ -819,10 +833,12 @@ export const analyticsEvents = pgTable("analytics_events", {
     .primaryKey()
     .default(sql`gen_random_uuid()`),
   eventName: text("event_name").notNull(),
+  ga4EventName: text("ga4_event_name"), // Map to specific GA4 event name
   triggerType: text("trigger_type").notNull(), // click, form_submit, page_view
   selector: text("selector"), // CSS selector for click/submit
   parameters: json("parameters"), // Additional parameters
   isActive: integer("is_active").notNull().default(1),
+  sendToGa4: boolean("send_to_ga4").notNull().default(true),
   createdAt: timestamp("created_at")
     .notNull()
     .default(sql`now()`),
@@ -947,6 +963,13 @@ export const insertHeroSettingsSchema = createInsertSchemaAny(heroSettings).omit
   animationType: z.enum(["fade", "slide"]).optional().default("fade"),
   fallbackImages: z.array(z.string()).optional().default([]),
   slideCount: z.number().min(1).max(20).optional().default(5),
+  popularSegments: z.array(z.object({
+    id: z.string(),
+    title: z.string(),
+    minViews: z.number(),
+    limit: z.number().optional(),
+    type: z.enum(["views", "likes", "recent"]).default("views")
+  })).optional().default([]),
 });
 
 export type HeroSettings = typeof heroSettings.$inferSelect;

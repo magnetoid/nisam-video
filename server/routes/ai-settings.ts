@@ -22,6 +22,9 @@ router.get("/config", requireAuth, async (req, res) => {
     if (config.openaiApiKey) {
       config.openaiApiKey = "********";
     }
+    if (config.ollamaApiKey) {
+      config.ollamaApiKey = "********";
+    }
     
     res.json(config);
   } catch (error: any) {
@@ -48,6 +51,7 @@ router.patch("/config", requireAuth, async (req, res) => {
       openaiModel: z.string().optional(),
       ollamaUrl: z.string().optional(),
       ollamaModel: z.string().optional(),
+      ollamaApiKey: z.string().optional(),
     });
     
     const data = schema.parse(req.body);
@@ -55,6 +59,9 @@ router.patch("/config", requireAuth, async (req, res) => {
     // Don't save masked key
     if (data.openaiApiKey === "********") {
       delete data.openaiApiKey;
+    }
+    if (data.ollamaApiKey === "********") {
+      delete data.ollamaApiKey;
     }
     
     const existing = await db.select().from(aiSettings).limit(1);
@@ -101,11 +108,15 @@ router.post("/ollama/sync", requireAuth, async (req, res) => {
   try {
     // Get URL from config or body
     let url = req.body.url;
+    let apiKey = req.body.apiKey;
     
     if (!url) {
       try {
         const settings = await db.select().from(aiSettings).limit(1);
         url = settings[0]?.ollamaUrl || "http://localhost:11434";
+        if (!apiKey) {
+          apiKey = settings[0]?.ollamaApiKey;
+        }
       } catch (e: any) {
         if (e?.code === '42P01') {
            return res.status(500).json({ error: "Database not initialized. Please run migrations." });
@@ -114,7 +125,7 @@ router.post("/ollama/sync", requireAuth, async (req, res) => {
       }
     }
     
-    const models = await fetchRemoteOllamaModels(url);
+    const models = await fetchRemoteOllamaModels(url, apiKey);
     
     // Update DB
     const now = new Date();
@@ -185,7 +196,7 @@ router.post("/test", requireAuth, async (req, res) => {
     const { provider, url, apiKey } = req.body;
     
     if (provider === "ollama") {
-      const success = await testOllamaConnection(url);
+      const success = await testOllamaConnection(url, apiKey);
       return res.json({ success });
     }
     

@@ -22,6 +22,7 @@ import publicRouter from "./public.js";
 import cronRouter from "./cron.js";
 import uploadsRouter from "./uploads.js";
 import tagImagesRouter from "./tag-images.js";
+import usersRouter from "./users.js";
 
 export function registerFeatureRoutes(app: Express): void {
   app.use("/api", publicRouter);
@@ -41,6 +42,7 @@ export function registerFeatureRoutes(app: Express): void {
   app.use("/api/utils", utilsRouter);
   app.use("/api/shorts", shortsRouter);
   app.use("/api/user", userRouter);
+  app.use("/api/users", usersRouter);
   app.use("/api", logsRouter); // Mounts /client-logs and /activity-logs
   app.use("/api/export", exportsRouter);
   app.use("/api/ai", aiSettingsRouter);

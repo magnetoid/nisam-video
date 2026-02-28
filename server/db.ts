@@ -21,9 +21,11 @@ if (dbUrl) {
     pool = new Pool({
       connectionString,
       ssl: { rejectUnauthorized: false }, // Allow self-signed certs (Supabase pooler)
-      max: process.env.NODE_ENV === "production" ? 1 : 10, // Use single connection per lambda in production
+      // Use env var for max connections, default to 10. 
+      // Only use 1 if specifically needed for serverless environments without pooling.
+      max: process.env.DB_POOL_MAX ? parseInt(process.env.DB_POOL_MAX) : (process.env.NODE_ENV === "production" ? 10 : 10),
       idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 5000, // Reduced from 10s to fail faster
+      connectionTimeoutMillis: 10000, // Increased to 10s to allow more time for connection acquisition
     });
 
     // Prevent crashes on idle client errors
