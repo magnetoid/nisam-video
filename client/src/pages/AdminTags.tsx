@@ -416,70 +416,71 @@ export default function AdminTags() {
                   Loading tags...
                 </div>
               ) : sortedTags.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-16">Image</TableHead>
-                      <TableHead>Tag Name</TableHead>
-                      <TableHead className="text-center">Video Count</TableHead>
-                      <TableHead className="text-center">Popularity</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {sortedTags.map((tag) => {
-                      const tagImage = tagImageMap[tag.tagName];
-                      const isGenerating = generatingImage === tag.tagName;
-                      const isUploading = uploadingImage === tag.tagName;
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-16">Image</TableHead>
+                        <TableHead>Tag Name</TableHead>
+                        <TableHead className="text-center">Video Count</TableHead>
+                        <TableHead className="text-center hidden md:table-cell">Popularity</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {sortedTags.map((tag) => {
+                        const tagImage = tagImageMap[tag.tagName];
+                        const isGenerating = generatingImage === tag.tagName;
+                        const isUploading = uploadingImage === tag.tagName;
 
-                      return (
-                        <TableRow
-                          key={tag.tagName}
-                          data-testid={`tag-row-${tag.tagName}`}
-                        >
-                          <TableCell>
-                            {tagImage ? (
-                              <div className="relative w-12 h-8 rounded overflow-hidden">
-                                <img
-                                  src={tagImage.imageUrl}
-                                  alt={tag.tagName}
-                                  className="w-full h-full object-cover"
-                                />
-                                {tagImage.isAiGenerated === 1 && (
-                                  <div className="absolute bottom-0 right-0 bg-primary/80 p-0.5 rounded-tl">
-                                    <Sparkles className="h-2 w-2 text-primary-foreground" />
-                                  </div>
+                        return (
+                          <TableRow
+                            key={tag.tagName}
+                            data-testid={`tag-row-${tag.tagName}`}
+                          >
+                            <TableCell>
+                              {tagImage ? (
+                                <div className="relative w-12 h-8 rounded overflow-hidden flex-shrink-0">
+                                  <img
+                                    src={tagImage.imageUrl}
+                                    alt={tag.tagName}
+                                    className="w-full h-full object-cover"
+                                  />
+                                  {tagImage.isAiGenerated === 1 && (
+                                    <div className="absolute bottom-0 right-0 bg-primary/80 p-0.5 rounded-tl">
+                                      <Sparkles className="h-2 w-2 text-primary-foreground" />
+                                    </div>
+                                  )}
+                                </div>
+                              ) : (
+                                <div className="w-12 h-8 rounded bg-muted flex items-center justify-center flex-shrink-0">
+                                  <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                                </div>
+                              )}
+                            </TableCell>
+                            <TableCell className="font-medium">
+                              <Badge variant="outline" className="text-sm">
+                                {tag.tagName}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <Badge variant="secondary">{tag.count}</Badge>
+                            </TableCell>
+                            <TableCell className="text-center hidden md:table-cell">
+                              <div className="flex items-center justify-center gap-1">
+                                {tag.count > 10 && (
+                                  <TrendingUp className="h-4 w-4 text-green-500" />
+                                )}
+                                {tag.count >= 5 && tag.count <= 10 && (
+                                  <TrendingUp className="h-4 w-4 text-yellow-500" />
+                                )}
+                                {tag.count < 5 && (
+                                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
                                 )}
                               </div>
-                            ) : (
-                              <div className="w-12 h-8 rounded bg-muted flex items-center justify-center">
-                                <ImageIcon className="h-4 w-4 text-muted-foreground" />
-                              </div>
-                            )}
-                          </TableCell>
-                          <TableCell className="font-medium">
-                            <Badge variant="outline" className="text-sm">
-                              {tag.tagName}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <Badge variant="secondary">{tag.count}</Badge>
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <div className="flex items-center justify-center gap-1">
-                              {tag.count > 10 && (
-                                <TrendingUp className="h-4 w-4 text-green-500" />
-                              )}
-                              {tag.count >= 5 && tag.count <= 10 && (
-                                <TrendingUp className="h-4 w-4 text-yellow-500" />
-                              )}
-                              {tag.count < 5 && (
-                                <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-1">
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-1">
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -554,6 +555,7 @@ export default function AdminTags() {
                     })}
                   </TableBody>
                 </Table>
+                </div>
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
                   {searchQuery

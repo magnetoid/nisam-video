@@ -29,10 +29,22 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 
-export function AdminSidebar() {
+interface AdminSidebarProps {
+  open?: boolean;
+  onClose?: () => void;
+}
+
+export function AdminSidebar({ open = false, onClose }: AdminSidebarProps) {
   const [location, setLocation] = useLocation();
   const { t } = useTranslation();
   const { toast } = useToast();
+
+  // Close sidebar on route change (mobile)
+  useEffect(() => {
+    if (onClose) {
+      onClose();
+    }
+  }, [location]);
 
   useEffect(() => {
     const common = [
@@ -191,8 +203,15 @@ export function AdminSidebar() {
   ];
 
   return (
-    <aside className="fixed left-0 top-16 bottom-0 w-60 bg-sidebar border-r border-sidebar-border overflow-y-auto z-40 flex flex-col">
-      <nav className="p-4 space-y-2 flex-1">
+    <>
+      {open && (
+        <div 
+          className="fixed inset-0 bg-background/80 backdrop-blur-sm z-30 md:hidden" 
+          onClick={onClose}
+        />
+      )}
+      <aside className={`fixed left-0 top-16 bottom-0 w-60 bg-sidebar border-r border-sidebar-border overflow-y-auto z-40 flex flex-col transition-transform duration-300 ease-in-out md:translate-x-0 ${open ? "translate-x-0" : "-translate-x-full"}`}>
+        <nav className="p-4 space-y-2 flex-1">
         {menuItems.map((item) => {
           const Icon = item.icon;
           const isActive = location === item.path;
@@ -226,5 +245,6 @@ export function AdminSidebar() {
         </Button>
       </div>
     </aside>
+    </>
   );
 }

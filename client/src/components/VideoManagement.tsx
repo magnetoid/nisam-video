@@ -102,7 +102,7 @@ export function VideoManagement({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col md:flex-row items-start justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold" data-testid="text-page-title">
             Video Management
@@ -112,7 +112,8 @@ export function VideoManagement({
           </p>
         </div>
 
-        {onCategorizeMissing && (
+        <div className="flex flex-wrap gap-2 w-full md:w-auto">
+          {onCategorizeMissing && (
           <Button
             size="sm"
             variant="outline"
@@ -181,9 +182,10 @@ export function VideoManagement({
             </Button>
           </div>
         )}
+        </div>
       </div>
 
-      <div className="flex items-center gap-4">
+      <div className="flex flex-col md:flex-row items-center gap-4">
         <Select
           value={selectedChannelId || "all"}
           onValueChange={(value) =>
@@ -263,10 +265,11 @@ export function VideoManagement({
         </div>
       ) : (
         <div className="border border-border rounded-lg overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-12">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-12">
                   <Checkbox
                     checked={allSelected}
                     onCheckedChange={() =>
@@ -276,10 +279,10 @@ export function VideoManagement({
                     aria-label="Select all videos"
                   />
                 </TableHead>
-                <TableHead className="w-[300px]">Video</TableHead>
-                <TableHead>Channel</TableHead>
-                <TableHead>Categories</TableHead>
-                <TableHead>Tags</TableHead>
+                <TableHead className="min-w-[200px]">Video</TableHead>
+                <TableHead className="hidden md:table-cell">Channel</TableHead>
+                <TableHead className="hidden lg:table-cell">Categories</TableHead>
+                <TableHead className="hidden xl:table-cell">Tags</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -311,12 +314,12 @@ export function VideoManagement({
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden md:table-cell">
                     <span className="text-sm" data-testid="text-channel-name">
                       {video.channel.name}
                     </span>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden lg:table-cell">
                     {video.categories && video.categories.length > 0 ? (
                       <div className="flex flex-wrap gap-1">
                         {video.categories.slice(0, 2).map((cat) => (
@@ -340,7 +343,7 @@ export function VideoManagement({
                       </span>
                     )}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden xl:table-cell">
                     {video.tags && video.tags.length > 0 ? (
                       <div className="flex flex-wrap gap-1">
                         {video.tags.slice(0, 2).map((tag) => (
@@ -436,8 +439,9 @@ export function VideoManagement({
               ))}
             </TableBody>
           </Table>
+          </div>
 
-          <div className="flex items-center justify-between gap-4 border-t border-border px-4 py-3">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4 border-t border-border px-4 py-3">
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">Page</span>
               <span className="text-sm font-medium">{page}</span>

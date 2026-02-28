@@ -10,11 +10,20 @@ import { UserMenu } from "@/components/UserMenu";
 
 interface HeaderProps {
   onSearchClick?: () => void;
+  onMenuClick?: () => void;
 }
 
-export function Header({ onSearchClick }: HeaderProps) {
+export function Header({ onSearchClick, onMenuClick }: HeaderProps) {
   const { t } = useTranslation();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
+  const handleMenuClick = () => {
+    if (onMenuClick) {
+      onMenuClick();
+    } else {
+      setMobileNavOpen(true);
+    }
+  };
 
   return (
     <>
@@ -24,7 +33,7 @@ export function Header({ onSearchClick }: HeaderProps) {
             <Button
               size="icon"
               variant="ghost"
-              onClick={() => setMobileNavOpen(true)}
+              onClick={handleMenuClick}
               data-testid="button-hamburger"
               className="md:hidden hover-elevate active-elevate-2 min-h-[44px] min-w-[44px]"
             >

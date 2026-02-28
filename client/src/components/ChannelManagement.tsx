@@ -163,113 +163,115 @@ export function ChannelManagement({
           </div>
       ) : (
         <div className="border border-border rounded-lg overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => toggleSort("name")}>
-                  <div className="flex items-center gap-1">
-                    Channel <ArrowUpDown className="h-3 w-3" />
-                  </div>
-                </TableHead>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => toggleSort("videoCount")}>
-                   <div className="flex items-center gap-1">
-                    Videos <ArrowUpDown className="h-3 w-3" />
-                  </div>
-                </TableHead>
-                <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => toggleSort("lastScraped")}>
-                   <div className="flex items-center gap-1">
-                    Last Scraped <ArrowUpDown className="h-3 w-3" />
-                  </div>
-                </TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredAndSortedChannels.map((channel) => (
-                <TableRow
-                  key={channel.id}
-                  data-testid={`row-channel-${channel.id}`}
-                >
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      {channel.thumbnailUrl ? (
-                        <img
-                          src={channel.thumbnailUrl}
-                          alt={channel.name}
-                          className="w-10 h-10 rounded-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                            <span className="text-xs font-bold">{channel.name.substring(0, 2).toUpperCase()}</span>
-                        </div>
-                      )}
-                      <div>
-                        <div
-                          className="font-medium flex items-center gap-2"
-                          data-testid="text-channel-name"
-                        >
-                          {channel.name}
-                          {channel.platform === 'tiktok' && (
-                              <Badge variant="outline" className="text-[10px] px-1 py-0 h-4">TikTok</Badge>
-                          )}
-                        </div>
-                        <a
-                          href={channel.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1"
-                          data-testid="link-channel-url"
-                        >
-                          View on {channel.platform === 'tiktok' ? 'TikTok' : 'YouTube'}
-                          <ExternalLink className="h-3 w-3" />
-                        </a>
-                      </div>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="min-w-[250px] cursor-pointer hover:bg-muted/50" onClick={() => toggleSort("name")}>
+                    <div className="flex items-center gap-1">
+                      Channel <ArrowUpDown className="h-3 w-3" />
                     </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary" data-testid="badge-video-count">
-                      {channel.videoCount}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <span
-                      className="text-sm text-muted-foreground"
-                      data-testid="text-last-scraped"
-                    >
-                      {channel.lastScraped
-                        ? formatDistanceToNow(new Date(channel.lastScraped), { addSuffix: true })
-                        : "Never"}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => onScrape?.(channel.id)}
-                        disabled={isLoading}
-                        data-testid={`button-scrape-${channel.id}`}
-                        className="gap-2"
-                      >
-                        <RefreshCw
-                          className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
-                        />
-                        Scrape
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => onDelete?.(channel.id)}
-                        data-testid={`button-delete-${channel.id}`}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                  </TableHead>
+                  <TableHead className="whitespace-nowrap cursor-pointer hover:bg-muted/50" onClick={() => toggleSort("videoCount")}>
+                    <div className="flex items-center gap-1">
+                      Videos <ArrowUpDown className="h-3 w-3" />
                     </div>
-                  </TableCell>
+                  </TableHead>
+                  <TableHead className="whitespace-nowrap cursor-pointer hover:bg-muted/50" onClick={() => toggleSort("lastScraped")}>
+                    <div className="flex items-center gap-1">
+                      Last Scraped <ArrowUpDown className="h-3 w-3" />
+                    </div>
+                  </TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {filteredAndSortedChannels.map((channel) => (
+                  <TableRow
+                    key={channel.id}
+                    data-testid={`row-channel-${channel.id}`}
+                  >
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        {channel.thumbnailUrl ? (
+                          <img
+                            src={channel.thumbnailUrl}
+                            alt={channel.name}
+                            className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                            <span className="text-xs font-bold">{channel.name.substring(0, 2).toUpperCase()}</span>
+                          </div>
+                        )}
+                        <div className="min-w-0">
+                          <div
+                            className="font-medium flex items-center gap-2 truncate"
+                            data-testid="text-channel-name"
+                          >
+                            <span className="truncate">{channel.name}</span>
+                            {channel.platform === 'tiktok' && (
+                              <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 flex-shrink-0">TikTok</Badge>
+                            )}
+                          </div>
+                          <a
+                            href={channel.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 truncate"
+                            data-testid="link-channel-url"
+                          >
+                            View on {channel.platform === 'tiktok' ? 'TikTok' : 'YouTube'}
+                            <ExternalLink className="h-3 w-3 flex-shrink-0" />
+                          </a>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary" data-testid="badge-video-count">
+                        {channel.videoCount}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <span
+                        className="text-sm text-muted-foreground whitespace-nowrap"
+                        data-testid="text-last-scraped"
+                      >
+                        {channel.lastScraped
+                          ? formatDistanceToNow(new Date(channel.lastScraped), { addSuffix: true })
+                          : "Never"}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => onScrape?.(channel.id)}
+                          disabled={isLoading}
+                          data-testid={`button-scrape-${channel.id}`}
+                          className="gap-2"
+                        >
+                          <RefreshCw
+                            className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
+                          />
+                          <span className="hidden sm:inline">Scrape</span>
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => onDelete?.(channel.id)}
+                          data-testid={`button-delete-${channel.id}`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </div>
       )}
 

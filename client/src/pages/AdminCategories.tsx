@@ -302,74 +302,76 @@ export default function AdminCategories() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name (EN)</TableHead>
-                    <TableHead>Description (EN)</TableHead>
-                    <TableHead className="text-center">Translations</TableHead>
-                    <TableHead className="text-center">Videos</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {categories.map((category) => (
-                    <TableRow
-                      key={category.id}
-                      data-testid={`row-category-${category.id}`}
-                    >
-                      <TableCell
-                        className="font-medium"
-                        data-testid="text-category-name"
-                      >
-                        {getDisplayName(category)}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground max-w-md">
-                        {getDisplayDescription(category) || (
-                          <span className="italic">No description</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-center">
-                          <div className="flex gap-1 justify-center">
-                              {category.translations.map(t => (
-                                  <Badge key={t.languageCode} variant="outline" className="text-xs">
-                                      {t.languageCode}
-                                  </Badge>
-                              ))}
-                          </div>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <Badge
-                          variant="secondary"
-                          data-testid="badge-video-count"
-                        >
-                          {category.videoCount}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex gap-2 justify-end">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => openEditDialog(category)}
-                            data-testid={`button-edit-${category.id}`}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => setDeletingCategory(category)}
-                            data-testid={`button-delete-${category.id}`}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name (EN)</TableHead>
+                      <TableHead className="hidden md:table-cell">Description (EN)</TableHead>
+                      <TableHead className="text-center hidden lg:table-cell">Translations</TableHead>
+                      <TableHead className="text-center">Videos</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {categories.map((category) => (
+                      <TableRow
+                        key={category.id}
+                        data-testid={`row-category-${category.id}`}
+                      >
+                        <TableCell
+                          className="font-medium"
+                          data-testid="text-category-name"
+                        >
+                          {getDisplayName(category)}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground max-w-md hidden md:table-cell">
+                          {getDisplayDescription(category) || (
+                            <span className="italic">No description</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-center hidden lg:table-cell">
+                            <div className="flex gap-1 justify-center">
+                                {category.translations.map(t => (
+                                    <Badge key={t.languageCode} variant="outline" className="text-xs">
+                                        {t.languageCode}
+                                    </Badge>
+                                ))}
+                            </div>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Badge
+                            variant="secondary"
+                            data-testid="badge-video-count"
+                          >
+                            {category.videoCount}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex gap-2 justify-end">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => openEditDialog(category)}
+                              data-testid={`button-edit-${category.id}`}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setDeletingCategory(category)}
+                              data-testid={`button-delete-${category.id}`}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             </CardContent>
           </Card>
         )}
