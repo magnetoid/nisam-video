@@ -48,68 +48,67 @@ router.get("/carousels", async (req, res) => {
   try {
     const lang = req.query.lang as string || 'en';
     const videosPerCategory = parseInt(req.query.limit as string, 10) || 10;
+    const sections = (req.query.sections as string || "hero,recent,trending,categories").split(",");
     
-    // Wrap each storage call in individual try-catch to prevent cascading failures
-    const [heroResult, recentResult, trendingResult, categoriesResult] = await Promise.allSettled([
-      storage.getHomeHeroVideos(4, lang),
-      storage.getRecentVideos(videosPerCategory, lang),
-      storage.getTrendingVideos(videosPerCategory, lang),
-      storage.getAllLocalizedCategories(lang),
-    ]);
+    const promises: Promise<any>[] = [];
+    const results: Record<string, any> = {};
 
-    // Extract results with fallbacks
-    const hero = heroResult.status === 'fulfilled' ? heroResult.value : [];
-    const recent = recentResult.status === 'fulfilled' ? recentResult.value : [];
-    const trending = trendingResult.status === 'fulfilled' ? trendingResult.value : [];
-    const allCategories = categoriesResult.status === 'fulfilled' ? categoriesResult.value : [];
+    if (sections.includes("hero")) {
+      promises.push(storage.getHomeHeroVideos(4, lang).then(v => results.hero = v));
+    }
+    if (sections.includes("recent")) {
+      promises.push(storage.getRecentVideos(videosPerCategory, lang).then(v => results.recent = v));
+    }
+    if (sections.includes("trending")) {
+      promises.push(storage.getTrendingVideos(videosPerCategory, lang).then(v => results.trending = v));
+    }
+    
+    // Wait for main sections
+    await Promise.allSettled(promises);
 
-    // Log individual failures for debugging
-    if (heroResult.status === 'rejected') {
-      console.warn(`[carousels] Hero video fetch failed:`, heroResult.reason);
-    }
-    if (recentResult.status === 'rejected') {
-      console.warn(`[carousels] Recent videos fetch failed:`, recentResult.reason);
-    }
-    if (trendingResult.status === 'rejected') {
-      console.warn(`[carousels] Trending videos fetch failed:`, trendingResult.reason);
-    }
-    if (categoriesResult.status === 'rejected') {
-      console.warn(`[carousels] Categories fetch failed:`, categoriesResult.reason);
-    }
+    // Handle categories separately if requested
+    if (sections.includes("categories")) {
+      const allCategories = await storage.getAllLocalizedCategories(lang);
+      
+      // Process categories with individual error handling
+      const limitedCategories = allCategories.slice(0, 10);
+      const categoryPromises = limitedCategories.map(async (category) => {
+        try {
+          const videos = await storage.getVideosByCategory(category.id, videosPerCategory, lang);
+          return {
+            name: category.translations[0]?.name || 'Unnamed',
+            videos: videos || [],
+          };
+        } catch (error) {
+          return {
+            name: category.translations[0]?.name || 'Unnamed',
+            videos: [],
+          };
+        }
+      });
+      
+      const categoryResults = await Promise.allSettled(categoryPromises);
+      const successfulCategories = categoryResults
+        .filter(result => result.status === 'fulfilled')
+        // @ts-ignore
+        .map(result => result.value)
+        .filter(result => result.videos.length > 0);
 
-    // Process categories with individual error handling
-    const limitedCategories = allCategories.slice(0, 10);
-    const categoryPromises = limitedCategories.map(async (category) => {
-      try {
-        const videos = await storage.getVideosByCategory(category.id, videosPerCategory, lang);
-        return {
-          name: category.translations[0]?.name || 'Unnamed',
-          videos: videos || [],
-        };
-      } catch (error) {
-        console.warn(`[carousels] Failed to fetch videos for category ${category.id}:`, error);
-        return {
-          name: category.translations[0]?.name || 'Unnamed',
-          videos: [],
-        };
+      const byCategory: Record<string, any[]> = {};
+      for (const result of successfulCategories) {
+        byCategory[result.name] = result.videos;
       }
-    });
-    
-    const categoryResults = await Promise.allSettled(categoryPromises);
-    const successfulCategories = categoryResults
-      .filter(result => result.status === 'fulfilled')
-      .map(result => result.value)
-      .filter(result => result.videos.length > 0);
-
-    const byCategory: Record<string, any[]> = {};
-    for (const result of successfulCategories) {
-      byCategory[result.name] = result.videos;
+      results.byCategory = byCategory;
     }
 
-    res.json({ hero, recent, trending, byCategory });
+    res.json({
+      hero: results.hero || [],
+      recent: results.recent || [],
+      trending: results.trending || [],
+      byCategory: results.byCategory || {},
+    });
   } catch (error) {
     console.error(`[carousels] Critical error [params=${JSON.stringify(req.query)}]:`, error);
-    // Even in case of critical error, return empty data instead of 500
     res.json({ hero: [], recent: [], trending: [], byCategory: {} });
   }
 });

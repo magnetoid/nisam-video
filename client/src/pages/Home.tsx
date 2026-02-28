@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { CarouselRow } from "@/components/CarouselRow";
+import { LazyCarouselRow } from "@/components/LazyCarouselRow";
 import { SearchOverlay } from "@/components/SearchOverlay";
 import { SEO } from "@/components/SEO";
 import { LikeStatusBatchProvider } from "@/components/LikeButton";
@@ -15,7 +16,7 @@ interface CarouselData {
   hero: VideoWithLocalizedRelations[];
   recent: VideoWithLocalizedRelations[];
   trending: VideoWithLocalizedRelations[];
-  byCategory: Record<string, VideoWithLocalizedRelations[]>;
+  // byCategory removed from main fetch
 }
 
 export default function Home() {
@@ -26,11 +27,12 @@ export default function Home() {
     data: carouselData,
     isLoading: carouselsLoading,
   } = useQuery<CarouselData>({
-    queryKey: ["/api/videos/carousels", i18n.language],
+    queryKey: ["/api/videos/carousels", i18n.language, "main"],
     staleTime: 60 * 1000,
     refetchOnWindowFocus: true,
     queryFn: async () => {
-        const res = await apiRequest("GET", `/api/videos/carousels?lang=${i18n.language}`);
+        // Load only main sections initially for speed
+        const res = await apiRequest("GET", `/api/videos/carousels?lang=${i18n.language}&sections=hero,recent,trending`);
         return res.json();
     }
   });
@@ -58,7 +60,6 @@ export default function Home() {
   const featuredVideos = carouselData?.hero ?? [];
   const recentVideos = carouselData?.recent ?? [];
   const trendingVideos = carouselData?.trending ?? [];
-  const videosByCategory = carouselData?.byCategory ?? {};
 
   const heroItems = useMemo(() => {
     const primary = featuredVideos.length > 0 ? featuredVideos : recentVideos;
@@ -80,12 +81,8 @@ export default function Home() {
     featuredVideos.forEach(v => ids.push(v.id));
     recentVideos.forEach(v => ids.push(v.id));
     trendingVideos.forEach(v => ids.push(v.id));
-    // Only include first 6 categories
-    Object.entries(videosByCategory).slice(0, 6).forEach(([, videos]) => {
-      videos.forEach(v => ids.push(v.id));
-    });
     return Array.from(new Set(ids));
-  }, [recentVideos, trendingVideos, videosByCategory]);
+  }, [recentVideos, trendingVideos]);
 
   const websiteStructuredData = {
     "@context": "https://schema.org",
@@ -130,19 +127,19 @@ export default function Home() {
               <CarouselRow title={t("home.recent")} videos={recentVideos} />
             )}
 
-            {Object.entries(videosByCategory).slice(0, 6).map(
-              ([categoryName, categoryVideos]) => (
-                <CarouselRow
-                  key={categoryName}
-                  title={categoryName}
-                  videos={categoryVideos}
-                />
-              ),
-            )}
-
             {trendingVideos.length > 0 && (
               <CarouselRow title={t("home.trending")} videos={trendingVideos} />
             )}
+
+            {/* Lazy load categories */}
+            {categories.map((category) => (
+              <LazyCarouselRow
+                key={category.id}
+                title={category.name || category.translations?.[0]?.name || "Category"}
+                categoryId={category.id}
+                lang={i18n.language}
+              />
+            ))}
           </div>
         </LikeStatusBatchProvider>
 

@@ -7,8 +7,12 @@ import { db, isDbReady } from "./db.js";
 import { seoSettings } from "../shared/schema.js";
 import { generateSlug } from "./utils.js";
 import { getCache, setCache } from "./services/redis.js";
+import imageRouter from "./routes/images.js";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Image proxy
+  app.use("/api/images", imageRouter);
+
   // Register object storage routes
   registerObjectStorageRoutes(app);
   

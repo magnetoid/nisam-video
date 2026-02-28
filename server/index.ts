@@ -14,6 +14,7 @@ import { errorMonitor, asyncHandler } from "./error-monitor.js";
 import { recordError } from "./error-log-service.js";
 import { recordRequestMetric } from "./performance-metrics.js";
 import { runMigrations } from "./migrate.js";
+import { startCronJobs } from "./services/cron.js";
 
 const app = express();
 
@@ -358,6 +359,9 @@ async function startServer() {
     await scheduler.init();
     log(`Scheduler initialized in ${Date.now() - schedStart}ms`);
   }
+
+  // Start background jobs
+  startCronJobs();
 
   // Warm cache on startup to eliminate cold-start delays
   // Wrap in try-catch and don't await to avoid blocking startup in serverless

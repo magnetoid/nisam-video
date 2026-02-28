@@ -1,7 +1,7 @@
 FROM node:20-alpine AS base
 
 FROM base AS deps
-RUN apk add --no-cache libc6-compat python3 make g++
+RUN apk add --no-cache libc6-compat python3 make g++ vips-dev
 WORKDIR /app
 
 # Forsiramo development env da bi se instalirali devDependencies (vite)
