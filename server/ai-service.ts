@@ -71,12 +71,13 @@ async function ollamaGenerate(prompt: string, options: { model: string; url: str
       headers['Authorization'] = `Bearer ${options.apiKey}`;
     }
 
-    const response = await fetch(`${options.url}/api/generate`, {
+    // Use /api/chat instead of /api/generate for better compatibility with Cloud models
+    const response = await fetch(`${options.url}/api/chat`, {
       method: "POST",
       headers,
       body: JSON.stringify({
         model: options.model,
-        prompt: prompt,
+        messages: [{ role: "user", content: prompt }],
         stream: false,
         format: options.format, // "json" or undefined
         options: {
@@ -92,7 +93,7 @@ async function ollamaGenerate(prompt: string, options: { model: string; url: str
     }
 
     const data = await response.json() as any;
-    return data.response;
+    return data.message?.content || "";
   } catch (error: any) {
     if (error.cause?.code === 'ECONNREFUSED') {
        throw new Error(`Ollama connection failed (ECONNREFUSED) at ${options.url}. Is Ollama running?`);

@@ -423,11 +423,22 @@ export default function AdminAISettings() {
                             render={({ field }) => (
                               <FormItem>
                                 <FormLabel>Ollama URL</FormLabel>
-                                <FormControl>
-                                  <Input placeholder="http://localhost:11434 (or remote URL)" {...field} />
-                                </FormControl>
+                                <div className="flex gap-2 items-center">
+                                  <FormControl>
+                                    <Input placeholder="http://localhost:11434 (or remote URL)" {...field} />
+                                  </FormControl>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => form.setValue("ollamaUrl", "https://ollama.com", { shouldDirty: true })}
+                                    title="Set to Official Cloud URL"
+                                  >
+                                    Cloud
+                                  </Button>
+                                </div>
                                 <FormDescription>
-                                  URL of your Ollama instance. Must be publicly accessible if deployed.
+                                  URL of your Ollama instance. Use 'https://ollama.com' for official cloud.
                                 </FormDescription>
                                 <FormMessage />
                               </FormItem>
