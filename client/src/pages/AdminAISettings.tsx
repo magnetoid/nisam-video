@@ -69,6 +69,7 @@ const aiSettingsSchema = z.object({
   openaiModel: z.string().optional(),
   ollamaUrl: z.string().default("http://localhost:11434"),
   ollamaModel: z.string().optional(),
+  ollamaApiKey: z.string().optional(),
 });
 
 type AiSettings = z.infer<typeof aiSettingsSchema>;
@@ -117,6 +118,7 @@ export default function AdminAISettings() {
       openaiModel: "gpt-5",
       ollamaUrl: "http://localhost:11434",
       ollamaModel: "",
+      ollamaApiKey: "",
     },
   });
 
@@ -131,6 +133,7 @@ export default function AdminAISettings() {
         openaiModel: config.openaiModel || "gpt-5",
         ollamaUrl: config.ollamaUrl || "http://localhost:11434",
         ollamaModel: config.ollamaModel || "",
+        ollamaApiKey: config.ollamaApiKey || "",
       });
       didHydrateFromServerRef.current = true;
     }
@@ -425,6 +428,23 @@ export default function AdminAISettings() {
                                 </FormControl>
                                 <FormDescription>
                                   URL of your Ollama instance. Must be publicly accessible if deployed.
+                                </FormDescription>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name="ollamaApiKey"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Ollama API Key (Optional)</FormLabel>
+                                <FormControl>
+                                  <Input type="password" placeholder="Key for remote auth" {...field} />
+                                </FormControl>
+                                <FormDescription>
+                                  Required if your remote Ollama service uses authentication.
                                 </FormDescription>
                                 <FormMessage />
                               </FormItem>

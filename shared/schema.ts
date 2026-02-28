@@ -963,9 +963,8 @@ export const aiSettings = pgTable("ai_settings", {
   openaiModel: text("openai_model").default("gpt-5"),
   ollamaUrl: text("ollama_url").default("http://localhost:11434"),
   ollamaModel: text("ollama_model"), // Selected model for generation
-  updatedAt: timestamp("updated_at")
-    .notNull()
-    .default(sql`now()`),
+  ollamaApiKey: text("ollama_api_key"), // Optional API Key for remote Ollama
+  updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
 });
 
 // AI Models table - Cache of available models

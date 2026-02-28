@@ -59,9 +59,26 @@ router.post("/run-migration", requireAuth, async (req, res) => {
           "openai_model" text DEFAULT 'gpt-5',
           "ollama_url" text DEFAULT 'http://localhost:11434',
           "ollama_model" text,
+          "ollama_api_key" text,
           "updated_at" timestamp DEFAULT now() NOT NULL
         );
       `;
+    } else {
+      // Check for missing columns in ai_settings if table exists
+      try {
+        const aiSettingsColumns = await db.execute(sql`
+          SELECT column_name 
+          FROM information_schema.columns 
+          WHERE table_name = 'ai_settings'
+        `);
+        const existingColumns = aiSettingsColumns.rows.map((row: any) => row.column_name);
+        
+        if (!existingColumns.includes('ollama_api_key')) {
+          await db.execute(sql`ALTER TABLE "ai_settings" ADD COLUMN "ollama_api_key" text`);
+        }
+      } catch (e) {
+        console.warn("Failed to alter ai_settings table:", e);
+      }
     }
     
     if (tablesToCreate.includes('ai_models')) {

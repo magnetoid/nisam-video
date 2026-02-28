@@ -22,7 +22,7 @@ interface OllamaTagsResponse {
   models: OllamaModel[];
 }
 
-export async function fetchRemoteOllamaModels(url: string): Promise<OllamaModel[]> {
+export async function fetchRemoteOllamaModels(url: string, apiKey?: string): Promise<OllamaModel[]> {
   try {
     // Ensure URL has protocol
     if (!url.startsWith("http")) {
@@ -32,14 +32,14 @@ export async function fetchRemoteOllamaModels(url: string): Promise<OllamaModel[
     // Remove trailing slash if present
     const baseUrl = url.replace(/\/$/, "");
 
-    // Fast-fail for localhost on Vercel
-    if (process.env.VERCEL === '1' && (baseUrl.includes('localhost') || baseUrl.includes('127.0.0.1'))) {
-       throw new Error("Cannot connect to localhost Ollama on Vercel. Please configure a remote Ollama URL (e.g., via ngrok) or use OpenAI.");
-    }
-
     const tagsUrl = `${baseUrl}/api/tags`;
     
-    const response = await fetch(tagsUrl);
+    const headers: Record<string, string> = {};
+    if (apiKey) {
+      headers['Authorization'] = `Bearer ${apiKey}`;
+    }
+
+    const response = await fetch(tagsUrl, { headers });
     
     if (!response.ok) {
       throw new Error(`Failed to fetch models: ${response.status} ${response.statusText}`);
@@ -56,7 +56,7 @@ export async function fetchRemoteOllamaModels(url: string): Promise<OllamaModel[
   }
 }
 
-export async function testOllamaConnection(url: string): Promise<boolean> {
+export async function testOllamaConnection(url: string, apiKey?: string): Promise<boolean> {
   try {
     // Ensure URL has protocol
     if (!url.startsWith("http")) {
@@ -65,31 +65,27 @@ export async function testOllamaConnection(url: string): Promise<boolean> {
     
     // Remove trailing slash if present
     const baseUrl = url.replace(/\/$/, "");
-
-    // Fast-fail for localhost on Vercel
-    if (process.env.VERCEL === '1' && (baseUrl.includes('localhost') || baseUrl.includes('127.0.0.1'))) {
-       throw new Error("Cannot connect to localhost Ollama on Vercel. Please configure a remote Ollama URL (e.g., via ngrok) or use OpenAI.");
-    }
     
+    const headers: Record<string, string> = {};
+    if (apiKey) {
+      headers['Authorization'] = `Bearer ${apiKey}`;
+    }
+
     // Try hitting the version endpoint or tags endpoint
     // Ollama root usually returns "Ollama is running"
-    const response = await fetch(baseUrl);
+    const response = await fetch(baseUrl, { headers });
     
     if (response.ok) {
       return true;
     }
     
     // Fallback to trying /api/tags if root fails
-    const tagsResponse = await fetch(`${baseUrl}/api/tags`);
+    const tagsResponse = await fetch(`${baseUrl}/api/tags`, { headers });
     return tagsResponse.ok;
   } catch (error: any) {
     console.error("[OllamaService] Connection test error:", error);
     if (error.code === 'ECONNREFUSED') {
         throw new Error(`Connection refused. Ensure Ollama is publicly accessible at ${url}.`);
-    }
-    // Propagate Vercel error for UI visibility
-    if (error.message.includes("Vercel")) {
-        throw error;
     }
     return false;
   }

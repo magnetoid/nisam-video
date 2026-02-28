@@ -28,7 +28,8 @@ async function getOllamaConfig() {
     // Ensure URL doesn't have trailing slash
     return {
       url: url.replace(/\/$/, ""),
-      model
+      model: config?.ollamaModel || "llama3",
+      apiKey: config?.ollamaApiKey,
     };
   } catch (error: any) {
     // Suppress "relation does not exist" error (code 42P01)
@@ -39,7 +40,8 @@ async function getOllamaConfig() {
     }
     return {
       url: "http://localhost:11434",
-      model: "llama3"
+      model: "llama3",
+      apiKey: undefined,
     };
   }
 }
@@ -57,16 +59,21 @@ const SeoSchema = z.object({
 });
 
 // Minimal Ollama Client
-async function ollamaGenerate(prompt: string, options: { model: string; url: string; format?: string; signal?: AbortSignal }) {
+async function ollamaGenerate(prompt: string, options: { model: string; url: string; apiKey?: string | null; format?: string; signal?: AbortSignal }) {
   try {
     // Fast-fail for localhost on Vercel
     if (process.env.VERCEL === '1' && (options.url.includes('localhost') || options.url.includes('127.0.0.1'))) {
        throw new Error("Cannot connect to localhost Ollama on Vercel. Please configure a remote Ollama URL or use OpenAI.");
     }
 
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (options.apiKey) {
+      headers['Authorization'] = `Bearer ${options.apiKey}`;
+    }
+
     const response = await fetch(`${options.url}/api/generate`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify({
         model: options.model,
         prompt: prompt,
@@ -150,6 +157,7 @@ Return ONLY valid JSON. Do not include markdown formatting or explanations.`;
           const content = await ollamaGenerate(prompt, {
             model: config.model,
             url: config.url,
+            apiKey: config.apiKey,
             format: "json",
             signal: timeoutMs ? AbortSignal.timeout(timeoutMs) : undefined
           });
@@ -282,6 +290,7 @@ Summary:`;
           const content = await ollamaGenerate(prompt, {
             model: config.model,
             url: config.url,
+            apiKey: config.apiKey,
             signal: timeoutMs ? AbortSignal.timeout(timeoutMs) : undefined
           });
 
@@ -348,6 +357,7 @@ Return ONLY valid JSON.`;
           const content = await ollamaGenerate(prompt, {
             model: config.model,
             url: config.url,
+            apiKey: config.apiKey,
             format: "json",
             signal: timeoutMs ? AbortSignal.timeout(timeoutMs) : undefined
           });
