@@ -2,6 +2,9 @@ import { Request, Response, NextFunction } from "express";
 import fs from "fs";
 import { storage } from "./storage/index.js";
 
+// Cache template in memory to avoid reading disk on every request
+let cachedTemplate: string | null = null;
+
 export async function seoMiddleware(req: Request, res: Response, next: NextFunction, indexPath: string) {
   // Only handle HTML requests for known routes
   if ((req.method !== 'GET' && req.method !== 'HEAD') || !req.accepts('html')) {
@@ -9,11 +12,14 @@ export async function seoMiddleware(req: Request, res: Response, next: NextFunct
   }
 
   try {
-    if (!fs.existsSync(indexPath)) {
-      return next();
+    if (!cachedTemplate) {
+      if (!fs.existsSync(indexPath)) {
+        return next();
+      }
+      cachedTemplate = fs.readFileSync(indexPath, "utf-8");
     }
 
-    let template = fs.readFileSync(indexPath, "utf-8");
+    let template = cachedTemplate;
     
     // Defaults
     let title = "nisam.video - AI Curated Videos";
