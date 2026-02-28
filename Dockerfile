@@ -36,4 +36,4 @@ USER nodejs
 
 EXPOSE 3000
 
-CMD ["npx", "tsx", "server/index.ts"]
+CMD ["./node_modules/.bin/tsx", "server/index.ts"]
