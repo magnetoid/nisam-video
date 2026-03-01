@@ -386,11 +386,16 @@ async function startServer() {
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
   if (app.get("env") === "development") {
-    log("Setting up Vite dev server...");
-    const viteStart = Date.now();
-    const { setupVite } = await import("./vite-dev.js");
-    await setupVite(app, server);
-    log(`Vite setup completed in ${Date.now() - viteStart}ms`);
+    // Only import vite-dev in development
+    try {
+      log("Setting up Vite dev server...");
+      const viteStart = Date.now();
+      const { setupVite } = await import("./vite-dev.js");
+      await setupVite(app, server);
+      log(`Vite setup completed in ${Date.now() - viteStart}ms`);
+    } catch (err) {
+      console.error("Failed to load vite-dev:", err);
+    }
   } else {
     // In serverless/production, we might not have static files locally (served by edge)
     // So we wrap this in try-catch or check existence to avoid crash
