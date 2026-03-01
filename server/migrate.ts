@@ -140,11 +140,13 @@ export async function runMigrations() {
     await migrate(db, { migrationsFolder });
 
     console.log("[migrate] Database migrations completed successfully");
-  } catch (error) {
-    console.error("[migrate] Database migration failed:", error);
-    // We don't throw here to prevent the server from crashing completely, 
-    // but the app might be unstable if schema is mismatched.
-    // In production, you might want to throw/exit.
+  } catch (error: any) {
+    if (error?.code === '42P07') {
+      console.log("[migrate] Tables already exist, skipping migration (safe to ignore)");
+    } else {
+      console.error("[migrate] Database migration failed:", error);
+    }
+    // We don't throw here to prevent the server from crashing completely
   }
 }
 

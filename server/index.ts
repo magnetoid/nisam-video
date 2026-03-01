@@ -425,7 +425,6 @@ if (process.argv[1] === __filename) {
         : {
             port,
             host: "0.0.0.0",
-            reusePort: true,
           };
     server.listen(listenOptions, () => {
       log(`serving on port ${port}`);
