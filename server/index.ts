@@ -390,7 +390,8 @@ async function startServer() {
     try {
       log("Setting up Vite dev server...");
       const viteStart = Date.now();
-      const { setupVite } = await import("./vite-dev.js");
+      const viteDevModule = process.env.VITE_DEV_MODULE_PATH ?? "./vite-dev.js";
+      const { setupVite } = await import(viteDevModule);
       await setupVite(app, server);
       log(`Vite setup completed in ${Date.now() - viteStart}ms`);
     } catch (err) {

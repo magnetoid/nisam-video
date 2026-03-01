@@ -19,6 +19,11 @@ interface CarouselData {
   recent: VideoWithLocalizedRelations[];
   trending: VideoWithLocalizedRelations[];
   popular: VideoWithLocalizedRelations[];
+  popularSegments?: {
+    id: string;
+    title: string;
+    videos: VideoWithLocalizedRelations[];
+  }[];
   // byCategory removed from main fetch
 }
 
@@ -79,6 +84,7 @@ export default function Home() {
   const recentVideos = carouselData?.recent ?? [];
   const trendingVideos = carouselData?.trending ?? [];
   const popularVideos = carouselData?.popular ?? [];
+  const popularSegments = carouselData?.popularSegments ?? [];
 
   const heroItems = useMemo(() => {
     const primary = featuredVideos.length > 0 ? featuredVideos : recentVideos;
@@ -101,8 +107,9 @@ export default function Home() {
     recentVideos.forEach(v => ids.push(v.id));
     trendingVideos.forEach(v => ids.push(v.id));
     popularVideos.forEach(v => ids.push(v.id));
+    popularSegments.forEach((segment) => segment.videos.forEach((v) => ids.push(v.id)));
     return Array.from(new Set(ids));
-  }, [recentVideos, trendingVideos, popularVideos]);
+  }, [featuredVideos, recentVideos, trendingVideos, popularVideos, popularSegments]);
 
   const websiteStructuredData = {
     "@context": "https://schema.org",
