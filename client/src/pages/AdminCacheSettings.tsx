@@ -1,7 +1,5 @@
 import { useEffect, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Header } from "@/components/Header";
-import { AdminSidebar } from "@/components/AdminSidebar";
 import {
   Card,
   CardContent,
@@ -169,23 +167,14 @@ export default function AdminCacheSettings() {
 
   if (settingsLoading) {
     return (
-      <div className="min-h-screen bg-background">
-        <Header />
-        <AdminSidebar />
-        <main className="ml-60 pt-16 p-8">
-          <div className="flex items-center justify-center h-64">
-            <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
-          </div>
-        </main>
+      <div className="flex items-center justify-center h-64">
+        <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <AdminSidebar />
-      <main className="ml-60 pt-16 p-8 space-y-6">
+    <div className="space-y-6">
         <div>
           <h1
             className="text-3xl font-bold text-foreground"
@@ -518,7 +507,6 @@ export default function AdminCacheSettings() {
             </div>
           </CardContent>
         </Card>
-      </main>
     </div>
   );
 }

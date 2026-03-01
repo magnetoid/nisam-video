@@ -1,7 +1,5 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Header } from "@/components/Header";
-import { AdminSidebar } from "@/components/AdminSidebar";
 import {
   Card,
   CardContent,
@@ -220,10 +218,7 @@ export default function AdminRegenerate() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <AdminSidebar />
-      <main className="ml-60 pt-16 p-8 space-y-6">
+    <div className="space-y-6">
         <div>
           <h1
             className="text-3xl font-bold text-foreground"
@@ -511,7 +506,6 @@ export default function AdminRegenerate() {
             </div>
           </CardContent>
         </Card>
-      </main>
     </div>
   );
 }

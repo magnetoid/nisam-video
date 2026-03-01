@@ -1,7 +1,5 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Header } from "@/components/Header";
-import { AdminSidebar } from "@/components/AdminSidebar";
 import {
   Card,
   CardContent,
@@ -77,21 +75,16 @@ export default function AdminUsers() {
   });
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <div className="flex pt-16 h-[calc(100vh-64px)]">
-        <AdminSidebar />
-        <main className="flex-1 overflow-y-auto p-8">
-          <div className="max-w-5xl mx-auto space-y-6">
-            <div>
-              <h1 className="text-3xl font-bold flex items-center gap-2">
-                <Users className="h-8 w-8" />
-                User Management
-              </h1>
-              <p className="text-muted-foreground mt-1">
-                Manage registered users and their roles
-              </p>
-            </div>
+    <div className="max-w-5xl mx-auto space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold flex items-center gap-2">
+          <Users className="h-8 w-8" />
+          User Management
+        </h1>
+        <p className="text-muted-foreground mt-1">
+          Manage registered users and their roles
+        </p>
+      </div>
 
             <Card>
               <CardHeader>
@@ -175,9 +168,6 @@ export default function AdminUsers() {
                 )}
               </CardContent>
             </Card>
-          </div>
-        </main>
-      </div>
     </div>
   );
 }

@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { AdminSidebar } from "@/components/AdminSidebar";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -145,19 +144,15 @@ export default function AdminScheduler() {
   };
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <AdminSidebar />
-
-      <main className="flex-1 p-8 ml-[240px]">
-        <div className="max-w-4xl mx-auto space-y-6">
-          <div>
-            <h1 className="text-3xl font-bold" data-testid="text-page-title">
-              Automated Scheduler
-            </h1>
-            <p className="text-muted-foreground mt-1">
-              Configure automated scraping for all channels
-            </p>
-          </div>
+    <div className="max-w-4xl mx-auto space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold" data-testid="text-page-title">
+          Automated Scheduler
+        </h1>
+        <p className="text-muted-foreground mt-1">
+          Configure automated scraping for all channels
+        </p>
+      </div>
 
           {isLoading ? (
             <Card>
@@ -340,8 +335,6 @@ export default function AdminScheduler() {
               </Card>
             </>
           )}
-        </div>
-      </main>
     </div>
   );
 }

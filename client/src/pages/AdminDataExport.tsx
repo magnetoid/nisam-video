@@ -1,6 +1,4 @@
 import { useState } from "react";
-import { Header } from "@/components/Header";
-import { AdminSidebar } from "@/components/AdminSidebar";
 import {
   Card,
   CardContent,
@@ -63,10 +61,7 @@ export default function AdminDataExport() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <AdminSidebar />
-      <main className="ml-60 pt-16 p-8 space-y-6">
+    <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Data Export</h1>
           <p className="text-sm text-muted-foreground mt-1">
@@ -209,7 +204,6 @@ export default function AdminDataExport() {
             </div>
           </CardContent>
         </Card>
-      </main>
     </div>
   );
 }

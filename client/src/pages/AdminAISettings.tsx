@@ -162,8 +162,8 @@ export default function AdminAISettings() {
   });
 
   const syncModelsMutation = useMutation({
-    mutationFn: async (url: string) => {
-      const res = await apiRequest("POST", "/api/ai/ollama/sync", { url });
+    mutationFn: async (data: { url: string; apiKey?: string }) => {
+      const res = await apiRequest("POST", "/api/ai/ollama/sync", data);
       return res.json();
     },
     onSuccess: (data) => {
@@ -227,17 +227,32 @@ export default function AdminAISettings() {
 
   const handleSync = async () => {
     const url = form.getValues("ollamaUrl");
+    const apiKeyRaw = form.getValues("ollamaApiKey");
+    const apiKey = apiKeyRaw && apiKeyRaw !== "********" ? apiKeyRaw : undefined;
     setIsSyncing(true);
-    await syncModelsMutation.mutateAsync(url);
+    await syncModelsMutation.mutateAsync({ url, apiKey });
     setIsSyncing(false);
   };
 
   const handleTest = async () => {
-    const data = {
-      provider: form.getValues("provider"),
-      url: form.getValues("ollamaUrl"),
-      apiKey: form.getValues("openaiApiKey"),
-    };
+    const provider = form.getValues("provider");
+    const openaiKeyRaw = form.getValues("openaiApiKey");
+    const ollamaKeyRaw = form.getValues("ollamaApiKey");
+    const openaiApiKey = openaiKeyRaw && openaiKeyRaw !== "********" ? openaiKeyRaw : undefined;
+    const ollamaApiKey = ollamaKeyRaw && ollamaKeyRaw !== "********" ? ollamaKeyRaw : undefined;
+
+    const data =
+      provider === "ollama"
+        ? {
+            provider,
+            url: form.getValues("ollamaUrl"),
+            apiKey: ollamaApiKey,
+          }
+        : {
+            provider,
+            url: form.getValues("openaiBaseUrl") || undefined,
+            apiKey: openaiApiKey,
+          };
     setIsTesting(true);
     await testConnectionMutation.mutateAsync(data);
     setIsTesting(false);

@@ -1,7 +1,5 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Header } from "@/components/Header";
-import { AdminSidebar } from "@/components/AdminSidebar";
 import {
   Card,
   CardContent,
@@ -81,37 +79,29 @@ export default function AdminAnalytics() {
   });
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <AdminSidebar />
+    <div className="space-y-6">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold" data-testid="text-page-title">
+            Analytics Dashboard
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Comprehensive statistics and insights
+          </p>
+        </div>
 
-      <main className="ml-60 pt-16 p-8">
-        <div className="space-y-6">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-bold" data-testid="text-page-title">
-                Analytics Dashboard
-              </h1>
-              <p className="text-muted-foreground mt-1">
-                Comprehensive statistics and insights
-              </p>
-            </div>
-
-            <Select value={dateRange} onValueChange={setDateRange}>
-              <SelectTrigger
-                className="w-[180px]"
-                data-testid="select-date-range"
-              >
-                <SelectValue placeholder="Select range" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Time</SelectItem>
-                <SelectItem value="7">Last 7 Days</SelectItem>
-                <SelectItem value="30">Last 30 Days</SelectItem>
-                <SelectItem value="90">Last 90 Days</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+        <Select value={dateRange} onValueChange={setDateRange}>
+          <SelectTrigger className="w-[180px]" data-testid="select-date-range">
+            <SelectValue placeholder="Select range" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Time</SelectItem>
+            <SelectItem value="7">Last 7 Days</SelectItem>
+            <SelectItem value="30">Last 30 Days</SelectItem>
+            <SelectItem value="90">Last 90 Days</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
 
           {isLoading ? (
             <div className="flex items-center justify-center h-64">
@@ -375,8 +365,6 @@ export default function AdminAnalytics() {
               </div>
             </div>
           )}
-        </div>
-      </main>
     </div>
   );
 }

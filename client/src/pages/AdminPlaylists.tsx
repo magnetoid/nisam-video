@@ -1,7 +1,5 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Header } from "@/components/Header";
-import { AdminSidebar } from "@/components/AdminSidebar";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -149,12 +147,8 @@ export default function AdminPlaylists() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <AdminSidebar />
-
-      <main className="ml-60 pt-16 p-8">
-        <div className="space-y-6">
+    <>
+      <div className="space-y-6">
           <div className="flex items-start justify-between gap-4">
             <div>
               <h1 className="text-3xl font-bold" data-testid="text-page-title">
@@ -298,8 +292,7 @@ export default function AdminPlaylists() {
               ))}
             </div>
           )}
-        </div>
-      </main>
+      </div>
 
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent>
@@ -347,6 +340,6 @@ export default function AdminPlaylists() {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 }

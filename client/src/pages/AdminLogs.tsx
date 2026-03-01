@@ -1,7 +1,5 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Header } from "@/components/Header";
-import { AdminSidebar } from "@/components/AdminSidebar";
 import {
   Card,
   CardContent,
@@ -181,31 +179,29 @@ export default function AdminLogs() {
   });
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <div className="flex pt-16 h-[calc(100vh-64px)]">
-        <AdminSidebar />
-        <main className="flex-1 overflow-y-auto p-8">
-          <div className="max-w-6xl mx-auto space-y-6">
-            <div className="flex items-center justify-between">
-                <div>
-                <h1 className="text-3xl font-bold flex items-center gap-2">
-                    <Activity className="h-8 w-8" />
-                    System Logs & Health
-                </h1>
-                <p className="text-muted-foreground mt-1">
-                    Monitor activity, system health, and errors
-                </p>
-                </div>
-                <Button variant="outline" onClick={() => {
-                    queryClient.invalidateQueries({ queryKey: ["/api/activity-logs"] });
-                    refetchHealth();
-                    refetchErrors();
-                }}>
-                    <RefreshCw className="mr-2 h-4 w-4" />
-                    Refresh
-                </Button>
-            </div>
+    <div className="max-w-6xl mx-auto space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold flex items-center gap-2">
+            <Activity className="h-8 w-8" />
+            System Logs & Health
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Monitor activity, system health, and errors
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          onClick={() => {
+            queryClient.invalidateQueries({ queryKey: ["/api/activity-logs"] });
+            refetchHealth();
+            refetchErrors();
+          }}
+        >
+          <RefreshCw className="mr-2 h-4 w-4" />
+          Refresh
+        </Button>
+      </div>
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
               <TabsList className="grid w-full grid-cols-3">
@@ -617,9 +613,6 @@ export default function AdminLogs() {
             )}
           </DialogContent>
         </Dialog>
-          </div>
-        </main>
-      </div>
     </div>
   );
 }

@@ -12,7 +12,8 @@ import {
   unique,
   boolean,
   uuid,
-  uniqueIndex
+  uniqueIndex,
+  doublePrecision
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
@@ -261,6 +262,24 @@ export const seoSettings = pgTable("seo_settings", {
   twitterHandle: text("twitter_handle"),
   socialLinks: json("social_links").default(sql`'{}'::jsonb`),
   metaKeywords: text("meta_keywords"),
+  googleSearchConsoleApiKey: text("google_search_console_api_key"),
+  bingWebmasterApiKey: text("bing_webmaster_api_key"),
+  enableAutoSitemapSubmission: boolean("enable_auto_sitemap_submission").notNull().default(false),
+  enableSchemaMarkup: boolean("enable_schema_markup").notNull().default(true),
+  enableHreflang: boolean("enable_hreflang").notNull().default(true),
+  enableABTesting: boolean("enable_ab_testing").notNull().default(false),
+  defaultLanguage: text("default_language").default("en"),
+  enableAMP: boolean("enable_amp").notNull().default(false),
+  enablePWA: boolean("enable_pwa").notNull().default(false),
+  robotsTxt: text("robots_txt"),
+  enableLocalSEO: boolean("enable_local_seo").notNull().default(false),
+  businessName: text("business_name"),
+  businessAddress: text("business_address"),
+  businessPhone: text("business_phone"),
+  businessEmail: text("business_email"),
+  businessHours: text("business_hours"),
+  latitude: doublePrecision("latitude"),
+  longitude: doublePrecision("longitude"),
   updatedAt: timestamp("updated_at")
     .notNull()
     .default(sql`now()`),

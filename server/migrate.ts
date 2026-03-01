@@ -160,6 +160,62 @@ async function ensureVideosColumns() {
   );
 }
 
+async function ensureSeoSettingsColumns() {
+  if (!pool) return;
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS "seo_settings" (
+      "id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+      "site_name" text DEFAULT 'nisam.video' NOT NULL,
+      "site_description" text DEFAULT 'AI-powered video aggregation hub featuring curated YouTube content organized by intelligent categorization' NOT NULL,
+      "og_image" text,
+      "twitter_handle" text,
+      "social_links" jsonb DEFAULT '{}'::jsonb,
+      "meta_keywords" text,
+      "google_search_console_api_key" text,
+      "bing_webmaster_api_key" text,
+      "enable_auto_sitemap_submission" boolean DEFAULT false NOT NULL,
+      "enable_schema_markup" boolean DEFAULT true NOT NULL,
+      "enable_hreflang" boolean DEFAULT true NOT NULL,
+      "enable_ab_testing" boolean DEFAULT false NOT NULL,
+      "default_language" text DEFAULT 'en',
+      "enable_amp" boolean DEFAULT false NOT NULL,
+      "enable_pwa" boolean DEFAULT false NOT NULL,
+      "robots_txt" text,
+      "enable_local_seo" boolean DEFAULT false NOT NULL,
+      "business_name" text,
+      "business_address" text,
+      "business_phone" text,
+      "business_email" text,
+      "business_hours" text,
+      "latitude" double precision,
+      "longitude" double precision,
+      "updated_at" timestamp DEFAULT now() NOT NULL
+    );
+  `);
+
+  await pool.query(`ALTER TABLE "seo_settings" ADD COLUMN IF NOT EXISTS "twitter_handle" text;`);
+  await pool.query(`ALTER TABLE "seo_settings" ADD COLUMN IF NOT EXISTS "social_links" jsonb DEFAULT '{}'::jsonb;`);
+  await pool.query(`ALTER TABLE "seo_settings" ADD COLUMN IF NOT EXISTS "google_search_console_api_key" text;`);
+  await pool.query(`ALTER TABLE "seo_settings" ADD COLUMN IF NOT EXISTS "bing_webmaster_api_key" text;`);
+  await pool.query(`ALTER TABLE "seo_settings" ADD COLUMN IF NOT EXISTS "enable_auto_sitemap_submission" boolean DEFAULT false NOT NULL;`);
+  await pool.query(`ALTER TABLE "seo_settings" ADD COLUMN IF NOT EXISTS "enable_schema_markup" boolean DEFAULT true NOT NULL;`);
+  await pool.query(`ALTER TABLE "seo_settings" ADD COLUMN IF NOT EXISTS "enable_hreflang" boolean DEFAULT true NOT NULL;`);
+  await pool.query(`ALTER TABLE "seo_settings" ADD COLUMN IF NOT EXISTS "enable_ab_testing" boolean DEFAULT false NOT NULL;`);
+  await pool.query(`ALTER TABLE "seo_settings" ADD COLUMN IF NOT EXISTS "default_language" text DEFAULT 'en';`);
+  await pool.query(`ALTER TABLE "seo_settings" ADD COLUMN IF NOT EXISTS "enable_amp" boolean DEFAULT false NOT NULL;`);
+  await pool.query(`ALTER TABLE "seo_settings" ADD COLUMN IF NOT EXISTS "enable_pwa" boolean DEFAULT false NOT NULL;`);
+  await pool.query(`ALTER TABLE "seo_settings" ADD COLUMN IF NOT EXISTS "robots_txt" text;`);
+  await pool.query(`ALTER TABLE "seo_settings" ADD COLUMN IF NOT EXISTS "enable_local_seo" boolean DEFAULT false NOT NULL;`);
+  await pool.query(`ALTER TABLE "seo_settings" ADD COLUMN IF NOT EXISTS "business_name" text;`);
+  await pool.query(`ALTER TABLE "seo_settings" ADD COLUMN IF NOT EXISTS "business_address" text;`);
+  await pool.query(`ALTER TABLE "seo_settings" ADD COLUMN IF NOT EXISTS "business_phone" text;`);
+  await pool.query(`ALTER TABLE "seo_settings" ADD COLUMN IF NOT EXISTS "business_email" text;`);
+  await pool.query(`ALTER TABLE "seo_settings" ADD COLUMN IF NOT EXISTS "business_hours" text;`);
+  await pool.query(`ALTER TABLE "seo_settings" ADD COLUMN IF NOT EXISTS "latitude" double precision;`);
+  await pool.query(`ALTER TABLE "seo_settings" ADD COLUMN IF NOT EXISTS "longitude" double precision;`);
+}
+
 export async function runMigrations() {
   console.log("[migrate] Starting database migrations...");
 
@@ -183,6 +239,11 @@ export async function runMigrations() {
       await ensureVideosColumns();
     } catch (e) {
       console.error("[migrate] videos bootstrap failed:", e);
+    }
+    try {
+      await ensureSeoSettingsColumns();
+    } catch (e) {
+      console.error("[migrate] seo_settings bootstrap failed:", e);
     }
 
     // Determine the migrations folder path

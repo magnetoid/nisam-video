@@ -1,7 +1,5 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Header } from "@/components/Header";
-import { AdminSidebar } from "@/components/AdminSidebar";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
@@ -109,12 +107,8 @@ export default function AdminTikTok() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <AdminSidebar />
-
-      <main className="ml-60 pt-16 p-8">
-        <div className="space-y-6">
+    <>
+      <div className="space-y-6">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold" data-testid="text-page-title">
@@ -254,57 +248,56 @@ export default function AdminTikTok() {
               </Table>
             </div>
           )}
-        </div>
+      </div>
 
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add TikTok Profile</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Profile Name</Label>
-                <Input
-                  id="name"
-                  placeholder="e.g., My TikTok"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  data-testid="input-profile-name"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="url">Profile URL</Label>
-                <Input
-                  id="url"
-                  placeholder="https://www.tiktok.com/@username"
-                  value={url}
-                  onChange={(e) => setUrl(e.target.value)}
-                  data-testid="input-profile-url"
-                />
-              </div>
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add TikTok Profile</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Profile Name</Label>
+              <Input
+                id="name"
+                placeholder="e.g., My TikTok"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                data-testid="input-profile-name"
+              />
             </div>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setDialogOpen(false)}
-                data-testid="button-cancel"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleAdd}
-                disabled={!url.trim() || !name.trim() || addProfileMutation.isPending}
-                data-testid="button-submit-profile"
-              >
-                {addProfileMutation.isPending ? (
-                  <RefreshCw className="h-4 w-4 animate-spin mr-2" />
-                ) : null}
-                Add Profile
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </main>
-    </div>
+            <div className="space-y-2">
+              <Label htmlFor="url">Profile URL</Label>
+              <Input
+                id="url"
+                placeholder="https://www.tiktok.com/@username"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                data-testid="input-profile-url"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDialogOpen(false)}
+              data-testid="button-cancel"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleAdd}
+              disabled={!url.trim() || !name.trim() || addProfileMutation.isPending}
+              data-testid="button-submit-profile"
+            >
+              {addProfileMutation.isPending ? (
+                <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+              ) : null}
+              Add Profile
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
