@@ -502,6 +502,7 @@ export const heroSettings = pgTable("hero_settings", {
   slideCount: integer("slide_count").default(5),
   homeHeroMode: text("home_hero_mode").default("primary"),
   popularPageMode: text("popular_page_mode").default("views"),
+  popularSegments: jsonb("popular_segments").default(sql`'[]'::jsonb`),
   showRecent: boolean("show_recent").default(true),
   showTrending: boolean("show_trending").default(true),
   showPopular: boolean("show_popular").default(true),

@@ -3,6 +3,23 @@ import Redis from "ioredis";
 // Globalna instanca
 let redisClient: Redis | null = null;
 
+function isRedisUsable(client: Redis): boolean {
+  const status = (client as any).status as string | undefined;
+  if (!status) return true;
+  return status !== "end" && status !== "close";
+}
+
+function disableRedisClient(reason?: unknown) {
+  if (reason) {
+    console.warn("[Redis] Disabling Redis client:", reason);
+  }
+  try {
+    redisClient?.disconnect();
+  } catch {
+  }
+  redisClient = null;
+}
+
 export function getRedisClient(): Redis | null {
   if (redisClient) return redisClient;
 
@@ -16,6 +33,7 @@ export function getRedisClient(): Redis | null {
     console.log("[Redis] Connecting to Redis...");
     redisClient = new Redis(redisUrl, {
       maxRetriesPerRequest: 3,
+      enableOfflineQueue: false,
       retryStrategy(times) {
         if (times > 3) {
           console.error("[Redis] Failed to connect after 3 attempts.");
@@ -26,7 +44,17 @@ export function getRedisClient(): Redis | null {
     });
 
     redisClient.on("connect", () => console.log("[Redis] Connected successfully!"));
-    redisClient.on("error", (err) => console.error("[Redis] Connection error:", err));
+    redisClient.on("error", (err) => {
+      console.error("[Redis] Connection error:", err);
+      if ((err as any)?.message?.includes?.("Connection is closed")) {
+        disableRedisClient(err);
+      }
+    });
+
+    if (!isRedisUsable(redisClient)) {
+      disableRedisClient("redis status is not usable");
+      return null;
+    }
 
     return redisClient;
   } catch (error) {
@@ -45,6 +73,9 @@ export async function getCache<T>(key: string): Promise<T | null> {
     return data ? JSON.parse(data) : null;
   } catch (error) {
     console.error(`[Redis] Get error for key ${key}:`, error);
+    if ((error as any)?.message?.includes?.("Connection is closed")) {
+      disableRedisClient(error);
+    }
     return null;
   }
 }
@@ -57,6 +88,9 @@ export async function setCache(key: string, value: any, ttlSeconds: number = 300
     await redis.set(key, JSON.stringify(value), "EX", ttlSeconds);
   } catch (error) {
     console.error(`[Redis] Set error for key ${key}:`, error);
+    if ((error as any)?.message?.includes?.("Connection is closed")) {
+      disableRedisClient(error);
+    }
   }
 }
 
@@ -71,5 +105,8 @@ export async function clearCache(pattern: string): Promise<void> {
     }
   } catch (error) {
     console.error(`[Redis] Clear error for pattern ${pattern}:`, error);
+    if ((error as any)?.message?.includes?.("Connection is closed")) {
+      disableRedisClient(error);
+    }
   }
 }

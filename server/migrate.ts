@@ -66,6 +66,13 @@ async function ensureHeroTables() {
       "default_placeholder_url" text,
       "enable_random" boolean DEFAULT true,
       "enable_images" boolean DEFAULT true,
+      "slide_count" integer DEFAULT 5,
+      "home_hero_mode" text DEFAULT 'primary',
+      "popular_page_mode" text DEFAULT 'views',
+      "popular_segments" jsonb DEFAULT '[]'::jsonb,
+      "show_recent" boolean DEFAULT true,
+      "show_trending" boolean DEFAULT true,
+      "show_popular" boolean DEFAULT true,
       "updated_at" timestamp DEFAULT now() NOT NULL
     );
   `);
@@ -73,6 +80,76 @@ async function ensureHeroTables() {
   await pool.query(
     `ALTER TABLE "hero_settings" ADD COLUMN IF NOT EXISTS "slide_count" integer DEFAULT 5;`
   );
+
+  await pool.query(
+    `ALTER TABLE "hero_settings" ADD COLUMN IF NOT EXISTS "home_hero_mode" text DEFAULT 'primary';`,
+  );
+  await pool.query(
+    `ALTER TABLE "hero_settings" ADD COLUMN IF NOT EXISTS "popular_page_mode" text DEFAULT 'views';`,
+  );
+  await pool.query(
+    `ALTER TABLE "hero_settings" ADD COLUMN IF NOT EXISTS "popular_segments" jsonb DEFAULT '[]'::jsonb;`,
+  );
+  await pool.query(
+    `ALTER TABLE "hero_settings" ADD COLUMN IF NOT EXISTS "show_recent" boolean DEFAULT true;`,
+  );
+  await pool.query(
+    `ALTER TABLE "hero_settings" ADD COLUMN IF NOT EXISTS "show_trending" boolean DEFAULT true;`,
+  );
+  await pool.query(
+    `ALTER TABLE "hero_settings" ADD COLUMN IF NOT EXISTS "show_popular" boolean DEFAULT true;`,
+  );
+}
+
+async function ensureSystemSettingsColumns() {
+  if (!pool) return;
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS "system_settings" (
+      "id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+      "maintenance_mode" integer DEFAULT 0 NOT NULL,
+      "maintenance_message" text,
+      "allow_registration" integer DEFAULT 0 NOT NULL,
+      "items_per_page" integer DEFAULT 24 NOT NULL,
+      "cache_enabled" integer DEFAULT 1 NOT NULL,
+      "cache_videos_ttl" integer DEFAULT 300 NOT NULL,
+      "cache_channels_ttl" integer DEFAULT 600 NOT NULL,
+      "cache_categories_ttl" integer DEFAULT 600 NOT NULL,
+      "cache_api_ttl" integer DEFAULT 180 NOT NULL,
+      "pwa_enabled" integer DEFAULT 1 NOT NULL,
+      "pwa_name" text DEFAULT 'nisam.video - AI Video Hub',
+      "pwa_short_name" text DEFAULT 'nisam.video',
+      "pwa_description" text DEFAULT 'AI-powered YouTube video aggregation hub with curated content',
+      "pwa_theme_color" text DEFAULT '#E50914',
+      "pwa_background_color" text DEFAULT '#141414',
+      "pwa_icon_192" text DEFAULT '/icon-192.png',
+      "pwa_icon_512" text DEFAULT '/icon-512.png',
+      "client_error_logging" integer DEFAULT 1 NOT NULL,
+      "about_page_content" text,
+      "gtm_id" text,
+      "ga4_id" text,
+      "custom_head_code" text,
+      "custom_body_start_code" text,
+      "custom_body_end_code" text,
+      "updated_at" timestamp DEFAULT now() NOT NULL
+    );
+  `);
+
+  await pool.query(`ALTER TABLE "system_settings" ADD COLUMN IF NOT EXISTS "pwa_enabled" integer DEFAULT 1 NOT NULL;`);
+  await pool.query(`ALTER TABLE "system_settings" ADD COLUMN IF NOT EXISTS "pwa_name" text DEFAULT 'nisam.video - AI Video Hub';`);
+  await pool.query(`ALTER TABLE "system_settings" ADD COLUMN IF NOT EXISTS "pwa_short_name" text DEFAULT 'nisam.video';`);
+  await pool.query(`ALTER TABLE "system_settings" ADD COLUMN IF NOT EXISTS "pwa_description" text DEFAULT 'AI-powered YouTube video aggregation hub with curated content';`);
+  await pool.query(`ALTER TABLE "system_settings" ADD COLUMN IF NOT EXISTS "pwa_theme_color" text DEFAULT '#E50914';`);
+  await pool.query(`ALTER TABLE "system_settings" ADD COLUMN IF NOT EXISTS "pwa_background_color" text DEFAULT '#141414';`);
+  await pool.query(`ALTER TABLE "system_settings" ADD COLUMN IF NOT EXISTS "pwa_icon_192" text DEFAULT '/icon-192.png';`);
+  await pool.query(`ALTER TABLE "system_settings" ADD COLUMN IF NOT EXISTS "pwa_icon_512" text DEFAULT '/icon-512.png';`);
+  await pool.query(`ALTER TABLE "system_settings" ADD COLUMN IF NOT EXISTS "client_error_logging" integer DEFAULT 1 NOT NULL;`);
+  await pool.query(`ALTER TABLE "system_settings" ADD COLUMN IF NOT EXISTS "about_page_content" text;`);
+  await pool.query(`ALTER TABLE "system_settings" ADD COLUMN IF NOT EXISTS "gtm_id" text;`);
+  await pool.query(`ALTER TABLE "system_settings" ADD COLUMN IF NOT EXISTS "ga4_id" text;`);
+  await pool.query(`ALTER TABLE "system_settings" ADD COLUMN IF NOT EXISTS "custom_head_code" text;`);
+  await pool.query(`ALTER TABLE "system_settings" ADD COLUMN IF NOT EXISTS "custom_body_start_code" text;`);
+  await pool.query(`ALTER TABLE "system_settings" ADD COLUMN IF NOT EXISTS "custom_body_end_code" text;`);
 }
 
 async function ensureVideosColumns() {
@@ -96,6 +173,11 @@ export async function runMigrations() {
       await ensureHeroTables();
     } catch (e) {
       console.error("[migrate] hero bootstrap failed:", e);
+    }
+    try {
+      await ensureSystemSettingsColumns();
+    } catch (e) {
+      console.error("[migrate] system_settings bootstrap failed:", e);
     }
     try {
       await ensureVideosColumns();

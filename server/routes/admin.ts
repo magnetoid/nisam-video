@@ -14,6 +14,8 @@ import {
   insertHeroSettingsSchema,
   insertAnalyticsEventSchema,
 } from "../../shared/schema.js";
+import { tags, tagTranslations } from "../../shared/schema.js";
+import { eq } from "drizzle-orm";
 import { errorLogBus, listBookmarks, listErrorEvents, toggleBookmark } from "../error-log-service.js";
 import { invalidateCacheOnMutation } from "../cache-middleware.js";
 import { getPerformanceSummary } from "../performance-metrics.js";
@@ -734,6 +736,35 @@ router.post("/kv/cleanup", requireAuth, async (req, res) => {
   } catch (error) {
     console.error("Cleanup error:", error);
     res.status(500).json({ error: "Failed to cleanup KV store" });
+  }
+});
+
+router.get("/tags", requireAuth, async (_req, res) => {
+  try {
+    const allTags = await db
+      .select({
+        videoId: tags.videoId,
+        tagName: tagTranslations.tagName,
+      })
+      .from(tags)
+      .innerJoin(tagTranslations, eq(tags.id, tagTranslations.tagId))
+      .where(eq(tagTranslations.languageCode, "en"));
+
+    const tagCounts = allTags.reduce<
+      Record<string, { tagName: string; count: number; videoIds: string[] }>
+    >((acc, tag) => {
+      if (!acc[tag.tagName]) {
+        acc[tag.tagName] = { tagName: tag.tagName, count: 0, videoIds: [] };
+      }
+      acc[tag.tagName].count++;
+      acc[tag.tagName].videoIds.push(tag.videoId);
+      return acc;
+    }, {});
+
+    res.json(Object.values(tagCounts));
+  } catch (error) {
+    console.error("Error fetching admin tags:", error);
+    res.status(500).json({ error: "Failed to fetch tags" });
   }
 });
 
