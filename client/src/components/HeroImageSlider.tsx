@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Eye, Play } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clock, Eye, Play, Sparkles, TrendingUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { clampIndex } from '@/utils/heroSlider';
 import { Button } from '@/components/ui/button';
@@ -36,11 +36,44 @@ function prefersReducedMotion(): boolean {
 type Props = {
   items?: HeroSlideItem[];
   ariaLabel?: string;
+  badgeMode?: 'primary' | 'trending' | 'random' | 'latest' | 'popular';
 };
 
-const HeroImageSlider: React.FC<Props> = ({ items, ariaLabel = 'Featured titles' }) => {
+function formatViewsLabel(viewCount?: string | null) {
+  if (!viewCount) return null;
+  const lower = viewCount.toLowerCase();
+  if (lower.includes('view') || lower.includes('pregled') || lower.includes('преглед')) return viewCount;
+  return `${viewCount} views`;
+}
+
+function formatPublishedLabel(publishDate?: string | null) {
+  if (!publishDate) return null;
+  const d = new Date(publishDate);
+  if (Number.isNaN(d.getTime())) return publishDate;
+  const seconds = Math.floor((Date.now() - d.getTime()) / 1000);
+  if (seconds < 0) return publishDate;
+  const days = Math.floor(seconds / 86400);
+  if (days < 1) return 'today';
+  if (days === 1) return '1 day ago';
+  if (days < 30) return `${days} days ago`;
+  const months = Math.floor(days / 30);
+  if (months === 1) return '1 month ago';
+  if (months < 12) return `${months} months ago`;
+  const years = Math.floor(months / 12);
+  return years === 1 ? '1 year ago' : `${years} years ago`;
+}
+
+const HeroImageSlider: React.FC<Props> = ({ items, ariaLabel = 'Featured titles', badgeMode = 'primary' }) => {
   const reducedMotion = prefersReducedMotion();
   const textShadowStyle = useMemo(() => ({ textShadow: '1px 1px 2px rgba(0, 0, 0, 0.35)' }), []);
+
+  const badge = useMemo(() => {
+    if (badgeMode === 'trending') return { label: '#1 TRENDING', Icon: TrendingUp };
+    if (badgeMode === 'popular') return { label: '#1 POPULAR', Icon: TrendingUp };
+    if (badgeMode === 'latest') return { label: '#1 LATEST', Icon: Clock };
+    if (badgeMode === 'random') return { label: 'RANDOM', Icon: Sparkles };
+    return { label: 'FEATURED', Icon: TrendingUp };
+  }, [badgeMode]);
 
   const slides = useMemo(() => {
     const primary = (items || [])
@@ -140,7 +173,7 @@ const HeroImageSlider: React.FC<Props> = ({ items, ariaLabel = 'Featured titles'
         const next = e.relatedTarget as Node | null;
         if (!next || !sectionRef.current?.contains(next)) setIsPaused(false);
       }}
-      className="relative w-full h-[calc(100vh-4rem)] min-h-[320px] md:min-h-[520px] max-h-[780px] overflow-hidden bg-black"
+      className="relative w-full h-[60vh] md:h-[75vh] overflow-hidden bg-black"
     >
       <AnimatePresence mode="wait">
         <motion.div
@@ -172,25 +205,19 @@ const HeroImageSlider: React.FC<Props> = ({ items, ariaLabel = 'Featured titles'
           <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
           <div className="absolute inset-0 bg-gradient-to-r from-background/90 via-background/20 to-transparent" />
 
-          <div className="absolute inset-0 z-10 flex items-end pb-24 md:items-center md:pb-0 justify-start px-4 sm:px-8 md:px-16">
+          <div className="absolute bottom-0 left-0 w-full p-6 md:p-16 flex flex-col justify-end items-start z-10">
             <div className="w-full max-w-4xl text-left space-y-4 md:space-y-6">
-              {activeSlide?.primaryCategory && (
-                <motion.div 
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2 }}
-                  className="flex items-center gap-2"
-                >
-                  <span className="text-xs md:text-sm font-bold uppercase tracking-widest text-primary bg-primary/10 px-2 py-1 rounded">
-                    {activeSlide.primaryCategory}
-                  </span>
-                  {activeSlide.secondaryCategories && activeSlide.secondaryCategories.length > 0 && (
-                    <span className="hidden md:inline text-xs md:text-sm text-white/70 font-medium">
-                      {activeSlide.secondaryCategories.slice(0, 2).join(" • ")}
-                    </span>
-                  )}
-                </motion.div>
-              )}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="flex items-center gap-3"
+              >
+                <span className="bg-primary text-primary-foreground px-3 py-1 text-xs md:text-sm font-bold uppercase tracking-wider rounded-md flex items-center gap-2">
+                  <badge.Icon className="h-3 w-3 md:h-4 md:w-4" />
+                  {badge.label}
+                </span>
+              </motion.div>
 
               <motion.h1
                 className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-black text-white leading-[0.9] tracking-tighter"
@@ -205,21 +232,21 @@ const HeroImageSlider: React.FC<Props> = ({ items, ariaLabel = 'Featured titles'
 
               {(activeSlide?.viewCount || activeSlide?.publishDate) && (
                 <motion.div 
-                  className="flex items-center gap-4 text-white/90 text-sm md:text-base font-medium"
+                  className="flex items-center gap-4 text-white/90 font-medium text-sm md:text-lg"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: 0.4 }}
                 >
                   {activeSlide.viewCount && (
-                    <div className="flex items-center gap-1.5">
-                      <Eye className="h-4 w-4" />
-                      <span>{activeSlide.viewCount} views</span>
+                    <div className="flex items-center gap-2">
+                      <Eye className="h-5 w-5" />
+                      <span>{formatViewsLabel(activeSlide.viewCount)}</span>
                     </div>
                   )}
                   {activeSlide.publishDate && (
                     <>
-                      <span className="text-white/40">•</span>
-                      <span>{activeSlide.publishDate}</span>
+                      <span className="text-white/50">•</span>
+                      <span>{formatPublishedLabel(activeSlide.publishDate)}</span>
                     </>
                   )}
                 </motion.div>
@@ -227,7 +254,7 @@ const HeroImageSlider: React.FC<Props> = ({ items, ariaLabel = 'Featured titles'
 
               {activeSlide?.description && (
                 <motion.p 
-                  className="hidden md:block text-lg text-white/80 line-clamp-2 max-w-2xl font-medium leading-relaxed"
+                  className="text-base md:text-xl text-white/80 line-clamp-2 max-w-2xl hidden md:block"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: 0.5 }}
@@ -238,15 +265,17 @@ const HeroImageSlider: React.FC<Props> = ({ items, ariaLabel = 'Featured titles'
               
               {activeSlide?.title && (
                 <motion.div 
-                  className="flex gap-4 pt-2"
+                  className="pt-4"
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.6 }}
                 >
                   <Link href={`/video/${activeSlide.slug || activeSlide.id}`}>
-                    <Button size="lg" className="h-12 md:h-14 px-8 md:px-10 text-base md:text-lg gap-3 bg-white text-black hover:bg-white/90 hover:scale-105 transition-all duration-300 rounded-lg font-bold shadow-xl shadow-black/20">
-                      <Play className="h-5 w-5 md:h-6 md:w-6 fill-black" /> 
-                      Watch Now
+                    <Button 
+                      size="lg" 
+                      className="gap-2 text-base md:text-lg h-12 md:h-14 px-8 bg-white text-black hover:bg-white/90 border-none font-bold shadow-xl shadow-black/20"
+                    >
+                      <Play className="h-5 w-5 fill-current" /> Play Now
                     </Button>
                   </Link>
                 </motion.div>

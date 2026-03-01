@@ -148,7 +148,10 @@ export default function Home() {
       <main className="pt-16">
         <LikeStatusBatchProvider videoIds={allVideoIds}>
           <div className="space-y-0">
-            <HeroImageSlider items={heroItems} />
+            <HeroImageSlider
+              items={heroItems}
+              badgeMode={(heroSettings?.homeHeroMode as any) || 'primary'}
+            />
 
             {recentVideos.length > 0 && (
               <CarouselRow title={t("home.recent")} videos={recentVideos} />

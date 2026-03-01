@@ -227,6 +227,8 @@ export default function AdminHeroManagement() {
       enableRandom: true,
       enableImages: true,
       slideCount: 5,
+      homeHeroMode: 'primary',
+      popularPageMode: 'views',
       showRecent: true,
       showTrending: true,
       showPopular: true,
@@ -467,6 +469,46 @@ export default function AdminHeroManagement() {
           <CardTitle>Slider Configuration</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
+          <div className="space-y-4 border p-4 rounded-md">
+            <Label className="text-base font-medium">Main Hero Badge + Source</Label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Home Hero Mode</Label>
+                <Select
+                  value={(settingsForm.watch('homeHeroMode') as any) || 'primary'}
+                  onValueChange={(value) => settingsForm.setValue('homeHeroMode', value as any)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="primary">Featured (Manual)</SelectItem>
+                    <SelectItem value="trending">Trending</SelectItem>
+                    <SelectItem value="popular">Popular</SelectItem>
+                    <SelectItem value="latest">Latest</SelectItem>
+                    <SelectItem value="random">Random</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Popular Page Mode</Label>
+                <Select
+                  value={(settingsForm.watch('popularPageMode') as any) || 'views'}
+                  onValueChange={(value) => settingsForm.setValue('popularPageMode', value as any)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="views">Views</SelectItem>
+                    <SelectItem value="likes">Likes</SelectItem>
+                    <SelectItem value="recent">Recent</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+
           <div className="space-y-4">
             <Label>Number of Slides to Show</Label>
             <div className="flex items-center gap-4">
