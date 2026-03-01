@@ -617,6 +617,9 @@ export default function AdminLogs() {
             )}
           </DialogContent>
         </Dialog>
+          </div>
+        </main>
+      </div>
     </div>
   );
 }
