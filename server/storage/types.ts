@@ -33,7 +33,11 @@ import {
   type TagImage,
   type InsertTagImage,
   type AnalyticsEvent,
-  type InsertAnalyticsEvent
+  type InsertAnalyticsEvent,
+  type ChannelRecommendation,
+  type InsertChannelRecommendation,
+  type EmailSettings,
+  type InsertEmailSettings
 } from "../../shared/schema.js";
 
 export interface IStorage {
@@ -180,6 +184,15 @@ export interface IStorage {
   createAnalyticsEvent(event: InsertAnalyticsEvent): Promise<AnalyticsEvent>;
   updateAnalyticsEvent(id: string, event: Partial<AnalyticsEvent>): Promise<AnalyticsEvent | undefined>;
   deleteAnalyticsEvent(id: string): Promise<void>;
+
+  // Channel Recommendations
+  createChannelRecommendation(data: InsertChannelRecommendation): Promise<ChannelRecommendation>;
+  getChannelRecommendations(filters?: { status?: string }): Promise<ChannelRecommendation[]>;
+  reviewChannelRecommendation(id: string, data: { status: "approved" | "rejected"; reviewedBy?: string | null; rejectionReason?: string | null; approvedChannelId?: string | null }): Promise<ChannelRecommendation | undefined>;
+
+  // Email Settings (admin only)
+  getEmailSettings(): Promise<EmailSettings | undefined>;
+  updateEmailSettings(data: Partial<InsertEmailSettings>): Promise<EmailSettings>;
 
   // Utilities
   updateAllVideoThumbnails(): Promise<number>;

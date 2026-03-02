@@ -23,12 +23,18 @@ import cronRouter from "./cron.js";
 import uploadsRouter from "./uploads.js";
 import tagImagesRouter from "./tag-images.js";
 import usersRouter from "./users.js";
+import channelRecommendationsRouter from "./channel-recommendations.js";
+import adminChannelRecommendationsRouter from "./admin-channel-recommendations.js";
+import emailSettingsRouter from "./email-settings.js";
 
 export function registerFeatureRoutes(app: Express): void {
   app.use("/api", publicRouter);
   app.use("/api/auth", authRouter);
   app.use("/api/channels", channelsRouter);
+  app.use("/api", channelRecommendationsRouter);
   app.use("/api/tiktok-profiles", tiktokRouter);
+  app.use("/api/admin/email-settings", emailSettingsRouter);
+  app.use("/api/admin", adminChannelRecommendationsRouter);
   app.use("/api/admin", adminRouter);
   app.use("/api/videos", videosRouter);
   app.use("/api/categories", categoriesRouter);

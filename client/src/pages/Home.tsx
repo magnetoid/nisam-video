@@ -69,6 +69,15 @@ export default function Home() {
     }
   });
 
+  const carouselCategories = useMemo(() => {
+    const MIN_VIDEOS = 12;
+    const MAX_CATEGORIES = 10;
+    return [...categories]
+      .filter((c) => (c.videoCount || 0) >= MIN_VIDEOS)
+      .sort((a, b) => (b.videoCount || 0) - (a.videoCount || 0))
+      .slice(0, MAX_CATEGORIES);
+  }, [categories]);
+
   const { data: searchVideos = [] } = useQuery<VideoWithLocalizedRelations[]>({
     queryKey: ["/api/videos?limit=100", i18n.language],
     enabled: showSearch,
@@ -172,7 +181,7 @@ export default function Home() {
             )}
 
             {/* Lazy load categories */}
-            {categories.map((category) => (
+            {carouselCategories.map((category) => (
               <LazyCarouselRow
                 key={category.id}
                 title={category.name || category.translations?.[0]?.name || "Category"}

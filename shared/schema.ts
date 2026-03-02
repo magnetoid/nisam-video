@@ -53,6 +53,50 @@ export const channels = pgTable("channels", {
     .default(sql`now()`),
 });
 
+export const channelRecommendations = pgTable("channel_recommendations", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  url: text("url").notNull().unique(),
+  description: text("description"),
+  platform: text("platform").notNull().default("youtube"),
+  status: text("status").notNull().default("pending"),
+  approvedChannelId: varchar("approved_channel_id").references(() => channels.id, {
+    onDelete: "set null",
+  }),
+  reviewedBy: varchar("reviewed_by").references(() => users.id, {
+    onDelete: "set null",
+  }),
+  reviewedAt: timestamp("reviewed_at"),
+  rejectionReason: text("rejection_reason"),
+  createdAt: timestamp("created_at")
+    .notNull()
+    .default(sql`now()`),
+});
+
+export const emailSettings = pgTable("email_settings", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  mode: text("mode").notNull().default("smtp"),
+  smtpHost: text("smtp_host"),
+  smtpPort: integer("smtp_port"),
+  smtpUsername: text("smtp_username"),
+  smtpPassword: text("smtp_password"),
+  smtpSecure: integer("smtp_secure").notNull().default(1),
+  smtpFromEmail: text("smtp_from_email"),
+  smtpFromName: text("smtp_from_name"),
+  imapHost: text("imap_host"),
+  imapPort: integer("imap_port"),
+  imapUsername: text("imap_username"),
+  imapPassword: text("imap_password"),
+  imapSecure: integer("imap_secure").notNull().default(1),
+  imapMailbox: text("imap_mailbox"),
+  updatedAt: timestamp("updated_at")
+    .notNull()
+    .default(sql`now()`),
+});
+
 // Videos table - Aggregated video content
 export const videos = pgTable("videos", {
   id: varchar("id")
@@ -637,6 +681,29 @@ export const insertChannelSchema = createInsertSchemaAny(channels).omit({
   platform: z.enum(["youtube", "tiktok"]).optional().default("youtube"),
 });
 
+export const insertChannelRecommendationSchema = createInsertSchemaAny(
+  channelRecommendations,
+).omit({
+  id: true,
+  status: true,
+  approvedChannelId: true,
+  reviewedBy: true,
+  reviewedAt: true,
+  rejectionReason: true,
+  createdAt: true,
+}).extend({
+  platform: z.enum(["youtube"]).optional().default("youtube"),
+  url: z.string().min(1),
+  description: z.string().max(2000).optional(),
+});
+
+export const insertEmailSettingsSchema = createInsertSchemaAny(emailSettings).omit({
+  id: true,
+  updatedAt: true,
+}).extend({
+  mode: z.enum(["smtp", "imap"]).optional().default("smtp"),
+});
+
 export const insertVideoSchema = createInsertSchemaAny(videos).omit({
   id: true,
   createdAt: true,
@@ -675,6 +742,14 @@ export type InsertUser = z.infer<typeof insertUserSchema>;
 
 export type Channel = typeof channels.$inferSelect;
 export type InsertChannel = z.infer<typeof insertChannelSchema>;
+
+export type ChannelRecommendation = typeof channelRecommendations.$inferSelect;
+export type InsertChannelRecommendation = z.infer<
+  typeof insertChannelRecommendationSchema
+>;
+
+export type EmailSettings = typeof emailSettings.$inferSelect;
+export type InsertEmailSettings = z.infer<typeof insertEmailSettingsSchema>;
 
 export type Video = typeof videos.$inferSelect;
 export type InsertVideo = z.infer<typeof insertVideoSchema>;

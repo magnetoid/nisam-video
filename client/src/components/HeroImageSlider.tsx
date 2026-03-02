@@ -220,7 +220,7 @@ const HeroImageSlider: React.FC<Props> = ({ items, ariaLabel = 'Featured titles'
               </motion.div>
 
               <motion.h1
-                className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-black text-white leading-[0.9] tracking-tighter"
+                className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-black text-white leading-[0.9] tracking-tighter"
                 aria-live="polite"
                 style={textShadowStyle}
                 initial={{ opacity: 0, y: 20 }}
@@ -232,7 +232,7 @@ const HeroImageSlider: React.FC<Props> = ({ items, ariaLabel = 'Featured titles'
 
               {(activeSlide?.viewCount || activeSlide?.publishDate) && (
                 <motion.div 
-                  className="flex items-center gap-4 text-white/90 font-medium text-sm md:text-lg"
+                  className="flex items-center gap-4 text-white/90 font-medium text-sm md:text-base"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: 0.4 }}
@@ -254,7 +254,7 @@ const HeroImageSlider: React.FC<Props> = ({ items, ariaLabel = 'Featured titles'
 
               {activeSlide?.description && (
                 <motion.p 
-                  className="text-base md:text-xl text-white/80 line-clamp-2 max-w-2xl hidden md:block"
+                  className="text-sm md:text-lg text-white/80 line-clamp-2 max-w-2xl hidden md:block"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: 0.5 }}
@@ -273,7 +273,7 @@ const HeroImageSlider: React.FC<Props> = ({ items, ariaLabel = 'Featured titles'
                   <Link href={`/video/${activeSlide.slug || activeSlide.id}`}>
                     <Button 
                       size="lg" 
-                      className="gap-2 text-base md:text-lg h-12 md:h-14 px-8 bg-white text-black hover:bg-white/90 border-none font-bold shadow-xl shadow-black/20"
+                      className="gap-2 text-sm md:text-base h-12 md:h-14 px-8 bg-white text-black hover:bg-white/90 border-none font-bold shadow-xl shadow-black/20"
                     >
                       <Play className="h-5 w-5 fill-current" /> Play Now
                     </Button>

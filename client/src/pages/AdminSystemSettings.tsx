@@ -52,8 +52,8 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import type { SystemSettings, AnalyticsEvent } from "@shared/schema";
-import { insertSystemSettingsSchema } from "@shared/schema";
+import type { SystemSettings, AnalyticsEvent, EmailSettings } from "@shared/schema";
+import { insertSystemSettingsSchema, insertEmailSettingsSchema } from "@shared/schema";
 import { 
   Settings, 
   AlertTriangle, 
@@ -143,6 +143,79 @@ export default function AdminSystemSettings() {
     updateSettingsMutation.mutate(data);
   };
 
+  // --- Email Settings Logic ---
+  const { data: emailSettings, isLoading: isLoadingEmailSettings } =
+    useQuery<EmailSettings>({
+      queryKey: ["/api/admin/email-settings"],
+      queryFn: async () => {
+        const res = await apiRequest("GET", "/api/admin/email-settings");
+        return res.json();
+      },
+    });
+
+  const updateEmailSettingsMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await apiRequest("PATCH", "/api/admin/email-settings", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/email-settings"] });
+      toast({ title: "Email settings saved" });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to save email settings",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const emailForm = useForm({
+    resolver: zodResolver(insertEmailSettingsSchema),
+    defaultValues: {
+      mode: "smtp",
+      smtpHost: "",
+      smtpPort: 587,
+      smtpUsername: "",
+      smtpPassword: "",
+      smtpSecure: 1,
+      smtpFromEmail: "",
+      smtpFromName: "",
+      imapHost: "",
+      imapPort: 993,
+      imapUsername: "",
+      imapPassword: "",
+      imapSecure: 1,
+      imapMailbox: "INBOX",
+    },
+  });
+
+  useEffect(() => {
+    if (emailSettings && !emailForm.formState.isDirty) {
+      emailForm.reset({
+        mode: (emailSettings.mode as any) || "smtp",
+        smtpHost: emailSettings.smtpHost || "",
+        smtpPort: emailSettings.smtpPort || 587,
+        smtpUsername: emailSettings.smtpUsername || "",
+        smtpPassword: (emailSettings.smtpPassword as any) || "",
+        smtpSecure: emailSettings.smtpSecure ?? 1,
+        smtpFromEmail: emailSettings.smtpFromEmail || "",
+        smtpFromName: emailSettings.smtpFromName || "",
+        imapHost: emailSettings.imapHost || "",
+        imapPort: emailSettings.imapPort || 993,
+        imapUsername: emailSettings.imapUsername || "",
+        imapPassword: (emailSettings.imapPassword as any) || "",
+        imapSecure: emailSettings.imapSecure ?? 1,
+        imapMailbox: emailSettings.imapMailbox || "INBOX",
+      });
+    }
+  }, [emailSettings, emailForm]);
+
+  const onEmailSettingsSubmit = (data: any) => {
+    updateEmailSettingsMutation.mutate(data);
+  };
+
   // --- Analytics Events Logic ---
   const [isEventDialogOpen, setIsEventDialogOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<AnalyticsEvent | null>(null);
@@ -190,7 +263,7 @@ export default function AdminSystemSettings() {
     },
   });
 
-  if (isLoadingSettings) {
+  if (isLoadingSettings || isLoadingEmailSettings) {
     return (
       <div className="flex items-center justify-center h-screen bg-background">
         <div className="text-muted-foreground">Loading settings...</div>
@@ -211,7 +284,7 @@ export default function AdminSystemSettings() {
             </div>
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-              <TabsList className="grid w-full grid-cols-4">
+              <TabsList className="grid w-full grid-cols-5">
                 <TabsTrigger value="general" className="flex items-center gap-2">
                   <Sliders className="h-4 w-4" />
                   General
@@ -219,6 +292,10 @@ export default function AdminSystemSettings() {
                 <TabsTrigger value="pwa" className="flex items-center gap-2">
                   <Smartphone className="h-4 w-4" />
                   PWA & Mobile
+                </TabsTrigger>
+                <TabsTrigger value="email" className="flex items-center gap-2">
+                  <Code className="h-4 w-4" />
+                  Email
                 </TabsTrigger>
                 <TabsTrigger value="analytics" className="flex items-center gap-2">
                   <BarChart3 className="h-4 w-4" />
@@ -519,6 +596,285 @@ export default function AdminSystemSettings() {
                     <div className="flex justify-end">
                       <Button type="submit" disabled={updateSettingsMutation.isPending}>
                         {updateSettingsMutation.isPending ? "Saving..." : "Save PWA Settings"}
+                      </Button>
+                    </div>
+                  </form>
+                </Form>
+              </TabsContent>
+
+              <TabsContent value="email">
+                <Form {...emailForm}>
+                  <form
+                    onSubmit={emailForm.handleSubmit(onEmailSettingsSubmit)}
+                    className="space-y-6"
+                  >
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Email (SMTP / IMAP)</CardTitle>
+                        <CardDescription>
+                          Configure email sending (SMTP) or mailbox access (IMAP)
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-6">
+                        <FormField
+                          control={emailForm.control}
+                          name="mode"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Mode</FormLabel>
+                              <Select
+                                value={field.value}
+                                onValueChange={field.onChange}
+                              >
+                                <FormControl>
+                                  <SelectTrigger className="w-[240px]">
+                                    <SelectValue placeholder="Select" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="smtp">SMTP (send mail)</SelectItem>
+                                  <SelectItem value="imap">IMAP (read mailbox)</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        {emailForm.watch("mode") === "smtp" ? (
+                          <div className="space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                              <FormField
+                                control={emailForm.control}
+                                name="smtpHost"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>SMTP Host</FormLabel>
+                                    <FormControl>
+                                      <Input placeholder="smtp.example.com" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              <FormField
+                                control={emailForm.control}
+                                name="smtpPort"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>SMTP Port</FormLabel>
+                                    <FormControl>
+                                      <Input
+                                        type="number"
+                                        placeholder="587"
+                                        value={field.value ?? ""}
+                                        onChange={(e) =>
+                                          field.onChange(
+                                            e.target.value ? Number(e.target.value) : null,
+                                          )
+                                        }
+                                      />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                              <FormField
+                                control={emailForm.control}
+                                name="smtpUsername"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>SMTP Username</FormLabel>
+                                    <FormControl>
+                                      <Input placeholder="user@example.com" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              <FormField
+                                control={emailForm.control}
+                                name="smtpPassword"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>SMTP Password</FormLabel>
+                                    <FormControl>
+                                      <Input type="password" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                            </div>
+
+                            <FormField
+                              control={emailForm.control}
+                              name="smtpSecure"
+                              render={({ field }) => (
+                                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                                  <div className="space-y-0.5">
+                                    <FormLabel className="text-base">Use TLS/SSL</FormLabel>
+                                    <FormDescription>
+                                      Enable secure connection to SMTP server
+                                    </FormDescription>
+                                  </div>
+                                  <FormControl>
+                                    <Switch
+                                      checked={(field.value ?? 1) === 1}
+                                      onCheckedChange={(checked) =>
+                                        field.onChange(checked ? 1 : 0)
+                                      }
+                                    />
+                                  </FormControl>
+                                </FormItem>
+                              )}
+                            />
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                              <FormField
+                                control={emailForm.control}
+                                name="smtpFromEmail"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>From Email</FormLabel>
+                                    <FormControl>
+                                      <Input placeholder="no-reply@example.com" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              <FormField
+                                control={emailForm.control}
+                                name="smtpFromName"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>From Name</FormLabel>
+                                    <FormControl>
+                                      <Input placeholder="nisam.video" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                              <FormField
+                                control={emailForm.control}
+                                name="imapHost"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>IMAP Host</FormLabel>
+                                    <FormControl>
+                                      <Input placeholder="imap.example.com" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              <FormField
+                                control={emailForm.control}
+                                name="imapPort"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>IMAP Port</FormLabel>
+                                    <FormControl>
+                                      <Input
+                                        type="number"
+                                        placeholder="993"
+                                        value={field.value ?? ""}
+                                        onChange={(e) =>
+                                          field.onChange(
+                                            e.target.value ? Number(e.target.value) : null,
+                                          )
+                                        }
+                                      />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                              <FormField
+                                control={emailForm.control}
+                                name="imapUsername"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>IMAP Username</FormLabel>
+                                    <FormControl>
+                                      <Input placeholder="user@example.com" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              <FormField
+                                control={emailForm.control}
+                                name="imapPassword"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>IMAP Password</FormLabel>
+                                    <FormControl>
+                                      <Input type="password" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                            </div>
+
+                            <FormField
+                              control={emailForm.control}
+                              name="imapSecure"
+                              render={({ field }) => (
+                                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                                  <div className="space-y-0.5">
+                                    <FormLabel className="text-base">Use TLS/SSL</FormLabel>
+                                    <FormDescription>
+                                      Enable secure connection to IMAP server
+                                    </FormDescription>
+                                  </div>
+                                  <FormControl>
+                                    <Switch
+                                      checked={(field.value ?? 1) === 1}
+                                      onCheckedChange={(checked) =>
+                                        field.onChange(checked ? 1 : 0)
+                                      }
+                                    />
+                                  </FormControl>
+                                </FormItem>
+                              )}
+                            />
+
+                            <FormField
+                              control={emailForm.control}
+                              name="imapMailbox"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Mailbox</FormLabel>
+                                  <FormControl>
+                                    <Input placeholder="INBOX" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+
+                    <div className="flex justify-end">
+                      <Button type="submit" disabled={updateEmailSettingsMutation.isPending}>
+                        {updateEmailSettingsMutation.isPending ? "Saving..." : "Save Email Settings"}
                       </Button>
                     </div>
                   </form>

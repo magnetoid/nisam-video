@@ -48,10 +48,16 @@ import {
   type VideoWithLocalizedRelations,
   type AnalyticsEvent,
   type InsertAnalyticsEvent,
+  type ChannelRecommendation,
+  type InsertChannelRecommendation,
+  type EmailSettings,
+  type InsertEmailSettings,
   type HeroImage,
   type InsertHeroImage,
   type HeroSettings,
   type InsertHeroSettings,
+  channelRecommendations,
+  emailSettings,
   analyticsEvents,
   users,
   type User,
@@ -305,6 +311,111 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error(`[storage] getChannelsByPlatform failed for ${platform}:`, error);
       return [];
+    }
+  }
+
+  async createChannelRecommendation(
+    data: InsertChannelRecommendation,
+  ): Promise<ChannelRecommendation> {
+    try {
+      const [rec] = await db
+        .insert(channelRecommendations)
+        .values(data)
+        .returning();
+      return rec;
+    } catch (error) {
+      const err = error as any;
+      if (
+        err?.code === "23505" &&
+        (err?.constraint === "channel_recommendations_url_unique" ||
+          String(err?.detail || "").includes("(url)=") )
+      ) {
+        const [existing] = await db
+          .select()
+          .from(channelRecommendations)
+          .where(eq(channelRecommendations.url, data.url))
+          .limit(1);
+        if (existing) return existing;
+      }
+      console.error("[storage] createChannelRecommendation failed:", error);
+      throw error;
+    }
+  }
+
+  async getChannelRecommendations(filters?: {
+    status?: string;
+  }): Promise<ChannelRecommendation[]> {
+    try {
+      const base = db.select().from(channelRecommendations);
+      const rows = filters?.status
+        ? await base.where(eq(channelRecommendations.status, filters.status))
+        : await base;
+      return rows;
+    } catch (error) {
+      console.error("[storage] getChannelRecommendations failed:", error);
+      return [];
+    }
+  }
+
+  async reviewChannelRecommendation(
+    id: string,
+    data: {
+      status: "approved" | "rejected";
+      reviewedBy?: string | null;
+      rejectionReason?: string | null;
+      approvedChannelId?: string | null;
+    },
+  ): Promise<ChannelRecommendation | undefined> {
+    try {
+      const [updated] = await db
+        .update(channelRecommendations)
+        .set({
+          status: data.status,
+          reviewedBy: data.reviewedBy ?? null,
+          reviewedAt: new Date(),
+          rejectionReason: data.rejectionReason ?? null,
+          approvedChannelId: data.approvedChannelId ?? null,
+        })
+        .where(eq(channelRecommendations.id, id))
+        .returning();
+      return updated || undefined;
+    } catch (error) {
+      console.error("[storage] reviewChannelRecommendation failed:", error);
+      return undefined;
+    }
+  }
+
+  async getEmailSettings(): Promise<EmailSettings | undefined> {
+    try {
+      const [row] = await db.select().from(emailSettings).limit(1);
+      return row || undefined;
+    } catch (error) {
+      console.error("[storage] getEmailSettings failed:", error);
+      return undefined;
+    }
+  }
+
+  async updateEmailSettings(
+    data: Partial<InsertEmailSettings>,
+  ): Promise<EmailSettings> {
+    try {
+      const existing = await this.getEmailSettings();
+      if (!existing) {
+        const [created] = await db
+          .insert(emailSettings)
+          .values({ ...data })
+          .returning();
+        return created;
+      }
+      const [updated] = await db
+        .update(emailSettings)
+        .set({ ...data, updatedAt: new Date() })
+        .where(eq(emailSettings.id, existing.id))
+        .returning();
+      return updated;
+    } catch (error) {
+      console.error("[storage] updateEmailSettings failed:", error);
+      throw error;
     }
   }
 

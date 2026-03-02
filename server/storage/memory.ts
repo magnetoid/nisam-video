@@ -32,6 +32,10 @@ import {
   type VideoWithLocalizedRelations,
   type AnalyticsEvent,
   type InsertAnalyticsEvent,
+  type ChannelRecommendation,
+  type InsertChannelRecommendation,
+  type EmailSettings,
+  type InsertEmailSettings,
   type Tag
 } from "../../shared/schema.js";
 import { IStorage } from "./types.js";
@@ -53,6 +57,8 @@ export class MemStorage implements IStorage {
   private systemSettings: SystemSettings | null = null;
   private tagImages: Map<string, TagImage> = new Map();
   private heroVideos: Map<string, HeroVideo> = new Map();
+  private channelRecommendations: Map<string, ChannelRecommendation> = new Map();
+  private emailSettings: EmailSettings | null = null;
 
   constructor() {
     // Add some initial categories
@@ -198,6 +204,100 @@ export class MemStorage implements IStorage {
 
   async getChannelsByPlatform(platform: string): Promise<Channel[]> {
     return Array.from(this.channels.values()).filter(c => c.platform === platform);
+  }
+
+  async createChannelRecommendation(
+    data: InsertChannelRecommendation,
+  ): Promise<ChannelRecommendation> {
+    const existing = Array.from(this.channelRecommendations.values()).find(
+      (r) => r.url === data.url,
+    );
+    if (existing) return existing;
+
+    const id = Math.random().toString(36).substr(2, 9);
+    const rec: ChannelRecommendation = {
+      id,
+      url: data.url,
+      description: data.description || null,
+      platform: data.platform || "youtube",
+      status: "pending",
+      approvedChannelId: null,
+      reviewedBy: null,
+      reviewedAt: null,
+      rejectionReason: null,
+      createdAt: new Date(),
+    };
+    this.channelRecommendations.set(id, rec);
+    return rec;
+  }
+
+  async getChannelRecommendations(filters?: {
+    status?: string;
+  }): Promise<ChannelRecommendation[]> {
+    const list = Array.from(this.channelRecommendations.values());
+    if (filters?.status) return list.filter((r) => r.status === filters.status);
+    return list;
+  }
+
+  async reviewChannelRecommendation(
+    id: string,
+    data: {
+      status: "approved" | "rejected";
+      reviewedBy?: string | null;
+      rejectionReason?: string | null;
+      approvedChannelId?: string | null;
+    },
+  ): Promise<ChannelRecommendation | undefined> {
+    const rec = this.channelRecommendations.get(id);
+    if (!rec) return undefined;
+    const updated: ChannelRecommendation = {
+      ...rec,
+      status: data.status,
+      reviewedBy: data.reviewedBy ?? null,
+      reviewedAt: new Date(),
+      rejectionReason: data.rejectionReason ?? null,
+      approvedChannelId: data.approvedChannelId ?? null,
+    };
+    this.channelRecommendations.set(id, updated);
+    return updated;
+  }
+
+  async getEmailSettings(): Promise<EmailSettings | undefined> {
+    return this.emailSettings || undefined;
+  }
+
+  async updateEmailSettings(
+    data: Partial<InsertEmailSettings>,
+  ): Promise<EmailSettings> {
+    if (!this.emailSettings) {
+      const id = Math.random().toString(36).substr(2, 9);
+      this.emailSettings = {
+        id,
+        mode: data.mode || "smtp",
+        smtpHost: (data as any).smtpHost || null,
+        smtpPort: (data as any).smtpPort ?? null,
+        smtpUsername: (data as any).smtpUsername || null,
+        smtpPassword: (data as any).smtpPassword || null,
+        smtpSecure: (data as any).smtpSecure ?? 1,
+        smtpFromEmail: (data as any).smtpFromEmail || null,
+        smtpFromName: (data as any).smtpFromName || null,
+        imapHost: (data as any).imapHost || null,
+        imapPort: (data as any).imapPort ?? null,
+        imapUsername: (data as any).imapUsername || null,
+        imapPassword: (data as any).imapPassword || null,
+        imapSecure: (data as any).imapSecure ?? 1,
+        imapMailbox: (data as any).imapMailbox || null,
+        updatedAt: new Date(),
+      };
+      return this.emailSettings;
+    }
+
+    this.emailSettings = {
+      ...this.emailSettings,
+      ...(data as any),
+      updatedAt: new Date(),
+    };
+    return this.emailSettings;
   }
 
   // Videos

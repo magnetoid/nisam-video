@@ -216,6 +216,67 @@ async function ensureSeoSettingsColumns() {
   await pool.query(`ALTER TABLE "seo_settings" ADD COLUMN IF NOT EXISTS "longitude" double precision;`);
 }
 
+async function ensureChannelRecommendationsTable() {
+  if (!pool) return;
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS "channel_recommendations" (
+      "id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+      "url" text NOT NULL UNIQUE,
+      "description" text,
+      "platform" text DEFAULT 'youtube' NOT NULL,
+      "status" text DEFAULT 'pending' NOT NULL,
+      "approved_channel_id" varchar,
+      "reviewed_by" varchar,
+      "reviewed_at" timestamp,
+      "rejection_reason" text,
+      "created_at" timestamp DEFAULT now() NOT NULL
+    );
+  `);
+
+  await pool.query(
+    `ALTER TABLE "channel_recommendations" ADD COLUMN IF NOT EXISTS "approved_channel_id" varchar;`,
+  );
+  await pool.query(
+    `ALTER TABLE "channel_recommendations" ADD COLUMN IF NOT EXISTS "reviewed_by" varchar;`,
+  );
+  await pool.query(
+    `ALTER TABLE "channel_recommendations" ADD COLUMN IF NOT EXISTS "reviewed_at" timestamp;`,
+  );
+  await pool.query(
+    `ALTER TABLE "channel_recommendations" ADD COLUMN IF NOT EXISTS "rejection_reason" text;`,
+  );
+}
+
+async function ensureEmailSettingsTable() {
+  if (!pool) return;
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS "email_settings" (
+      "id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+      "mode" text DEFAULT 'smtp' NOT NULL,
+      "smtp_host" text,
+      "smtp_port" integer,
+      "smtp_username" text,
+      "smtp_password" text,
+      "smtp_secure" integer DEFAULT 1 NOT NULL,
+      "smtp_from_email" text,
+      "smtp_from_name" text,
+      "imap_host" text,
+      "imap_port" integer,
+      "imap_username" text,
+      "imap_password" text,
+      "imap_secure" integer DEFAULT 1 NOT NULL,
+      "imap_mailbox" text,
+      "updated_at" timestamp DEFAULT now() NOT NULL
+    );
+  `);
+
+  await pool.query(`ALTER TABLE "email_settings" ADD COLUMN IF NOT EXISTS "smtp_from_email" text;`);
+  await pool.query(`ALTER TABLE "email_settings" ADD COLUMN IF NOT EXISTS "smtp_from_name" text;`);
+  await pool.query(`ALTER TABLE "email_settings" ADD COLUMN IF NOT EXISTS "imap_mailbox" text;`);
+}
+
 export async function runMigrations() {
   console.log("[migrate] Starting database migrations...");
 
@@ -244,6 +305,16 @@ export async function runMigrations() {
       await ensureSeoSettingsColumns();
     } catch (e) {
       console.error("[migrate] seo_settings bootstrap failed:", e);
+    }
+    try {
+      await ensureChannelRecommendationsTable();
+    } catch (e) {
+      console.error("[migrate] channel_recommendations bootstrap failed:", e);
+    }
+    try {
+      await ensureEmailSettingsTable();
+    } catch (e) {
+      console.error("[migrate] email_settings bootstrap failed:", e);
     }
 
     // Determine the migrations folder path

@@ -1,6 +1,7 @@
 import { Link } from "wouter";
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { RecommendChannelDialog } from "@/components/RecommendChannelDialog";
 
 export function Footer() {
   const { t } = useTranslation();
@@ -64,6 +65,14 @@ export function Footer() {
                   ❤️ {t("nav.donate")}
                 </span>
               </Link>
+              <RecommendChannelDialog>
+                <span
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                  data-testid="link-footer-recommend-channel"
+                >
+                  {t("footer.recommendChannel", "Recommend channel")}
+                </span>
+              </RecommendChannelDialog>
               <Link href="/admin">
                 <span
                   className="text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
