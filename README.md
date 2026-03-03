@@ -61,7 +61,7 @@ AI-Powered Video Hub aggregating content from various platforms.
 - **Deployment**: Vercel
 - **Caching**: LRU server-side, TanStack Query client-side
 - **Scraping**: Cheerio for YouTube, Puppeteer for TikTok
-- **AI**: OpenAI (simulated) for categorization
+- **AI**: Configurable via Admin UI (Ollama or OpenAI)
 
 ## ⚙️ Setup
 
@@ -75,10 +75,11 @@ AI-Powered Video Hub aggregating content from various platforms.
    ```env
    DATABASE_URL="postgres://user:pass@host:port/db?sslmode=require"
    SESSION_SECRET="your-secret"
-   OPENAI_API_KEY="sk-..." (Optional)
+   REDIS_URL="redis://user:pass@host:6379" (Optional)
    ADMIN_USERNAME="admin"
    ADMIN_PASSWORD="password"
    ```
+   AI provider credentials are configured in **Admin → AI Settings** and stored in the database.
 4. **Database Setup**:
    ```bash
    npm run db:push

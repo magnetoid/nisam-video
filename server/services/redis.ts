@@ -20,8 +20,54 @@ function disableRedisClient(reason?: unknown) {
   redisClient = null;
 }
 
+async function waitForRedisReady(client: Redis, timeoutMs = 250): Promise<boolean> {
+  const status = (client as any).status as string | undefined;
+  if (!status || status === "ready") return true;
+  if (status === "end" || status === "close") return false;
+
+  return await new Promise<boolean>((resolve) => {
+    const c: any = client;
+
+    const onReady = () => finish(true);
+    const onError = () => finish(false);
+    const onEnd = () => finish(false);
+
+    const remove = (event: string, handler: (...args: any[]) => void) => {
+      if (typeof c.off === "function") c.off(event, handler);
+      else if (typeof c.removeListener === "function") c.removeListener(event, handler);
+    };
+
+    const timer = setTimeout(() => finish(false), timeoutMs);
+
+    let done = false;
+    function finish(ok: boolean) {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      remove("ready", onReady);
+      remove("error", onError);
+      remove("end", onEnd);
+      remove("close", onEnd);
+      resolve(ok);
+    }
+
+    c.once("ready", onReady);
+    c.once("error", onError);
+    c.once("end", onEnd);
+    c.once("close", onEnd);
+
+    if ((client as any).status === "ready") finish(true);
+  });
+}
+
 export function getRedisClient(): Redis | null {
-  if (redisClient) return redisClient;
+  if (redisClient) {
+    if (!isRedisUsable(redisClient)) {
+      disableRedisClient("redis status is not usable");
+      return null;
+    }
+    return redisClient;
+  }
 
   const redisUrl = process.env.REDIS_URL;
   if (!redisUrl) {
@@ -46,7 +92,13 @@ export function getRedisClient(): Redis | null {
     redisClient.on("connect", () => console.log("[Redis] Connected successfully!"));
     redisClient.on("error", (err) => {
       console.error("[Redis] Connection error:", err);
-      if ((err as any)?.message?.includes?.("Connection is closed")) {
+      const msg = (err as any)?.message as string | undefined;
+      const code = (err as any)?.code as string | undefined;
+      if (
+        msg?.includes?.("Connection is closed") ||
+        msg?.includes?.("Stream isn't writeable") ||
+        code === "ETIMEDOUT"
+      ) {
         disableRedisClient(err);
       }
     });
@@ -67,13 +119,15 @@ export function getRedisClient(): Redis | null {
 export async function getCache<T>(key: string): Promise<T | null> {
   const redis = getRedisClient();
   if (!redis) return null;
+  if (!(await waitForRedisReady(redis))) return null;
 
   try {
     const data = await redis.get(key);
     return data ? JSON.parse(data) : null;
   } catch (error) {
     console.error(`[Redis] Get error for key ${key}:`, error);
-    if ((error as any)?.message?.includes?.("Connection is closed")) {
+    const msg = (error as any)?.message as string | undefined;
+    if (msg?.includes?.("Connection is closed") || msg?.includes?.("Stream isn't writeable")) {
       disableRedisClient(error);
     }
     return null;
@@ -83,12 +137,14 @@ export async function getCache<T>(key: string): Promise<T | null> {
 export async function setCache(key: string, value: any, ttlSeconds: number = 300): Promise<void> {
   const redis = getRedisClient();
   if (!redis) return;
+  if (!(await waitForRedisReady(redis))) return;
 
   try {
     await redis.set(key, JSON.stringify(value), "EX", ttlSeconds);
   } catch (error) {
     console.error(`[Redis] Set error for key ${key}:`, error);
-    if ((error as any)?.message?.includes?.("Connection is closed")) {
+    const msg = (error as any)?.message as string | undefined;
+    if (msg?.includes?.("Connection is closed") || msg?.includes?.("Stream isn't writeable")) {
       disableRedisClient(error);
     }
   }
@@ -97,6 +153,7 @@ export async function setCache(key: string, value: any, ttlSeconds: number = 300
 export async function clearCache(pattern: string): Promise<void> {
   const redis = getRedisClient();
   if (!redis) return;
+  if (!(await waitForRedisReady(redis))) return;
 
   try {
     const keys = await redis.keys(pattern);
@@ -105,7 +162,8 @@ export async function clearCache(pattern: string): Promise<void> {
     }
   } catch (error) {
     console.error(`[Redis] Clear error for pattern ${pattern}:`, error);
-    if ((error as any)?.message?.includes?.("Connection is closed")) {
+    const msg = (error as any)?.message as string | undefined;
+    if (msg?.includes?.("Connection is closed") || msg?.includes?.("Stream isn't writeable")) {
       disableRedisClient(error);
     }
   }
