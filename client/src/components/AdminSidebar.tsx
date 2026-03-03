@@ -238,7 +238,7 @@ export function AdminSidebar({ open = false, onClose, className }: AdminSidebarP
                     <Link key={item.path} href={item.path}>
                       <div
                         className={cn(
-                          "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer group relative overflow-hidden",
+                          "flex items-center gap-3 px-3 py-2.5 min-h-[44px] rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer group relative overflow-hidden",
                           isActive
                             ? "bg-primary text-primary-foreground shadow-md"
                             : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"

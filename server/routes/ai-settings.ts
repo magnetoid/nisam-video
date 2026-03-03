@@ -5,6 +5,7 @@ import { db } from "../db.js";
 import { aiSettings, aiModels } from "../../shared/schema.js";
 import { eq, desc } from "drizzle-orm";
 import { fetchRemoteOllamaModels, testOllamaConnection } from "../services/ollama.js";
+import { testOpenAIConnection } from "../services/openai.js";
 import { z } from "zod";
 
 const router = Router();
@@ -200,9 +201,12 @@ router.post("/test", requireAuth, async (req, res) => {
       return res.json({ success });
     }
     
-    // For OpenAI, simple mock test or list models if key provided
-    // Not implementing full OpenAI test here for brevity, assuming Ollama is the focus
-    res.json({ success: true, message: "OpenAI test not fully implemented" });
+    if (!apiKey) {
+      return res.status(400).json({ success: false, error: "OpenAI API key is required" });
+    }
+    const baseUrl = typeof url === "string" && url.trim() ? url.trim() : "https://api.openai.com/v1";
+    const success = await testOpenAIConnection(baseUrl, apiKey);
+    res.json({ success });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
   }

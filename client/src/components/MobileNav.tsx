@@ -63,10 +63,15 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
   ];
 
   return (
-    <Sheet open={open} onOpenChange={onClose}>
+    <Sheet
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) onClose();
+      }}
+    >
       <SheetContent
         side="left"
-        className="w-[280px] sm:w-[320px]"
+        className="w-[280px] sm:w-[320px] pb-[env(safe-area-inset-bottom)]"
         data-testid="mobile-nav-sheet"
       >
         <SheetHeader>
@@ -84,7 +89,7 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
           {navItems.map((item) => (
             <Link key={item.href} href={item.href} onClick={onClose}>
               <div
-                className="flex items-center gap-3 px-4 py-3 rounded-md hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors"
+                className="flex items-center gap-3 px-4 py-3 min-h-[44px] rounded-md hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors"
                 data-testid={item.testId}
               >
                 <item.icon className="h-5 w-5 text-muted-foreground" />

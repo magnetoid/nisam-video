@@ -5,43 +5,71 @@ import { db } from "./db.js";
 import { aiSettings } from "../shared/schema.js";
 import { recordError } from "./error-log-service.js";
 
-// Helper to get configured Ollama URL
-async function getOllamaConfig() {
+async function getAiConfig() {
   try {
     const settings = await db.select().from(aiSettings).limit(1);
     const config = settings[0];
-    
-    // Default to localhost if not set
-    const rawUrl = (config?.ollamaUrl || "http://localhost:11434").trim();
-    const url = (() => {
-      if (!rawUrl) return "http://localhost:11434";
-      if (!/^https?:\/\//i.test(rawUrl)) return "http://localhost:11434";
+
+    const provider = (config?.provider || "ollama") as "ollama" | "openai";
+
+    const rawOllamaUrl = (config?.ollamaUrl || "http://localhost:11434").trim();
+    const ollamaUrl = (() => {
+      if (!rawOllamaUrl) return "http://localhost:11434";
+      if (!/^https?:\/\//i.test(rawOllamaUrl)) return "http://localhost:11434";
       try {
-        new URL(rawUrl);
-        return rawUrl;
+        new URL(rawOllamaUrl);
+        return rawOllamaUrl;
       } catch {
         return "http://localhost:11434";
       }
-    })();
-    const model = config?.ollamaModel || "llama3";
-    
-    // Ensure URL doesn't have trailing slash
+    })().replace(/\/$/, "");
+
+    const openaiBaseUrlRaw = (config?.openaiBaseUrl || "https://api.openai.com/v1").trim();
+    const openaiBaseUrl = (() => {
+      if (!openaiBaseUrlRaw) return "https://api.openai.com/v1";
+      if (!/^https?:\/\//i.test(openaiBaseUrlRaw)) return "https://api.openai.com/v1";
+      try {
+        new URL(openaiBaseUrlRaw);
+        return openaiBaseUrlRaw;
+      } catch {
+        return "https://api.openai.com/v1";
+      }
+    })().replace(/\/+$/, "");
+
     return {
-      url: url.replace(/\/$/, ""),
-      model: config?.ollamaModel || "llama3",
-      apiKey: config?.ollamaApiKey,
+      provider,
+      ollama: {
+        url: ollamaUrl,
+        model: config?.ollamaModel || "llama3",
+        apiKey: config?.ollamaApiKey,
+      },
+      openai: {
+        baseUrl: openaiBaseUrl,
+        model: config?.openaiModel || "gpt-4o-mini",
+        apiKey: config?.openaiApiKey,
+      },
     };
   } catch (error: any) {
     // Suppress "relation does not exist" error (code 42P01)
     if (error?.code === '42P01') {
       console.warn("AI Settings table not found, using defaults.");
+    } else if (error?.code === '42703') {
+      console.warn("AI Settings columns missing, using defaults.");
     } else {
       console.error("Error getting AI config, falling back to default:", error);
     }
     return {
-      url: "http://localhost:11434",
-      model: "llama3",
-      apiKey: undefined,
+      provider: "ollama" as const,
+      ollama: {
+        url: "http://localhost:11434",
+        model: "llama3",
+        apiKey: undefined,
+      },
+      openai: {
+        baseUrl: "https://api.openai.com/v1",
+        model: "gpt-4o-mini",
+        apiKey: undefined,
+      },
     };
   }
 }
@@ -102,6 +130,42 @@ async function ollamaGenerate(prompt: string, options: { model: string; url: str
   }
 }
 
+async function openaiGenerate(
+  prompt: string,
+  options: { model: string; baseUrl: string; apiKey?: string | null; signal?: AbortSignal },
+) {
+  if (!options.apiKey) {
+    throw new Error("OpenAI API key is missing. Set it in Admin → AI Settings.");
+  }
+
+  const res = await fetch(`${options.baseUrl}/chat/completions`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${options.apiKey}`,
+    },
+    body: JSON.stringify({
+      model: options.model,
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.7,
+    }),
+    signal: options.signal,
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    const snippet = text.length > 300 ? `${text.slice(0, 300)}…` : text;
+    throw new Error(`OpenAI API error: ${res.status} ${res.statusText}${snippet ? ` - ${snippet}` : ""}`);
+  }
+
+  const data = (await res.json()) as any;
+  const content = data?.choices?.[0]?.message?.content;
+  if (typeof content !== "string") {
+    throw new Error("OpenAI API response missing message content");
+  }
+  return content;
+}
+
 export interface VideoCategorizationResult {
   categories: {
     en: string[];
@@ -132,7 +196,7 @@ export async function categorizeVideo(
     pRetry(
       async () => {
         try {
-          const config = await getOllamaConfig();
+          const config = await getAiConfig();
           
           const prompt = `Analyze this video and provide categories and tags in both English and Serbian.
 
@@ -155,13 +219,22 @@ Example JSON:
 
 Return ONLY valid JSON. Do not include markdown formatting or explanations.`;
 
-          const content = await ollamaGenerate(prompt, {
-            model: config.model,
-            url: config.url,
-            apiKey: config.apiKey,
-            format: "json",
-            signal: timeoutMs ? AbortSignal.timeout(timeoutMs) : undefined
-          });
+          const signal = timeoutMs ? AbortSignal.timeout(timeoutMs) : undefined;
+          const content =
+            config.provider === "openai"
+              ? await openaiGenerate(prompt, {
+                  model: config.openai.model,
+                  baseUrl: config.openai.baseUrl,
+                  apiKey: config.openai.apiKey,
+                  signal,
+                })
+              : await ollamaGenerate(prompt, {
+                  model: config.ollama.model,
+                  url: config.ollama.url,
+                  apiKey: config.ollama.apiKey,
+                  format: "json",
+                  signal,
+                });
 
           let result;
           try {
@@ -279,7 +352,7 @@ export async function generateVideoSummary(
     pRetry(
       async () => {
         try {
-          const config = await getOllamaConfig();
+          const config = await getAiConfig();
           
           const prompt = `Summarize this video content in a concise, engaging paragraph (max 150 words).
 
@@ -288,12 +361,21 @@ Description: ${description || "No description"}
 
 Summary:`;
 
-          const content = await ollamaGenerate(prompt, {
-            model: config.model,
-            url: config.url,
-            apiKey: config.apiKey,
-            signal: timeoutMs ? AbortSignal.timeout(timeoutMs) : undefined
-          });
+          const signal = timeoutMs ? AbortSignal.timeout(timeoutMs) : undefined;
+          const content =
+            config.provider === "openai"
+              ? await openaiGenerate(prompt, {
+                  model: config.openai.model,
+                  baseUrl: config.openai.baseUrl,
+                  apiKey: config.openai.apiKey,
+                  signal,
+                })
+              : await ollamaGenerate(prompt, {
+                  model: config.ollama.model,
+                  url: config.ollama.url,
+                  apiKey: config.ollama.apiKey,
+                  signal,
+                });
 
           return content.trim() || "No summary available.";
         } catch (error: any) {
@@ -334,7 +416,7 @@ export async function generateSeoMetadata(
     pRetry(
       async () => {
         try {
-          const config = await getOllamaConfig();
+          const config = await getAiConfig();
           
           const prompt = `Generate SEO metadata for this video.
 
@@ -355,13 +437,22 @@ Example JSON:
 
 Return ONLY valid JSON.`;
 
-          const content = await ollamaGenerate(prompt, {
-            model: config.model,
-            url: config.url,
-            apiKey: config.apiKey,
-            format: "json",
-            signal: timeoutMs ? AbortSignal.timeout(timeoutMs) : undefined
-          });
+          const signal = timeoutMs ? AbortSignal.timeout(timeoutMs) : undefined;
+          const content =
+            config.provider === "openai"
+              ? await openaiGenerate(prompt, {
+                  model: config.openai.model,
+                  baseUrl: config.openai.baseUrl,
+                  apiKey: config.openai.apiKey,
+                  signal,
+                })
+              : await ollamaGenerate(prompt, {
+                  model: config.ollama.model,
+                  url: config.ollama.url,
+                  apiKey: config.ollama.apiKey,
+                  format: "json",
+                  signal,
+                });
 
           let result;
           try {

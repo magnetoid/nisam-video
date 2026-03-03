@@ -2,6 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
+html,
+body {
+  overflow-x: hidden;
+}
+
 .text-clamp-2 {
   display: -webkit-box;
   -webkit-line-clamp: 2;

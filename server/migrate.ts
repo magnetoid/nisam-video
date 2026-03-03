@@ -277,6 +277,53 @@ async function ensureEmailSettingsTable() {
   await pool.query(`ALTER TABLE "email_settings" ADD COLUMN IF NOT EXISTS "imap_mailbox" text;`);
 }
 
+async function ensureAiTables() {
+  if (!pool) return;
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS "ai_settings" (
+      "id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+      "provider" text DEFAULT 'ollama' NOT NULL,
+      "openai_api_key" text,
+      "openai_base_url" text,
+      "openai_model" text,
+      "ollama_url" text DEFAULT 'http://localhost:11434',
+      "ollama_model" text DEFAULT 'llama3',
+      "ollama_api_key" text,
+      "updated_at" timestamp DEFAULT now() NOT NULL
+    );
+  `);
+
+  await pool.query(`ALTER TABLE "ai_settings" ADD COLUMN IF NOT EXISTS "provider" text DEFAULT 'ollama' NOT NULL;`);
+  await pool.query(`ALTER TABLE "ai_settings" ADD COLUMN IF NOT EXISTS "openai_api_key" text;`);
+  await pool.query(`ALTER TABLE "ai_settings" ADD COLUMN IF NOT EXISTS "openai_base_url" text;`);
+  await pool.query(`ALTER TABLE "ai_settings" ADD COLUMN IF NOT EXISTS "openai_model" text;`);
+  await pool.query(`ALTER TABLE "ai_settings" ADD COLUMN IF NOT EXISTS "ollama_url" text DEFAULT 'http://localhost:11434';`);
+  await pool.query(`ALTER TABLE "ai_settings" ADD COLUMN IF NOT EXISTS "ollama_model" text DEFAULT 'llama3';`);
+  await pool.query(`ALTER TABLE "ai_settings" ADD COLUMN IF NOT EXISTS "ollama_api_key" text;`);
+  await pool.query(`ALTER TABLE "ai_settings" ADD COLUMN IF NOT EXISTS "updated_at" timestamp DEFAULT now() NOT NULL;`);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS "ai_models" (
+      "id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+      "provider" text NOT NULL,
+      "name" text NOT NULL,
+      "size" text,
+      "digest" text,
+      "family" text,
+      "format" text,
+      "parameter_size" text,
+      "quantization_level" text,
+      "is_active" boolean DEFAULT true,
+      "last_synced_at" timestamp DEFAULT now()
+    );
+  `);
+
+  await pool.query(
+    `CREATE UNIQUE INDEX IF NOT EXISTS "ai_models_provider_name_unique" ON "ai_models" ("provider", "name");`,
+  );
+}
+
 export async function runMigrations() {
   console.log("[migrate] Starting database migrations...");
 
@@ -315,6 +362,11 @@ export async function runMigrations() {
       await ensureEmailSettingsTable();
     } catch (e) {
       console.error("[migrate] email_settings bootstrap failed:", e);
+    }
+    try {
+      await ensureAiTables();
+    } catch (e) {
+      console.error("[migrate] ai tables bootstrap failed:", e);
     }
 
     // Determine the migrations folder path
