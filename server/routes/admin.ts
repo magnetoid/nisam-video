@@ -14,7 +14,7 @@ import {
   insertHeroSettingsSchema,
   insertAnalyticsEventSchema,
 } from "../../shared/schema.js";
-import { tags, tagTranslations } from "../../shared/schema.js";
+import { tags, tagTranslations, aiSettings } from "../../shared/schema.js";
 import { eq } from "drizzle-orm";
 import { errorLogBus, listBookmarks, listErrorEvents, toggleBookmark } from "../error-log-service.js";
 import { invalidateCacheOnMutation } from "../cache-middleware.js";
@@ -334,14 +334,37 @@ router.get("/error-logs/export", requireAuth, async (req, res) => {
 });
 
 router.get("/ai-status", requireAuth, async (_req, res) => {
-  // Always return configured as we use local Ollama now
-  res.json({
-    openai: {
-      configured: true,
-      model: "llama3",
-      baseUrlConfigured: true,
-    },
-  });
+  try {
+    const rows = await db.select().from(aiSettings).limit(1);
+    const cfg = rows[0];
+    res.json({
+      provider: cfg?.provider || "ollama",
+      openai: {
+        configured: Boolean(cfg?.openaiApiKey && cfg.openaiApiKey.trim().length > 0),
+        model: cfg?.openaiModel || "gpt-4o-mini",
+        baseUrlConfigured: Boolean(cfg?.openaiBaseUrl && cfg.openaiBaseUrl.trim().length > 0),
+      },
+      ollama: {
+        configured: Boolean(cfg?.ollamaUrl && cfg.ollamaUrl.trim().length > 0),
+        model: cfg?.ollamaModel || "llama3",
+        url: cfg?.ollamaUrl || "http://localhost:11434",
+      },
+    });
+  } catch (error: any) {
+    if (error?.code === "42P01") {
+      return res.json({
+        provider: "ollama",
+        openai: { configured: false, model: "gpt-4o-mini", baseUrlConfigured: true },
+        ollama: { configured: true, model: "llama3", url: "http://localhost:11434" },
+      });
+    }
+    console.error("AI status error:", error);
+    res.json({
+      provider: "ollama",
+      openai: { configured: false, model: "gpt-4o-mini", baseUrlConfigured: true },
+      ollama: { configured: false, model: "llama3", url: "http://localhost:11434" },
+    });
+  }
 });
 
 router.post("/regenerate", requireAuth, async (req, res) => {
@@ -500,6 +523,8 @@ router.post("/regenerate", requireAuth, async (req, res) => {
     const { cache: cacheModule } = await import("../cache.js");
     cacheModule.clear();
 
+    const done = mode === "missing" ? total === 0 : nextOffset >= total;
+
     res.json({
       success: true,
       processed,
@@ -509,7 +534,7 @@ router.post("/regenerate", requireAuth, async (req, res) => {
       offset,
       limit,
       nextOffset,
-      done: nextOffset >= total,
+      done,
     });
   } catch (error) {
     console.error("Regeneration error:", error);
@@ -602,6 +627,8 @@ router.post("/regenerate-slugs", requireAuth, async (req, res) => {
     const { cache: cacheModule } = await import("../cache.js");
     cacheModule.clear();
 
+    const done = mode === "missing" ? total === 0 : nextOffset >= total;
+
     res.json({
       success: true,
       processed,
@@ -609,7 +636,7 @@ router.post("/regenerate-slugs", requireAuth, async (req, res) => {
       offset,
       limit,
       nextOffset,
-      done: nextOffset >= total,
+      done,
       message: `Successfully regenerated ${processed} video URLs`,
     });
   } catch (error) {

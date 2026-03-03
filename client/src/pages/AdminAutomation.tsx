@@ -510,15 +510,6 @@ export default function AdminAutomation() {
                         <RefreshCw className={`mr-2 h-4 w-4 ${regenerateMutation.isPending ? "animate-spin" : ""}`} />
                         Regenerate Missing Only (Batch 50)
                       </Button>
-                      <Button 
-                        onClick={() => regenerateMutation.mutate('all')} 
-                        disabled={regenerateMutation.isPending}
-                        variant="secondary"
-                        className="w-full justify-start"
-                      >
-                        <RefreshCw className={`mr-2 h-4 w-4 ${regenerateMutation.isPending ? "animate-spin" : ""}`} />
-                        Regenerate ALL (Batch 50)
-                      </Button>
                       <p className="text-xs text-muted-foreground mt-2">
                         Runs in batches of 50 videos. Check logs for progress.
                         Using AI services may incur costs.

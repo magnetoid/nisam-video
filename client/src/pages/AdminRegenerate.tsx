@@ -29,7 +29,7 @@ export default function AdminRegenerate() {
   const [progress, setProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState("");
   const [result, setResult] = useState<any>(null);
-  const [regenerationMode, setRegenerationMode] = useState<"all" | "missing">("missing");
+  const [regenerationMode] = useState<"missing">("missing");
   const { toast } = useToast();
 
   const { data: aiStatus } = useQuery<{
@@ -80,6 +80,10 @@ export default function AdminRegenerate() {
         }
 
         const data = await response.json();
+
+        if (regenerationMode === "missing" && data.total > 0 && (data.processed || 0) === 0) {
+          throw new Error("No progress made while processing missing items. Check AI provider settings and server logs.");
+        }
 
         if (initialTotal === 0 && data.total > 0) {
           initialTotal = data.total;
@@ -173,6 +177,10 @@ export default function AdminRegenerate() {
         }
 
         const data = await response.json();
+
+        if (regenerationMode === "missing" && data.total > 0 && (data.processed || 0) === 0) {
+          throw new Error("No progress made while processing missing slugs.");
+        }
         total = typeof data.total === "number" ? data.total : total;
         processedTotal += data.processed || 0;
         offset = typeof data.nextOffset === "number" ? data.nextOffset : offset + batchSize;
@@ -227,7 +235,7 @@ export default function AdminRegenerate() {
             Regenerate Content
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Use AI to regenerate categories and tags for all videos
+            Use AI to generate missing categories, tags, and URLs
           </p>
           {aiStatus?.openai && (
             <div className="mt-3 flex items-center gap-2 text-sm">
@@ -242,13 +250,13 @@ export default function AdminRegenerate() {
           <Card className="mt-6">
             <CardHeader className="pb-3">
               <CardTitle className="text-base">Regeneration Mode</CardTitle>
-              <CardDescription>Choose how videos should be processed</CardDescription>
+              <CardDescription>Only missing items are processed to reduce costs</CardDescription>
             </CardHeader>
             <CardContent>
               <RadioGroup
                 defaultValue="missing"
                 value={regenerationMode}
-                onValueChange={(v) => setRegenerationMode(v as "all" | "missing")}
+                onValueChange={() => {}}
                 className="flex flex-col gap-4 sm:flex-row sm:gap-8"
               >
                 <div className="flex items-center space-x-2">
@@ -257,15 +265,6 @@ export default function AdminRegenerate() {
                     <span className="font-medium">Missing Metadata Only</span>
                     <p className="text-xs text-muted-foreground">
                       Only process videos without categories/tags/slugs
-                    </p>
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="all" id="all" />
-                  <Label htmlFor="all" className="cursor-pointer">
-                    <span className="font-medium">All Videos</span>
-                    <p className="text-xs text-muted-foreground">
-                      Reprocess everything (slower)
                     </p>
                   </Label>
                 </div>
@@ -344,46 +343,11 @@ export default function AdminRegenerate() {
           <Card className="hover-elevate">
             <CardHeader>
               <div className="flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-primary" />
-                <CardTitle className="text-lg">Full Regeneration</CardTitle>
-              </div>
-              <CardDescription>
-                Regenerate all AI categories and tags for every video in the
-                system
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button
-                onClick={() => handleRegenerate("all")}
-                disabled={isRegenerating}
-                className="w-full gap-2"
-                data-testid="button-regenerate-all"
-              >
-                <RefreshCw
-                  className={`h-4 w-4 ${isRegenerating ? "animate-spin" : ""}`}
-                />
-                Regenerate All
-              </Button>
-              <div className="mt-4 p-3 bg-muted rounded-md">
-                <div className="flex items-start gap-2">
-                  <AlertCircle className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                  <p className="text-xs text-muted-foreground">
-                    This process uses AI and may take several minutes depending
-                    on the number of videos
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="hover-elevate">
-            <CardHeader>
-              <div className="flex items-center gap-2">
                 <FolderTree className="h-5 w-5 text-primary" />
                 <CardTitle className="text-lg">Categories Only</CardTitle>
               </div>
               <CardDescription>
-                Regenerate only AI-generated categories for all videos
+                Generate categories for videos missing categories
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -409,7 +373,7 @@ export default function AdminRegenerate() {
                 <CardTitle className="text-lg">Tags Only</CardTitle>
               </div>
               <CardDescription>
-                Regenerate only AI-generated tags for all videos
+                Generate tags for videos missing tags
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -434,10 +398,7 @@ export default function AdminRegenerate() {
                 <Link2 className="h-5 w-5 text-primary" />
                 <CardTitle className="text-lg">SEO URLs</CardTitle>
               </div>
-              <CardDescription>
-                Regenerate SEO-friendly URLs (slugs) for all videos from their
-                titles
-              </CardDescription>
+              <CardDescription>Generate SEO-friendly URLs for videos missing slugs</CardDescription>
             </CardHeader>
             <CardContent>
               <Button
