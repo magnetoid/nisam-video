@@ -69,7 +69,13 @@ router.patch("/", requireAuth, async (req, res) => {
 
 router.post("/run-now", requireAuth, async (req, res) => {
   try {
-    await scheduler.runScrapeJob({ source: "manual", maxBatchSize: 1, retries: 1 });
+    const batchSize = parseInt(process.env.INCREMENTAL_BATCH_SIZE || "10", 10) || 10;
+    await scheduler.runScrapeJob({ 
+      source: "manual", 
+      batchSize, 
+      maxBatchSize: batchSize,
+      retries: 1 
+    });
     res.json({ success: true, message: "Scrape job completed" });
   } catch (error) {
     logger.error("Run scheduler error:", error);

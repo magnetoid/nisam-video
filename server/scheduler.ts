@@ -123,7 +123,7 @@ class SchedulerService {
           return aLast - bLast;
         });
 
-      const batch = channelsNeedingScrape.slice(0, batchSize);
+      const batch = channelsNeedingScrape;
       logger.info(
         `[Scheduler] Incremental batch: ${batch.length}/${channelsNeedingScrape.length} channels due (total channels: ${allChannels.length}, cutoff: ${intervalHours}h)`,
       );
@@ -226,7 +226,7 @@ class SchedulerService {
               const ingestionResult = await processScrapedVideos(scrapedVideos, {
                 channelId: channel.id,
                 platform,
-                runCategorization: false, // Scheduler runs categorization separately
+                runCategorization: true,
               });
 
               savedCount = ingestionResult.savedCount;

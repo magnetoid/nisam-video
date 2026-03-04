@@ -1921,11 +1921,30 @@ export class DatabaseStorage implements IStorage {
       const transMap = new Map(langTrans.map(t => [t.tagId, t]));
       const enMap = new Map(enTrans.map(t => [t.tagId, t]));
 
+      // Count videos per tag
+      const tagCounts = new Map<string, number>();
+      bases.forEach(tag => {
+        tagCounts.set(tag.id, (tagCounts.get(tag.id) || 0) + 1);
+      });
+
       const localized: LocalizedTag[] = bases.map(base => {
         let trans = transMap.get(base.id);
         if (!trans) trans = enMap.get(base.id);
-        return trans ? { ...base, translations: [trans], tagName: trans.tagName } : null;
+        return trans ? { 
+          ...base, 
+          translations: [trans], 
+          tagName: trans.tagName,
+          videoCount: tagCounts.get(base.id) || 0
+        } : null;
       }).filter((t): t is LocalizedTag => t !== null);
+
+      // Sort by video count (descending), then by tag name
+      localized.sort((a, b) => {
+        if (b.videoCount !== a.videoCount) {
+          return b.videoCount - a.videoCount;
+        }
+        return (a.tagName || "").localeCompare(b.tagName || "");
+      });
 
       // Cache for 10 min
       cache.set(cacheKey, localized, 600000);
