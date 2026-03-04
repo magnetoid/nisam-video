@@ -812,6 +812,7 @@ export type LocalizedCategory = Category & {
 export type LocalizedTag = Tag & {
   translations: TagTranslation[];
   tagName: string;
+  videoCount?: number;
 };
 
 export type PlaylistWithVideos = Playlist & {

@@ -745,10 +745,21 @@ export class MemStorage implements IStorage {
   }
 
   async getAllLocalizedTags(lang: string): Promise<LocalizedTag[]> {
-      return Array.from(this.tags.values()).map(t => ({
-          ...t,
-          translations: []
-      }));
+    const tagMap = new Map<string, { tagName: string; videoCount: number }>();
+    
+    this.tags.forEach(tag => {
+      if (!tagMap.has(tag.id)) {
+        tagMap.set(tag.id, { tagName: tag.tagName || '', videoCount: 0 });
+      }
+      tagMap.get(tag.id)!.videoCount++;
+    });
+    
+    return Array.from(this.tags.values()).map(t => ({
+      ...t,
+      translations: [],
+      tagName: t.tagName || '',
+      videoCount: tagMap.get(t.id)?.videoCount || 0
+    })).filter(t => t.tagName);
   }
 
   async getLocalizedTagsByVideoId(videoId: string, lang: string): Promise<LocalizedTag[]> {
