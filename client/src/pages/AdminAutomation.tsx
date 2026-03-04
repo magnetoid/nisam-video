@@ -227,7 +227,9 @@ export default function AdminAutomation() {
         streamRef.current = null;
       }
 
-      const source = new EventSource(`/api/automation/jobs/${jobId}/stream`);
+      const source = new EventSource(`/api/automation/jobs/${jobId}/stream`, {
+        withCredentials: true,
+      });
       streamRef.current = source;
 
       const onSnapshot = (ev: MessageEvent) => {
@@ -405,9 +407,12 @@ export default function AdminAutomation() {
                   <h1 className="text-3xl font-bold tracking-tight">Automation</h1>
                   <p className="text-muted-foreground mt-1">Monitor incremental scraping progress and history.</p>
                 </div>
-                <Button onClick={() => runNowMutation.mutate()} disabled={runNowMutation.isPending}>
+                <Button
+                  onClick={() => runNowMutation.mutate()}
+                  disabled={runNowMutation.isPending || running || scheduler?.isRunning}
+                >
                   <RefreshCw className={`mr-2 h-4 w-4 ${runNowMutation.isPending ? "animate-spin" : ""}`} />
-                  Run Incremental Batch
+                  {running || scheduler?.isRunning ? "Batch Running" : "Run Incremental Batch"}
                 </Button>
               </div>
 

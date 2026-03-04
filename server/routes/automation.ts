@@ -80,7 +80,9 @@ router.get("/jobs/active", requireAuth, async (req, res) => {
 function writeSseEvent(res: any, event: string, data: unknown) {
   res.write(`event: ${event}\n`);
   res.write(`data: ${JSON.stringify(data)}\n\n`);
-  console.log(`SSE emitted: ${event}`, data);
+  if (process.env.DEBUG_SSE === "1") {
+    console.log(`SSE emitted: ${event}`, data);
+  }
 }
 
 async function getJobById(jobId: string) {
@@ -94,7 +96,12 @@ router.get("/jobs/:id/stream", requireAuth, async (req, res) => {
     "Content-Type": "text/event-stream",
     "Cache-Control": "no-cache, no-transform",
     Connection: "keep-alive",
+    "X-Accel-Buffering": "no",
+    "Content-Encoding": "identity",
   });
+
+  res.flushHeaders?.();
+  res.write(":ok\n\n");
 
   let lastSnapshot = "";
   let lastLogIndex = 0;
@@ -170,7 +177,12 @@ router.get("/jobs/active/stream", requireAuth, async (req, res) => {
     "Content-Type": "text/event-stream",
     "Cache-Control": "no-cache, no-transform",
     Connection: "keep-alive",
+    "X-Accel-Buffering": "no",
+    "Content-Encoding": "identity",
   });
+
+  res.flushHeaders?.();
+  res.write(":ok\n\n");
 
   let activeJobId: string | null = null;
   let lastSnapshot = "";

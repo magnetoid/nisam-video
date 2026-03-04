@@ -66,6 +66,13 @@ app.use(compression({
   level: 6,
   threshold: 1024,
   filter: (req, res) => {
+    const accept = req.headers["accept"];
+    if (typeof accept === "string" && accept.includes("text/event-stream")) {
+      return false;
+    }
+    if (typeof req.path === "string" && req.path.includes("/stream")) {
+      return false;
+    }
     if (req.headers['x-no-compression']) {
       return false;
     }
