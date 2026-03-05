@@ -1,291 +1,148 @@
-# Nisam Video
+# 🎥 Nisam Video
 
-AI-Powered Video Hub aggregating content from various platforms.
+<div align="center">
 
-## 🌟 Key Features
+![Project Status](https://img.shields.io/badge/Status-Active-success?style=for-the-badge)
+![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)
+![Tech Stack](https://img.shields.io/badge/Stack-PERN-orange?style=for-the-badge)
+![PRs Welcome](https://img.shields.io/badge/PRs-Welcome-brightgreen?style=for-the-badge)
 
-### 🎬 Netflix-Style Hero Slider
-- Dynamic, auto-rotating hero banner with fallbacks
-- Admin-configurable content with drag-and-drop ordering
-- Random video fallback when no hero images are set
-- Responsive design with optimized image loading
+**An AI-Powered, Netflix-Style Video Hub Aggregating Content from Across the Web.**
 
-### 🔍 Advanced Video Discovery
-- AI-powered categorization and tagging (simulated)
-- Multi-language support (Serbian Latin & English)
-- Robust search with category/tag filters
-- Dedicated pages for categories, tags, and popular content
-- Support for YouTube Shorts and TikTok videos
+[View Demo](https://nisam.video) · [Report Bug](https://github.com/magnetoid/nisam-video/issues) · [Request Feature](https://github.com/magnetoid/nisam-video/issues)
 
-### 📱 Progressive Web App (PWA)
-- Installable on mobile/desktop devices
-- Offline capability with service worker caching
-- Manifest.json for native app-like experience
-- Responsive design for all screen sizes
+</div>
 
-### 🛠️ Comprehensive Admin Panel
-- Secure authentication with session management
-- Video, category, and tag management
-- Hero slider configuration
-- SEO settings with dynamic meta tags
-- Cache management and system settings
-- Activity logs and error monitoring
-- Data export capabilities
-- About page editor with markdown support
-- Custom code injection for head/body
+---
 
-### 🤖 AI Integration
-- Auto-categorization using AI (simulated)
-- AI re-categorization tool for existing content
-- Smart content organization
+## ✨ Overview
 
-### 📈 Analytics & Performance
-- Dashboard with statistics and metrics
-- Performance monitoring with caching strategies
-- Error tracking and reporting
-- Server-side LRU caching with configurable TTLs
+**Nisam Video** is a cutting-edge video aggregation platform designed to deliver a premium, **Netflix-like user experience**. It leverages **Artificial Intelligence** to automatically categorize, tag, and organize content from platforms like **YouTube** and **TikTok**, creating a seamless and immersive viewing environment.
 
-### 🔒 Security & SEO
-- Session-based authentication (transitioning to Passport.js)
-- Comprehensive SEO with JSON-LD Structured Data
-- Dynamic sitemaps and robots.txt
-- Canonical URLs and hreflang tags
-- Open Graph and Twitter Card meta tags
+Built with performance, scalability, and UX in mind, it features a **Progressive Web App (PWA)** architecture, robust **admin tools**, and a powerful **recommendation engine**.
+
+---
+
+## 🚀 Key Features
+
+### 🎬 **Immersive Viewing Experience**
+*   **Netflix-Style Hero Slider**: Auto-rotating, dynamic hero banner with video previews.
+*   **Smart "Similar Videos"**: AI-driven recommendation engine using category, tags, and channel affinity.
+*   **Responsive & Fast**: Mobile-first design with lazy loading and optimized assets.
+*   **PWA Support**: Installable on mobile/desktop with offline capabilities.
+
+### 🤖 **AI-Powered Intelligence**
+*   **Auto-Categorization**: Automatically assigns categories and tags to imported videos.
+*   **Content Regeneration**: Admin tools to re-process and improve metadata for existing libraries.
+*   **Smart Tagging**: Generates up to 10 descriptive tags per video for better discoverability.
+*   **Multi-Language Support**: Automatic translation of metadata (English & Serbian).
+
+### 🛠️ **Powerful Admin Dashboard**
+*   **Content Management**: Bulk edit, delete, and organize videos.
+*   **AI Tools**: Trigger AI regeneration for tags and categories directly from the UI.
+*   **SEO Management**: Dynamic meta tags, sitemap generation, and robots.txt configuration.
+*   **System Health**: Real-time monitoring of error logs, cache stats, and server performance.
+
+### 🔌 **Advanced Tech Stack**
+*   **Backend**: Node.js, Express, Drizzle ORM (PostgreSQL).
+*   **Frontend**: React, Vite, Tailwind CSS, Shadcn UI, TanStack Query.
+*   **Infrastructure**: Redis caching, Docker support, Vercel deployment ready.
+
+---
 
 ## 🏗️ Architecture
 
-- **Backend**: Node.js, Express
-- **Frontend**: React, Vite, Tailwind CSS, Shadcn UI
-- **Database**: PostgreSQL (Supabase), Drizzle ORM
-- **Authentication**: Session-based (transitioning to Passport.js)
-- **Deployment**: Vercel
-- **Caching**: LRU server-side, TanStack Query client-side
-- **Scraping**: Cheerio for YouTube, Puppeteer for TikTok
-- **AI**: Configurable via Admin UI (Ollama or OpenAI)
+<div align="center">
 
-## ⚙️ Setup
+| Component | Technology | Description |
+| :--- | :--- | :--- |
+| **Frontend** | React + Vite | Blazing fast SPA with HMR. |
+| **UI Framework** | Tailwind + Shadcn | Beautiful, accessible components. |
+| **State Mgmt** | TanStack Query | Efficient server state management & caching. |
+| **Backend** | Express.js | Robust RESTful API architecture. |
+| **Database** | PostgreSQL | Relational data integrity with Drizzle ORM. |
+| **Caching** | Redis | High-performance session & data caching. |
+| **AI Engine** | OpenAI / Ollama | Intelligent content analysis & generation. |
 
-1. **Clone the repository**
-2. **Install dependencies**:
-   ```bash
-   npm install
-   ```
-3. **Environment Variables**:
-   Create a `.env` file with:
-   ```env
-   DATABASE_URL="postgres://user:pass@host:port/db?sslmode=require"
-   SESSION_SECRET="your-secret"
-   REDIS_URL="redis://user:pass@host:6379" (Optional)
-   ADMIN_USERNAME="admin"
-   ADMIN_PASSWORD="password"
-   ```
-   AI provider credentials are configured in **Admin → AI Settings** and stored in the database.
-4. **Database Setup**:
-   ```bash
-   npm run db:push
-   ```
-5. **Run Development Server**:
-   ```bash
-   npm run dev
-   ```
+</div>
 
-## 🧪 Testing
+---
 
-Run unit and integration tests:
-```bash
-npm test
-```
+## ⚡ Getting Started
 
-## 📁 Project Structure
+Follow these steps to get your local development environment up and running.
 
-- `server/`: Backend logic (Routes, Storage, Scheduler)
-- `client/`: Frontend React application
-- `shared/`: Shared schemas (Zod) and types
-- `tests/`: Vitest test suite
-- `migrations/`: Database migrations
-- `docs/`: Documentation files
+### Prerequisites
+*   **Node.js** (v18+)
+*   **PostgreSQL** database
+*   **Redis** (optional, for caching)
 
-## 🚀 Features
+### Installation
 
-- **Video Aggregation**: Scrapes and aggregates videos from YouTube and TikTok
-- **Categorization**: Auto-categorization using AI (simulated)
-- **Localization**: Multi-language support for metadata
-- **Admin Dashboard**: Manage videos, scrape jobs, and settings
-- **SEO Optimization**: Dynamic meta tags, sitemaps, and structured data
-- **PWA Support**: Installable progressive web app with offline capability
-- **Analytics**: Dashboard with statistics and metrics
-- **Error Handling**: Comprehensive error tracking and reporting
-- **Performance**: Optimized caching and database queries
+1.  **Clone the repository**
+    ```bash
+    git clone https://github.com/magnetoid/nisam-video.git
+    cd nisam-video
+    ```
 
-## 📱 PWA Features
+2.  **Install dependencies**
+    ```bash
+    npm install
+    ```
 
-Our application is a full-featured Progressive Web App with:
+3.  **Configure Environment**
+    Create a `.env` file in the root directory:
+    ```env
+    DATABASE_URL="postgres://user:pass@host:port/db"
+    SESSION_SECRET="super-secret-key"
+    ADMIN_USERNAME="admin"
+    ADMIN_PASSWORD="password"
+    # Optional:
+    REDIS_URL="redis://localhost:6379"
+    OPENAI_API_KEY="sk-..."
+    ```
 
-- **Installability**: Can be installed on mobile/desktop devices
-- **Offline Support**: Service worker caches essential assets and content
-- **App-like Experience**: Standalone display mode with custom splash screen
-- **Push Notifications**: (Planned) Future support for push notifications
-- **Background Sync**: (Planned) Future support for background data sync
+4.  **Initialize Database**
+    ```bash
+    npm run db:push
+    ```
 
-### Service Worker Capabilities
-- Caches static assets and key pages
-- Provides offline fallback page
-- Skips cache for API requests
-- Automatic cache updates and cleanup
+5.  **Start Development Server**
+    ```bash
+    npm run dev
+    ```
 
-### Manifest Features
-- Custom app name and icons
-- Theme colors matching brand
-- Standalone display mode
-- Orientation flexibility
+---
 
-## 🔧 Admin Panel Capabilities
+## 🛡️ Admin & Security
 
-The admin panel provides comprehensive control over the application:
+*   **Secure Access**: Protected admin routes with session-based authentication.
+*   **Rate Limiting**: Built-in protection against abuse for public endpoints.
+*   **Input Validation**: Strict Zod schema validation for all API requests.
+*   **Error Logging**: Comprehensive error tracking with searchable logs in the admin panel.
 
-### Content Management
-- Video management with bulk operations
-- Category and tag management with localization
-- Hero slider configuration with preview
-- Playlist creation and management
-
-### System Settings
-- Cache management and invalidation
-- SEO settings with dynamic meta tags
-- System configuration (maintenance mode, etc.)
-- Custom code injection for advanced customization
-
-### Monitoring & Analytics
-- Activity logs with detailed tracking
-- Error logs with filtering and search
-- Performance metrics and caching statistics
-- Data export capabilities
-
-### AI Tools
-- AI-powered content categorization
-- Re-categorization of existing content
-- Smart tagging suggestions
-
-## 🎨 UI/UX Features
-
-### Responsive Design
-- Mobile-first approach
-- Tablet and desktop optimizations
-- Touch-friendly interfaces
-- Keyboard navigation support
-
-### Accessibility
-- WCAG 2.1 AA compliance
-- Screen reader support
-- Keyboard navigation
-- Proper contrast ratios
-
-### Performance Optimizations
-- Lazy loading for images and components
-- Code splitting for faster initial loads
-- Efficient caching strategies
-- Optimized database queries
-
-## 📊 Analytics & Monitoring
-
-### Built-in Analytics
-- Video view tracking
-- User engagement metrics
-- Performance monitoring
-- Error tracking and reporting
-
-### Third-party Integration
-- Google Analytics support
-- Custom analytics event tracking
-- Performance monitoring tools
-
-## 🔒 Security Features
-
-### Authentication
-- Session-based authentication
-- Secure password handling
-- Role-based access control
-
-### Data Protection
-- Encrypted database connections
-- Input validation and sanitization
-- Protection against common web vulnerabilities
-
-### Privacy
-- GDPR-compliant data handling
-- User data export capabilities
-- Cookie consent management
-
-## 🚀 Deployment
-
-### Vercel Deployment
-- Automatic deployments on push
-- Preview deployments for pull requests
-- Custom domain support
-- SSL certificates
-
-### Environment Configuration
-- Development, staging, and production environments
-- Environment-specific configurations
-- Secret management
-
-## 🧪 Testing Strategy
-
-### Unit Testing
-- Component testing with React Testing Library
-- Utility function testing
-- API endpoint testing
-
-### Integration Testing
-- Database integration tests
-- API integration tests
-- End-to-end workflow tests
-
-### Performance Testing
-- Load testing capabilities
-- Performance benchmarking
-- Cache effectiveness monitoring
-
-## 📚 Documentation
-
-### Developer Documentation
-- Architecture overview
-- API documentation
-- Component guides
-- Contribution guidelines
-
-### User Documentation
-- Admin panel guides
-- Feature walkthroughs
-- Troubleshooting guides
-
-## 🔄 Future Enhancements
-
-### Planned Features
-- Enhanced AI categorization with real OpenAI integration
-- Push notification support
-- Background sync capabilities
-- Advanced analytics dashboard
-- User accounts and favorites
-- Social sharing features
-- Advanced search with filters
-- Video recommendations
-
-### Scalability Improvements
-- Database sharding strategies
-- CDN integration
-- Microservice architecture
-- Load balancing
+---
 
 ## 🤝 Contributing
 
-We welcome contributions! Please see our contributing guidelines for details on how to get started.
+Contributions are what make the open-source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
+
+1.  Fork the Project
+2.  Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+3.  Commit your Changes (`git commit -m 'feat: Add some AmazingFeature'`)
+4.  Push to the Branch (`git push origin feature/AmazingFeature`)
+5.  Open a Pull Request
+
+---
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+Distributed under the MIT License. See `LICENSE` for more information.
 
-## 🙏 Acknowledgments
+---
 
-- Thanks to all contributors who have helped shape this project
-- Special thanks to the open-source community for the amazing tools we use
+<div align="center">
+
+**Built with ❤️ by [Magnetoid](https://github.com/magnetoid)**
+
+</div>
