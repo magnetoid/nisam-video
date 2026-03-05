@@ -264,8 +264,9 @@ export default function AdminSEO() {
           <Tabs
             value={activeTab}
             onValueChange={(tab) => setLocation(setTabParam(path, query, tab))}
+            className="relative z-10"
           >
-            <TabsList className="grid w-full h-auto grid-cols-2 sm:grid-cols-3 md:grid-cols-6">
+            <TabsList className="grid w-full min-h-[42px] grid-cols-2 sm:grid-cols-3 md:grid-cols-6">
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="global">Global</TabsTrigger>
               <TabsTrigger value="advanced">Advanced</TabsTrigger>
