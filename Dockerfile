@@ -1,18 +1,23 @@
 FROM node:20-alpine AS base
 
 FROM base AS deps
-RUN apk add --no-cache libc6-compat python3 make g++ vips-dev
+# Install native build tools + vips first so sharp can find them
+RUN apk add --no-cache libc6-compat python3 make g++ vips-dev vips-tools
 WORKDIR /app
 
 # Forsiramo development env da bi se instalirali devDependencies (vite)
 ENV NODE_ENV=development
 ENV PUPPETEER_SKIP_DOWNLOAD=1
+# Tell sharp to use pre-built binaries for Alpine/musl
+ENV npm_config_platform=linux
+ENV npm_config_libc=musl
+
+# Ensure node-gyp is available globally before any npm install
+RUN npm install -g node-gyp
 
 COPY package.json package-lock.json* ./
-# Instaliraj sve (ukljucujuci devDependencies)
-# Use npm install instead of ci to be more robust with native modules on Alpine
-RUN npm install -g node-gyp
-RUN npm install --include=dev
+# Install with explicit Alpine flags so sharp downloads the binary instead of building
+RUN npm install --platform=linux --libc=musl --include=dev
 
 FROM base AS builder
 WORKDIR /app
@@ -41,8 +46,7 @@ COPY --from=builder /app/migrations ./migrations
 
 # Install production dependencies
 COPY package.json package-lock.json* ./
-RUN npm install -g node-gyp
-RUN npm install --omit=dev
+RUN npm install --platform=linux --libc=musl --omit=dev
 
 USER nodejs
 
