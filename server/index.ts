@@ -273,40 +273,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// Global error handler - moved to top level for early catching
-app.use((err: any, req: Request, res: Response, next: NextFunction) => {
-  const status = err.status || err.statusCode || 500;
-  const message = err.message || "Internal Server Error";
-  
-  // Log the error with more context
-  console.error("Global error handler caught:", {
-    message,
-    stack: err?.stack,
-    url: req.url,
-    method: req.method,
-    status
-  });
-  
-  // Record the error in our error log system
-  recordError({
-    level: "error",
-    type: "server_runtime",
-    message,
-    stack: err?.stack,
-    module: "express",
-    statusCode: typeof status === "number" ? status : 500,
-    url: req.url,
-    method: req.method,
-  });
-  
-  // Always return JSON response
-  res.status(status).json({ 
-    error: {
-      code: status,
-      message: status >= 500 ? "A server error has occurred" : message
-    }
-  });
-});
+
 
 // Create startup function
 async function startServer() {
@@ -356,8 +323,7 @@ async function startServer() {
     });
   });
 
-  // Error monitoring middleware (must be added after routes)
-  app.use(errorMonitor.errorMiddleware());
+
 
   const schedulerDisabled = process.env.DISABLE_SCHEDULER === "1" || process.env.VERCEL === "1";
   if (schedulerDisabled) {
@@ -420,6 +386,51 @@ async function startServer() {
       log(`Static serving skipped due to error`);
     }
   }
+
+  // Global error handling - must be after all routes and static serving
+  app.use(errorMonitor.errorMiddleware());
+  
+  app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+    const status = err.status || err.statusCode || 500;
+    const message = err.message || "Internal Server Error";
+    
+    // Log the error with more context if not already logged by errorMonitor
+    if (!res.headersSent) {
+      console.error("Global error handler caught:", {
+        message,
+        stack: err?.stack,
+        url: req.url,
+        method: req.method,
+        status
+      });
+      
+      // Record the error in our error log system if not already done
+      // (errorMonitor middleware might have done it, but if it was skipped or failed)
+      recordError({
+        level: "error",
+        type: "server_runtime",
+        message,
+        stack: err?.stack,
+        module: "express",
+        statusCode: typeof status === "number" ? status : 500,
+        url: req.url,
+        method: req.method,
+      });
+      
+      // Always return JSON response for API routes, or if accepting JSON
+      if (req.path.startsWith("/api") || req.headers.accept?.includes("json")) {
+        res.status(status).json({ 
+          error: {
+            code: status,
+            message: status >= 500 ? "A server error has occurred" : message
+          }
+        });
+      } else {
+        // For non-API routes (e.g. frontend render error), send a simple error page or text
+        res.status(status).send(`Error ${status}: ${message}`);
+      }
+    }
+  });
 
   log(`Server initialization complete in ${Date.now() - initStart}ms`);
   return server;

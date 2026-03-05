@@ -23,7 +23,7 @@ if (dbUrl) {
       ssl: { rejectUnauthorized: false }, // Allow self-signed certs (Supabase pooler)
       // Use env var for max connections, default to 10. 
       // Only use 1 if specifically needed for serverless environments without pooling.
-      max: process.env.DB_POOL_MAX ? parseInt(process.env.DB_POOL_MAX) : (process.env.NODE_ENV === "production" ? 10 : 10),
+      max: process.env.DB_POOL_MAX ? parseInt(process.env.DB_POOL_MAX, 10) : (process.env.NODE_ENV === "production" ? 10 : 10),
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 10000, // Increased to 10s to allow more time for connection acquisition
     });

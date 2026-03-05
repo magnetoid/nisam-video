@@ -1,14 +1,14 @@
 import { db } from "../db.js";
 import { scrapeJobs, channels, type ScrapeJob } from "../../shared/schema.js";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { scrapeYouTubeChannel } from "../youtube-scraper.js";
-import { scrapeTikTokProfile } from "../tiktok-scraper.js"; // Added TikTok support
+import { scrapeTikTokProfile } from "../tiktok-scraper.js";
 import { recordError } from "../error-log-service.js";
 import { storage } from "../storage/index.js";
 import { invalidateChannelCaches, invalidateVideoContentCaches } from "../cache-invalidation.js";
 import { appendScrapeJobLog } from "../scrape-job-logs.js";
-import { processScrapedVideos } from "../video-ingestion.js"; // Import shared logic
-import { logger } from "../lib/logger.js"; // Use structured logger
+import { processScrapedVideos } from "../video-ingestion.js";
+import { logger } from "../lib/logger.js";
 
 // Job States
 export type JobStatus = "pending" | "running" | "completed" | "failed" | "cancelled";
@@ -55,8 +55,16 @@ export class JobQueue {
     this.isProcessing = true;
 
     try {
-      while (true) {
+      // Process up to 5 jobs in a row before yielding
+      // This prevents infinite loops from blocking the event loop completely
+      // and allows other requests to be handled
+      const MAX_BATCH_SIZE = 5;
+      let processedCount = 0;
+
+      while (processedCount < MAX_BATCH_SIZE) {
         // Find next pending job
+        // Note: Drizzle ORM doesn't easily support SKIP LOCKED yet without raw SQL
+        // so we'll just pick one and try to lock it by setting status to running immediately
         const jobs = await db.select()
           .from(scrapeJobs)
           .where(eq(scrapeJobs.status, "pending"))
@@ -66,7 +74,27 @@ export class JobQueue {
         if (jobs.length === 0) break;
 
         const job = jobs[0];
-        await this.runJob(job);
+        
+        // Optimistic locking: try to set status to running
+        // If another instance picked it up, this update might fail or return 0 rows if we added version checking
+        // But for now, simple status update is "good enough" for low scale
+        try {
+            await this.runJob(job);
+        } catch (error) {
+            // This catch block is for errors within runJob that weren't caught
+            // Ideally runJob catches everything, but just in case
+            logger.error(`Critical error running job ${job.id}`, error);
+            // Try to mark as failed if runJob didn't
+            try {
+                await this.updateJobStatus(job.id, "failed", "Critical system error during execution");
+            } catch (e) {
+                logger.error("Failed to update job status after critical error", e);
+                // Break loop to avoid hammering a broken job/DB
+                break;
+            }
+        }
+        
+        processedCount++;
       }
     } catch (error) {
       logger.error("Job Queue Error", error);
@@ -91,7 +119,9 @@ export class JobQueue {
       await this.updateJobStatus(job.id, "completed", "Job completed successfully.", false);
     } catch (error: any) {
       logger.error(`Job ${job.id} failed`, error);
+      // Ensure we update status to failed so it's not picked up again immediately
       await this.updateJobStatus(job.id, "failed", `Job failed: ${error.message}`, false);
+      
       await recordError({
         level: "error",
         type: "job_failed",
@@ -109,12 +139,14 @@ export class JobQueue {
     let failed = 0;
 
     // Process sequentially to avoid overwhelming the system
-    // Could be optimized with p-map if needed, but full sync is rare
     for (const channel of allChannels) {
       try {
         await this.log(job.id, `Scanning channel: ${channel.name}`);
         await this.scrapeChannel(channel, job.isIncremental, job.id);
         processed++;
+        
+        // Add a small delay between channels to be nice to external APIs
+        await new Promise(resolve => setTimeout(resolve, 2000));
       } catch (e: any) {
         failed++;
         await this.log(job.id, `Failed to scan ${channel.name}: ${e.message}`);
@@ -146,16 +178,32 @@ export class JobQueue {
     const platform = channel.platform === "tiktok" ? "tiktok" : "youtube";
     let scrapedVideos: any[] = [];
 
-    if (platform === "tiktok") {
-      const result = await scrapeTikTokProfile(channel.url);
-      scrapedVideos = result.videos;
-    } else {
-      const { videos: ytVideos } = await scrapeYouTubeChannel(channel.url, {
-        existingVideoIds: existingIds,
-        incremental,
-        maxItems: 60,
-      });
-      scrapedVideos = ytVideos;
+    // Add timeout to scraping
+    const SCRAPE_TIMEOUT = 120000; // 2 minutes
+    const scrapePromise = (async () => {
+        if (platform === "tiktok") {
+            const result = await scrapeTikTokProfile(channel.url);
+            return result.videos;
+        } else {
+            const { videos: ytVideos } = await scrapeYouTubeChannel(channel.url, {
+                existingVideoIds: existingIds,
+                incremental,
+                maxItems: 60,
+            });
+            return ytVideos;
+        }
+    })();
+
+    try {
+        scrapedVideos = await Promise.race([
+            scrapePromise,
+            new Promise<any[]>((_, reject) => 
+                setTimeout(() => reject(new Error("Scraping timed out")), SCRAPE_TIMEOUT)
+            )
+        ]);
+    } catch (e: any) {
+        if (jobId) await this.log(jobId, `Scraping failed: ${e.message}`);
+        throw e;
     }
 
     if (jobId) await this.log(jobId, `Found ${scrapedVideos.length} new videos.`);

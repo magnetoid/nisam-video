@@ -36,22 +36,29 @@ router.get("/proxy", async (req, res) => {
 
   // 2. Fetch & Convert
   try {
-    const response = await fetch(url);
-    if (!response.ok) throw new Error("Failed to fetch image");
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000); // 10s timeout
     
-    const buffer = await response.arrayBuffer();
-    const image = await Jimp.read(Buffer.from(buffer));
-    const webpBuffer = await image
-      .resize(640, Jimp.AUTO) // keep aspect ratio
-      .quality(80)
-      .getBufferAsync(Jimp.MIME_WEBP);
+    try {
+      const response = await fetch(url, { signal: controller.signal });
+      if (!response.ok) throw new Error("Failed to fetch image");
+      
+      const buffer = await response.arrayBuffer();
+      const image = await Jimp.read(Buffer.from(buffer));
+      const webpBuffer = await image
+        .resize(640, Jimp.AUTO) // keep aspect ratio
+        .quality(80)
+        .getBufferAsync(Jimp.MIME_WEBP);
 
-    // 3. Save to Cache (7 days)
-    await setCache(cacheKey, webpBuffer.toString('base64'), 7 * 86400);
+      // 3. Save to Cache (7 days)
+      await setCache(cacheKey, webpBuffer.toString('base64'), 7 * 86400);
 
-    res.setHeader("Content-Type", "image/webp");
-    res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
-    res.send(webpBuffer);
+      res.setHeader("Content-Type", "image/webp");
+      res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+      res.send(webpBuffer);
+    } finally {
+      clearTimeout(timeout);
+    }
   } catch (error) {
     console.error("Image proxy error:", error);
     res.status(500).send("Failed to process image");
