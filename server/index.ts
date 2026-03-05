@@ -359,8 +359,10 @@ async function startServer() {
   // Error monitoring middleware (must be added after routes)
   app.use(errorMonitor.errorMiddleware());
 
-  // Initialize scheduler (only if not in serverless/production to avoid background tasks issues)
-  if (process.env.NODE_ENV !== "production") {
+  const schedulerDisabled = process.env.DISABLE_SCHEDULER === "1" || process.env.VERCEL === "1";
+  if (schedulerDisabled) {
+    log("Scheduler initialization skipped (DISABLE_SCHEDULER=1 or VERCEL=1)");
+  } else {
     log("Initializing scheduler...");
     const schedStart = Date.now();
     await scheduler.init();

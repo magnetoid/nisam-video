@@ -393,6 +393,7 @@ class SchedulerService {
   getStatus() {
     return {
       isActive: this.task !== null, // Scheduler is enabled/active
+      hasTask: this.task !== null,
       isRunning: this.isRunning, // Job is currently executing
     };
   }

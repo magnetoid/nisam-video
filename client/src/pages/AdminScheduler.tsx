@@ -24,6 +24,8 @@ import type { SchedulerSettings } from "@shared/schema";
 interface SchedulerStatus extends SchedulerSettings {
   isActive: boolean;
   isRunning: boolean;
+  hasTask?: boolean;
+  runtimeMode?: "serverless" | "process";
 }
 
 export default function AdminScheduler() {
@@ -106,8 +108,8 @@ export default function AdminScheduler() {
     },
     onSuccess: () => {
       toast({
-        title: "Scrape Job Started",
-        description: "Scraping all channels now",
+        title: "Scrape Job Completed",
+        description: "Scraping finished.",
       });
     },
     onError: () => {
@@ -133,10 +135,10 @@ export default function AdminScheduler() {
         </Badge>
       );
     }
-    if (scheduler?.isActive) {
+    if (scheduler?.isEnabled) {
       return (
         <Badge variant="default" className="bg-blue-600">
-          Active
+          Enabled
         </Badge>
       );
     }
@@ -178,6 +180,19 @@ export default function AdminScheduler() {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {scheduler?.isEnabled && scheduler?.runtimeMode === "serverless" && scheduler?.hasTask === false && (
+                    <div className="rounded-lg border border-border bg-muted/30 p-3 text-sm text-muted-foreground">
+                      Scheduler is enabled, but this deployment does not keep background timers running. Use an external cron
+                      trigger to call <span className="font-mono">/api/scheduler/run-now</span>.
+                    </div>
+                  )}
+
+                  {scheduler?.isEnabled && !scheduler?.isRunning && (
+                    <div className="text-sm text-muted-foreground">
+                      "Running Job" only shows while a scrape is executing, then it returns to Enabled.
+                    </div>
+                  )}
+
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -225,7 +240,7 @@ export default function AdminScheduler() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex gap-3">
-                    {scheduler?.isActive ? (
+                    {scheduler?.isEnabled ? (
                       <Button
                         onClick={() => stopMutation.mutate()}
                         disabled={stopMutation.isPending}

@@ -20,7 +20,14 @@ router.get("/", async (req, res) => {
   try {
     const settings = await scheduler.getSettings();
     const status = scheduler.getStatus();
-    res.json({ ...settings, ...status });
+    const runtimeMode = process.env.VERCEL === "1" ? "serverless" : "process";
+    const isEnabled = !!settings?.isEnabled;
+    res.json({
+      ...settings,
+      ...status,
+      isActive: isEnabled,
+      runtimeMode,
+    });
   } catch (error) {
     logger.error("Get scheduler error:", error);
     res.status(500).json({ error: "Failed to fetch scheduler status" });

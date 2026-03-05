@@ -588,7 +588,14 @@ router.get("/scheduler", requireAuth, async (req, res) => {
   try {
     const settings = await storage.getSchedulerSettings();
     const status = scheduler.getStatus();
-    res.json({ ...settings, ...status });
+    const runtimeMode = process.env.VERCEL === "1" ? "serverless" : "process";
+    const isEnabled = !!settings?.isEnabled;
+    res.json({
+      ...settings,
+      ...status,
+      isActive: isEnabled,
+      runtimeMode,
+    });
   } catch (error: any) {
     console.error("Get scheduler error:", error);
     res.status(500).json({ error: error.message || "Failed to fetch scheduler", code: "SCHEDULER_FETCH_FAILED" });
