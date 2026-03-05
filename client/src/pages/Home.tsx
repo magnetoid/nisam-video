@@ -10,6 +10,7 @@ import { LikeStatusBatchProvider } from "@/components/LikeButton";
 import type { LocalizedCategory, VideoWithLocalizedRelations } from "@shared/schema";
 import { useTranslation } from "react-i18next";
 import { apiRequest } from "@/lib/queryClient";
+import { getMaxResolutionThumbnail } from "@/lib/video";
 import HeroImageSlider from '@/components/HeroImageSlider';
 
 import { HeroSettings } from "@shared/schema";
@@ -100,7 +101,7 @@ export default function Home() {
     return primary.map((v) => ({
       id: v.id,
       title: v.title,
-      imageUrl: v.thumbnailUrl || null,
+      imageUrl: v.thumbnailUrl ? getMaxResolutionThumbnail(v.thumbnailUrl, v.videoId) : null,
       slug: v.slug || v.id,
       primaryCategory: v.categories?.[0]?.name || v.categories?.[0]?.translations?.[0]?.name || undefined,
       secondaryCategories: (v.categories || []).slice(1).map((c) => c.name || c.translations?.[0]?.name).filter(Boolean) as string[],

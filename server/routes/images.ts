@@ -6,6 +6,9 @@ const router = Router();
 
 router.get("/proxy", async (req, res) => {
   const url = req.query.url as string;
+  const widthParam = req.query.width;
+  const width = widthParam ? parseInt(widthParam as string, 10) : 640;
+  
   if (!url) return res.status(400).send("Missing URL");
 
   // Validacija URL-a (samo ytimg.com i slično)
@@ -19,7 +22,8 @@ router.get("/proxy", async (req, res) => {
     return res.status(400).send("Invalid URL");
   }
 
-  const cacheKey = `img:${url}`;
+  // Include width in cache key to support multiple sizes
+  const cacheKey = `img:${url}:${width}`;
   
   // 1. Try Cache
   try {
@@ -46,7 +50,7 @@ router.get("/proxy", async (req, res) => {
       const buffer = await response.arrayBuffer();
       const image = await Jimp.read(Buffer.from(buffer));
       const webpBuffer = await image
-        .resize(640, Jimp.AUTO) // keep aspect ratio
+        .resize(width, Jimp.AUTO) // keep aspect ratio
         .quality(80)
         .getBufferAsync(Jimp.MIME_WEBP);
 

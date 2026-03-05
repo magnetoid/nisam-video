@@ -5,7 +5,7 @@ export function getOptimizedImageUrl(url: string | null | undefined, width = 640
 
   // Only proxy external images
   if (url.startsWith("http")) {
-    return `/api/images/proxy?url=${encodeURIComponent(url)}`;
+    return `/api/images/proxy?url=${encodeURIComponent(url)}&width=${width}`;
   }
   
   return url;

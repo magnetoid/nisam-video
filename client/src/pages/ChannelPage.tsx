@@ -10,6 +10,7 @@ import { VideoGrid } from "@/components/VideoGrid";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { apiRequest } from "@/lib/queryClient";
+import { getOptimizedImageUrl } from "@/lib/image";
 import type { Channel, VideoWithLocalizedRelations } from "@shared/schema";
 
 export default function ChannelPage() {
@@ -102,7 +103,11 @@ export default function ChannelPage() {
     return typeof raw === "string" ? raw.trim() : "";
   }, [channel]);
 
-  const heroImage = channel?.thumbnailUrl || null;
+  const heroImage = useMemo(() => {
+    const url = channel?.bannerUrl || channel?.thumbnailUrl;
+    if (!url) return null;
+    return getOptimizedImageUrl(url, 1920);
+  }, [channel]);
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
