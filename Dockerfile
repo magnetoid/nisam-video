@@ -10,7 +10,9 @@ ENV PUPPETEER_SKIP_DOWNLOAD=1
 
 COPY package.json package-lock.json* ./
 # Instaliraj sve (ukljucujuci devDependencies)
-RUN npm ci --include=dev
+# Use npm install instead of ci to be more robust with native modules on Alpine
+RUN npm install -g node-gyp
+RUN npm install --include=dev
 
 FROM base AS builder
 WORKDIR /app
@@ -39,7 +41,8 @@ COPY --from=builder /app/migrations ./migrations
 
 # Install production dependencies
 COPY package.json package-lock.json* ./
-RUN npm ci --omit=dev
+RUN npm install -g node-gyp
+RUN npm install --omit=dev
 
 USER nodejs
 
