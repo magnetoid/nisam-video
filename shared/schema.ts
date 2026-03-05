@@ -1107,6 +1107,31 @@ export const aiModels = pgTable("ai_models", {
   providerNameUnique: unique("ai_models_provider_name_unique").on(table.provider, table.name),
 }));
 
+// Supported Languages table - Dynamic language configuration
+export const supportedLanguages = pgTable("supported_languages", {
+  code: varchar("code", { length: 10 }).primaryKey(), // e.g., 'en', 'sr-Latn'
+  name: text("name").notNull(), // e.g., 'English', 'Srpski'
+  isActive: boolean("is_active").notNull().default(true),
+  isDefault: boolean("is_default").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+});
+
+// UI Translations table - Dynamic translation overrides
+export const uiTranslations = pgTable("ui_translations", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  languageCode: varchar("language_code", { length: 10 })
+    .notNull()
+    .references(() => supportedLanguages.code, { onDelete: "cascade" }),
+  namespace: text("namespace").notNull().default("translation"),
+  key: text("key").notNull(), // Dot notation key, e.g., 'nav.home'
+  value: text("value").notNull(),
+  updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
+}, (table) => ({
+  langKeyUnique: unique("ui_translations_lang_key_unique").on(table.languageCode, table.namespace, table.key),
+}));
+
 // KV Store table - Key-value storage for rate limiting, buffers, etc.
 export const kvStore = pgTable("kv_store", {
   key: text("key").primaryKey(),
@@ -1129,3 +1154,14 @@ export const insertAiModelSchema = createInsertSchemaAny(aiModels).omit({
 
 export type AiModel = typeof aiModels.$inferSelect;
 export type InsertAiModel = z.infer<typeof insertAiModelSchema>;
+
+export const insertSupportedLanguageSchema = createInsertSchemaAny(supportedLanguages);
+export type InsertSupportedLanguage = z.infer<typeof insertSupportedLanguageSchema>;
+export type SupportedLanguage = typeof supportedLanguages.$inferSelect;
+
+export const insertUiTranslationSchema = createInsertSchemaAny(uiTranslations).omit({
+  id: true,
+  updatedAt: true,
+});
+export type InsertUiTranslation = z.infer<typeof insertUiTranslationSchema>;
+export type UiTranslation = typeof uiTranslations.$inferSelect;

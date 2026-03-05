@@ -37,7 +37,11 @@ import {
   type ChannelRecommendation,
   type InsertChannelRecommendation,
   type EmailSettings,
-  type InsertEmailSettings
+  type InsertEmailSettings,
+  type SupportedLanguage,
+  type InsertSupportedLanguage,
+  type UiTranslation,
+  type InsertUiTranslation
 } from "../../shared/schema.js";
 
 export interface IStorage {
@@ -199,4 +203,13 @@ export interface IStorage {
   // Utilities
   updateAllVideoThumbnails(): Promise<number>;
   incrementVideoViews(videoId: string, count: number): Promise<void>;
+
+  // Supported Languages
+  getSupportedLanguages(): Promise<SupportedLanguage[]>;
+  upsertSupportedLanguage(lang: InsertSupportedLanguage): Promise<SupportedLanguage>;
+  deleteSupportedLanguage(code: string): Promise<void>;
+
+  // UI Translations
+  getUiTranslations(lang: string, namespace?: string): Promise<Record<string, string>>;
+  upsertUiTranslation(trans: InsertUiTranslation): Promise<UiTranslation>;
 }

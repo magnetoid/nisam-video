@@ -9,6 +9,8 @@ import { generateSlug } from "./utils.js";
 import { getCache, setCache } from "./services/redis.js";
 import imageRouter from "./routes/images.js";
 
+import languageRoutes from "./routes/languages.js";
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Image proxy
   app.use("/api/images", imageRouter);
@@ -18,6 +20,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Register modular feature routes (auth, channels, tiktok, videos, etc.)
   registerFeatureRoutes(app);
+  
+  // Register language routes
+  app.use("/api", languageRoutes);
 
   // SEO Routes - Sitemap and Robots
   app.get("/sitemap.xml", async (req, res) => {

@@ -23,6 +23,7 @@ import {
   FileText,
   Bot,
   Users,
+  Globe,
 } from "lucide-react";
 import { SiTiktok } from "react-icons/si";
 import { useTranslation } from "react-i18next";
@@ -191,6 +192,12 @@ export function AdminSidebar({ open = false, onClose, className }: AdminSidebarP
           label: t("admin.seo"),
           path: "/admin/seo",
           testId: "link-seo",
+        },
+        {
+          icon: Globe,
+          label: "Languages",
+          path: "/admin/languages",
+          testId: "link-languages",
         },
         {
           icon: Sliders,

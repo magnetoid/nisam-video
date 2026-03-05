@@ -62,7 +62,13 @@ import {
   users,
   type User,
   type InsertUser,
-  type Tag
+  type Tag,
+  supportedLanguages,
+  uiTranslations,
+  type SupportedLanguage,
+  type InsertSupportedLanguage,
+  type UiTranslation,
+  type InsertUiTranslation
 } from "../../shared/schema.js";
 import { db } from "../db.js";
 import { eq, like, and, or, isNull, lte, gte, inArray, notInArray, sql, desc } from "drizzle-orm";
@@ -2578,4 +2584,88 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  // Supported Languages
+  async getSupportedLanguages(): Promise<SupportedLanguage[]> {
+    try {
+      const langs = await db.select().from(supportedLanguages).orderBy(supportedLanguages.code);
+      if (langs.length === 0) {
+        // Seed defaults if empty
+        const defaults = [
+          { code: 'en', name: 'English', isActive: true, isDefault: true, createdAt: new Date() },
+          { code: 'sr-Latn', name: 'Srpski', isActive: true, isDefault: false, createdAt: new Date() }
+        ];
+        await db.insert(supportedLanguages).values(defaults).onConflictDoNothing();
+        return defaults;
+      }
+      return langs;
+    } catch (error) {
+      console.error("[storage] getSupportedLanguages failed:", error);
+      return [];
+    }
+  }
+
+  async upsertSupportedLanguage(lang: InsertSupportedLanguage): Promise<SupportedLanguage> {
+    try {
+      const [upserted] = await db
+        .insert(supportedLanguages)
+        .values(lang)
+        .onConflictDoUpdate({
+          target: supportedLanguages.code,
+          set: { ...lang }
+        })
+        .returning();
+      return upserted;
+    } catch (error) {
+      console.error(`[storage] upsertSupportedLanguage failed for ${lang.code}:`, error);
+      throw error;
+    }
+  }
+
+  async deleteSupportedLanguage(code: string): Promise<void> {
+    try {
+      await db.delete(supportedLanguages).where(eq(supportedLanguages.code, code));
+    } catch (error) {
+      console.error(`[storage] deleteSupportedLanguage failed for ${code}:`, error);
+      throw error;
+    }
+  }
+
+  // UI Translations
+  async getUiTranslations(lang: string, namespace: string = 'translation'): Promise<Record<string, string>> {
+    try {
+      const rows = await db
+        .select({ key: uiTranslations.key, value: uiTranslations.value })
+        .from(uiTranslations)
+        .where(and(eq(uiTranslations.languageCode, lang), eq(uiTranslations.namespace, namespace)));
+      
+      const result: Record<string, string> = {};
+      for (const row of rows) {
+        // Handle nested keys? No, i18next-http-backend handles flat keys if we return them right,
+        // but typically it expects a nested JSON object.
+        // We will return a flat map here, and the route handler can expand it.
+        result[row.key] = row.value;
+      }
+      return result;
+    } catch (error) {
+      console.error(`[storage] getUiTranslations failed for ${lang}/${namespace}:`, error);
+      return {};
+    }
+  }
+
+  async upsertUiTranslation(trans: InsertUiTranslation): Promise<UiTranslation> {
+    try {
+      const [upserted] = await db
+        .insert(uiTranslations)
+        .values({ ...trans, updatedAt: new Date() })
+        .onConflictDoUpdate({
+          target: [uiTranslations.languageCode, uiTranslations.namespace, uiTranslations.key],
+          set: { value: trans.value, updatedAt: new Date() }
+        })
+        .returning();
+      return upserted;
+    } catch (error) {
+      console.error(`[storage] upsertUiTranslation failed:`, error);
+      throw error;
+    }
+  }
 }

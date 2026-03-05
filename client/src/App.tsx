@@ -51,6 +51,7 @@ const adminPages = {
   hero: lazy(() => import("@/pages/AdminHeroManagement")),
   aiSettings: lazy(() => import("@/pages/AdminAISettings")),
   users: lazy(() => import("@/pages/AdminUsers")),
+  languages: lazy(() => import("@/pages/AdminLanguages")),
 };
 
 type AdminPageKey = keyof typeof adminPages;
@@ -82,6 +83,7 @@ const adminRoutes: AdminRouteConfig[] = [
   { path: "/admin/ai-settings", page: "aiSettings" },
   { path: "/admin/debug", page: "logs" },
   { path: "/admin/users", page: "users" },
+  { path: "/admin/languages", page: "languages" },
   { path: "/admin", page: "dashboard" },
 ];
 
@@ -275,10 +277,10 @@ function Router() {
     );
   }
 
+  // For non-en routes (root), we don't enforce sr-Latn anymore to allow other languages
+  // configured in the admin panel.
   return (
-    <LanguageWrapper lang="sr-Latn">
-      <AppRoutes />
-    </LanguageWrapper>
+    <AppRoutes />
   );
 }
 
@@ -297,7 +299,9 @@ function App() {
           <AnalyticsTracker>
             <Toaster />
             <AppErrorBoundary>
-              <Router />
+              <Suspense fallback={<AdminLoadingFallback />}>
+                <Router />
+              </Suspense>
             </AppErrorBoundary>
           </AnalyticsTracker>
         </TooltipProvider>
