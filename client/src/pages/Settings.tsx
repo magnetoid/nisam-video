@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { User, Settings as SettingsIcon, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
+import { getQueryFn } from "@/lib/queryClient";
 
 export default function Settings() {
   const { t } = useTranslation();
@@ -13,11 +14,7 @@ export default function Settings() {
 
   const { data: session, isLoading } = useQuery({
     queryKey: ["/api/auth/session"],
-    queryFn: async () => {
-      const res = await fetch("/api/auth/session");
-      if (!res.ok) throw new Error("Failed to fetch session");
-      return res.json();
-    },
+    queryFn: getQueryFn({ on401: "returnNull" }),
   });
 
   if (isLoading) return null;

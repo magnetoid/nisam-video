@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, getQueryFn } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
 export function UserMenu() {
@@ -22,11 +22,7 @@ export function UserMenu() {
 
   const { data: session } = useQuery({
     queryKey: ["/api/auth/session"],
-    queryFn: async () => {
-      const res = await fetch("/api/auth/session");
-      if (!res.ok) throw new Error("Failed to fetch session");
-      return res.json();
-    },
+    queryFn: getQueryFn({ on401: "returnNull" }),
   });
 
   const handleLogout = async () => {

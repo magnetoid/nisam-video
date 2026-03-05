@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useEffect } from "react";
+import { getQueryFn } from "@/lib/queryClient";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -16,6 +17,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   const { data: session, isLoading } = useQuery<SessionResponse>({
     queryKey: ["/api/auth/session"],
+    queryFn: getQueryFn({ on401: "returnNull" }),
   });
 
   useEffect(() => {
