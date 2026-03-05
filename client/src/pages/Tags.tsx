@@ -1,6 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { useLocation } from "wouter";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { VideoGrid } from "@/components/VideoGrid";
@@ -8,7 +9,10 @@ import { SEO } from "@/components/SEO";
 import type { VideoWithLocalizedRelations, TagImage, LocalizedTag } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 
+type TagStat = { tagName: string; count: number; videoIds?: string[] };
+
 export default function Tags() {
+  const [location] = useLocation();
   const [selectedTag, setSelectedTag] = useState<string | "others" | null>(null);
   const { i18n } = useTranslation();
 
@@ -18,6 +22,10 @@ export default function Tags() {
           const res = await apiRequest("GET", `/api/tags?lang=${i18n.language}`);
           return res.json();
       }
+  });
+
+  const { data: tagStats = [] } = useQuery<TagStat[]>({
+    queryKey: ["/api/tags/stats"],
   });
 
   const { data: tagImages = [] } = useQuery<TagImage[]>({
@@ -31,9 +39,27 @@ export default function Tags() {
     }, {} as Record<string, TagImage>);
   }, [tagImages]);
 
-  const sortedTags = useMemo(() => {
-    return [...localizedTags].sort((a, b) => (a.tagName || "").localeCompare(b.tagName || ""));
+  const tagCountMap = useMemo(() => {
+    return new Map<string, number>(tagStats.map((s) => [s.tagName, s.count]));
+  }, [tagStats]);
+
+  const uniqueTags = useMemo(() => {
+    const byName = new Map<string, LocalizedTag>();
+    for (const t of localizedTags) {
+      if (!t.tagName) continue;
+      if (!byName.has(t.tagName)) byName.set(t.tagName, t);
+    }
+    return Array.from(byName.values());
   }, [localizedTags]);
+
+  const sortedTags = useMemo(() => {
+    return [...uniqueTags].sort((a, b) => {
+      const aCount = tagCountMap.get(a.tagName) ?? 0;
+      const bCount = tagCountMap.get(b.tagName) ?? 0;
+      if (bCount !== aCount) return bCount - aCount;
+      return (a.tagName || "").localeCompare(b.tagName || "");
+    });
+  }, [uniqueTags, tagCountMap]);
 
   const top20Tags = sortedTags.slice(0, 20);
   const otherTags = sortedTags.slice(20);
@@ -42,6 +68,25 @@ export default function Tags() {
     selectedTag && selectedTag !== "others" ? sortedTags.find((t) => t.id === selectedTag) : null;
 
   const selectedTagName = selectedTagData?.tagName || null;
+
+  useEffect(() => {
+    const idx = location.indexOf("?");
+    if (idx === -1) return;
+    const params = new URLSearchParams(location.slice(idx + 1));
+    const filter = params.get("filter");
+    if (!filter) return;
+
+    const byId = sortedTags.find((t) => t.id === filter);
+    if (byId) {
+      setSelectedTag(byId.id);
+      return;
+    }
+
+    const byName = sortedTags.find((t) => t.tagName === filter);
+    if (byName) {
+      setSelectedTag(byName.id);
+    }
+  }, [location, sortedTags]);
 
   const { data: videos = [] } = useQuery<VideoWithLocalizedRelations[]>({
     queryKey: ["/api/videos", "tag-grid", selectedTagName, selectedTag, i18n.language],
@@ -127,67 +172,11 @@ export default function Tags() {
       </div>
 
       <div className="px-4 sm:px-8 md:px-16 py-8">
-        <h2 className="text-2xl font-bold mb-6">Browse by Tag</h2>
-        <div className="flex flex-wrap gap-2 sm:gap-3 mb-8">
-          <button
-            onClick={() => setSelectedTag(null)}
-            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-              !selectedTag
-                ? "bg-primary text-primary-foreground"
-                : "bg-card text-card-foreground hover-elevate"
-            }`}
-            data-testid="button-filter-all"
-          >
-            All Tags ({localizedTags.length})
-          </button>
-          {top20Tags.map((tag) => {
-            const hasImage = !!(tag.tagName && tagImageMap[tag.tagName]);
-            return (
-              <button
-                key={tag.id}
-                onClick={() => setSelectedTag(tag.id)}
-                className={`relative px-4 py-2 rounded-full text-sm font-medium transition-colors overflow-hidden ${
-                  selectedTag === tag.id
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-card text-card-foreground hover-elevate"
-                }`}
-                data-testid={`button-tag-${tag.id}`}
-              >
-                {hasImage && selectedTag !== tag.id && (
-                  <span className="absolute left-2 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-primary/60" />
-                )}
-                <span className={hasImage && selectedTag !== tag.id ? "ml-3" : ""}>
-                  {tag.tagName}
-                </span>
-                {tag.videoCount !== undefined && tag.videoCount > 0 && (
-                  <span className="ml-2 text-xs opacity-70">
-                    {tag.videoCount} videos
-                  </span>
-                )}
-              </button>
-            );
-          })}
-          {otherTags.length > 0 && (
-            <button
-              onClick={() => setSelectedTag("others")}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                selectedTag === "others"
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-card text-card-foreground hover-elevate"
-              }`}
-              data-testid="button-filter-others"
-            >
-              Others ({otherTags.length})
-            </button>
-          )}
-        </div>
-      </div>
-
-      <div className="px-4 sm:px-8 md:px-16 py-8">
         <h2 className="text-2xl font-bold mb-6">Popular Tags</h2>
         <div className="flex flex-wrap gap-2 sm:gap-3">
-          {top20Tags.slice(0, 10).map((tag) => {
+          {top20Tags.slice(0, 12).map((tag) => {
             const hasImage = !!(tag.tagName && tagImageMap[tag.tagName]);
+            const count = tagCountMap.get(tag.tagName) ?? 0;
             return (
               <button
                 key={tag.id}
@@ -205,14 +194,66 @@ export default function Tags() {
                 <span className={hasImage && selectedTag !== tag.id ? "ml-3" : ""}>
                   {tag.tagName}
                 </span>
-                {tag.videoCount !== undefined && tag.videoCount > 0 && (
-                  <span className="ml-2 text-xs opacity-70">
-                    {tag.videoCount} videos
-                  </span>
+                {count > 0 && (
+                  <span className="ml-2 text-xs opacity-70">{count} videos</span>
                 )}
               </button>
             );
           })}
+        </div>
+      </div>
+
+      <div className="px-4 sm:px-8 md:px-16 py-8">
+        <h2 className="text-2xl font-bold mb-6">Browse by Tag</h2>
+        <div className="flex flex-wrap gap-2 sm:gap-3 mb-8">
+          <button
+            onClick={() => setSelectedTag(null)}
+            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+              !selectedTag
+                ? "bg-primary text-primary-foreground"
+                : "bg-card text-card-foreground hover-elevate"
+            }`}
+            data-testid="button-filter-all"
+          >
+            All Tags ({localizedTags.length})
+          </button>
+          {top20Tags.map((tag) => {
+            const hasImage = !!(tag.tagName && tagImageMap[tag.tagName]);
+            const count = tagCountMap.get(tag.tagName) ?? 0;
+            return (
+              <button
+                key={tag.id}
+                onClick={() => setSelectedTag(tag.id)}
+                className={`relative px-4 py-2 rounded-full text-sm font-medium transition-colors overflow-hidden ${
+                  selectedTag === tag.id
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-card text-card-foreground hover-elevate"
+                }`}
+                data-testid={`button-tag-${tag.id}`}
+              >
+                {hasImage && selectedTag !== tag.id && (
+                  <span className="absolute left-2 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-primary/60" />
+                )}
+                <span className={hasImage && selectedTag !== tag.id ? "ml-3" : ""}>
+                  {tag.tagName}
+                </span>
+                {count > 0 && <span className="ml-2 text-xs opacity-70">{count} videos</span>}
+              </button>
+            );
+          })}
+          {otherTags.length > 0 && (
+            <button
+              onClick={() => setSelectedTag("others")}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                selectedTag === "others"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-card text-card-foreground hover-elevate"
+              }`}
+              data-testid="button-filter-others"
+            >
+              Others ({otherTags.length})
+            </button>
+          )}
         </div>
       </div>
 

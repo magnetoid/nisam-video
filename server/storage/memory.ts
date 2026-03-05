@@ -48,6 +48,7 @@ export class MemStorage implements IStorage {
   private videos: Map<string, Video> = new Map();
   private categories: Map<string, Category> = new Map();
   private tags: Map<string, Tag> = new Map();
+  private tagTranslationsByTagId: Map<string, TagTranslation[]> = new Map();
   private videoCategories: Map<string, { videoId: string, categoryId: string }> = new Map();
   private playlists: Map<string, Playlist> = new Map();
   private playlistVideos: Map<string, PlaylistVideo> = new Map();
@@ -717,25 +718,45 @@ export class MemStorage implements IStorage {
         updatedAt: new Date()
     })) as TagTranslation[];
 
+    this.tagTranslationsByTagId.set(id, fullTranslations);
+
+    const defaultTagName =
+      fullTranslations.find((t) => t.languageCode === 'en')?.tagName ||
+      fullTranslations[0]?.tagName ||
+      'Tag';
+
     return {
         ...newTag,
-        translations: fullTranslations
+        translations: fullTranslations,
+        tagName: defaultTagName,
+        videoCount: 1,
     };
   }
   
   async getLocalizedTag(id: string, lang: string): Promise<LocalizedTag | undefined> {
       const tag = this.tags.get(id);
       if (!tag) return undefined;
+
+      const translations = this.tagTranslationsByTagId.get(id) || [];
+      const chosen =
+        translations.find((t) => t.languageCode === lang) ||
+        translations.find((t) => t.languageCode === 'en') ||
+        translations[0];
+      const tagName = chosen?.tagName || 'Mock Tag';
       return {
           ...tag,
-          translations: [{
-              id: 'mock',
-              tagId: id,
-              languageCode: lang,
-              tagName: 'Mock Tag',
-              createdAt: new Date(),
-              updatedAt: new Date()
-          }]
+          translations: chosen
+            ? [chosen]
+            : [{
+                id: 'mock',
+                tagId: id,
+                languageCode: lang,
+                tagName,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+              }],
+          tagName,
+          videoCount: 1,
       };
   }
 
@@ -745,28 +766,47 @@ export class MemStorage implements IStorage {
   }
 
   async getAllLocalizedTags(lang: string): Promise<LocalizedTag[]> {
-    const tagMap = new Map<string, { tagName: string; videoCount: number }>();
-    
-    this.tags.forEach(tag => {
-      if (!tagMap.has(tag.id)) {
-        tagMap.set(tag.id, { tagName: tag.tagName || '', videoCount: 0 });
-      }
-      tagMap.get(tag.id)!.videoCount++;
+    const countByName = new Map<string, number>();
+    const localized: LocalizedTag[] = [];
+
+    for (const tag of this.tags.values()) {
+      const translations = this.tagTranslationsByTagId.get(tag.id) || [];
+      const chosen =
+        translations.find((t) => t.languageCode === lang) ||
+        translations.find((t) => t.languageCode === 'en') ||
+        translations[0];
+      const tagName = chosen?.tagName || 'Mock Tag';
+
+      countByName.set(tagName, (countByName.get(tagName) || 0) + 1);
+
+      localized.push({
+        ...tag,
+        translations: chosen ? [chosen] : [],
+        tagName,
+      });
+    }
+
+    for (const t of localized) {
+      t.videoCount = countByName.get(t.tagName) || 0;
+    }
+
+    localized.sort((a, b) => {
+      const aCount = a.videoCount || 0;
+      const bCount = b.videoCount || 0;
+      if (bCount !== aCount) return bCount - aCount;
+      return (a.tagName || '').localeCompare(b.tagName || '');
     });
-    
-    return Array.from(this.tags.values()).map(t => ({
-      ...t,
-      translations: [],
-      tagName: t.tagName || '',
-      videoCount: tagMap.get(t.id)?.videoCount || 0
-    })).filter(t => t.tagName);
+
+    return localized;
   }
 
   async getLocalizedTagsByVideoId(videoId: string, lang: string): Promise<LocalizedTag[]> {
     const tags = Array.from(this.tags.values()).filter(t => t.videoId === videoId);
     return tags.map(t => ({
         ...t,
-        translations: []
+        translations: (this.tagTranslationsByTagId.get(t.id) || []).filter(tr => tr.languageCode === lang),
+        tagName: ((this.tagTranslationsByTagId.get(t.id) || []).find(tr => tr.languageCode === lang)?.tagName) || 'Mock Tag',
+        videoCount: 1,
     }));
   }
 
@@ -776,6 +816,7 @@ export class MemStorage implements IStorage {
 
   async deleteTag(id: string): Promise<void> {
       this.tags.delete(id);
+      this.tagTranslationsByTagId.delete(id);
   }
 
   async addTagTranslation(tagId: string, translation: InsertTagTranslation): Promise<TagTranslation> {
@@ -788,7 +829,10 @@ export class MemStorage implements IStorage {
   
   async deleteTagsByVideoId(videoId: string): Promise<void> {
     const tagsToDelete = Array.from(this.tags.values()).filter(t => t.videoId === videoId);
-    tagsToDelete.forEach(t => this.tags.delete(t.id));
+    tagsToDelete.forEach(t => {
+      this.tags.delete(t.id);
+      this.tagTranslationsByTagId.delete(t.id);
+    });
   }
   
   async getTagWithAllTranslations(id: string): Promise<(Tag & { translations: TagTranslation[] }) | undefined> {

@@ -266,13 +266,13 @@ export default function AdminSEO() {
             onValueChange={(tab) => setLocation(setTabParam(path, query, tab))}
             className="relative z-10"
           >
-            <TabsList className="grid w-full min-h-[42px] grid-cols-2 sm:grid-cols-3 md:grid-cols-6">
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="global">Global</TabsTrigger>
-              <TabsTrigger value="advanced">Advanced</TabsTrigger>
-              <TabsTrigger value="meta-tags">Meta Tags</TabsTrigger>
-              <TabsTrigger value="redirects">Redirects</TabsTrigger>
-              <TabsTrigger value="sitemap">Sitemap & Robots</TabsTrigger>
+            <TabsList className="flex w-full flex-wrap justify-start gap-1 min-h-[44px] pointer-events-auto relative z-20">
+              <TabsTrigger value="overview" className="min-h-[44px]">Overview</TabsTrigger>
+              <TabsTrigger value="global" className="min-h-[44px]">Global</TabsTrigger>
+              <TabsTrigger value="advanced" className="min-h-[44px]">Advanced</TabsTrigger>
+              <TabsTrigger value="meta-tags" className="min-h-[44px]">Meta Tags</TabsTrigger>
+              <TabsTrigger value="redirects" className="min-h-[44px]">Redirects</TabsTrigger>
+              <TabsTrigger value="sitemap" className="min-h-[44px]">Sitemap & Robots</TabsTrigger>
             </TabsList>
 
             <TabsContent value="overview" className="space-y-4">
