@@ -6,6 +6,7 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { SEO } from "@/components/SEO";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { VideoWithLocalizedRelations } from "@shared/schema";
 import { Play, Smartphone, Film } from "lucide-react";
 import { SiYoutube, SiTiktok } from "react-icons/si";
@@ -89,8 +90,13 @@ export default function Shorts() {
         </div>
 
         {isLoading && (
-          <div className="flex justify-center py-16">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6" data-testid="shorts-skeleton">
+            {Array.from({ length: 18 }).map((_, i) => (
+              <div key={i} className="space-y-2">
+                <Skeleton className="aspect-[9/16] w-full rounded-lg" />
+                <Skeleton className="h-3 w-5/6" />
+              </div>
+            ))}
           </div>
         )}
 

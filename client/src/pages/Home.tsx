@@ -78,7 +78,7 @@ export default function Home() {
       .slice(0, MAX_CATEGORIES);
   }, [categories]);
 
-  const { data: searchVideos = [] } = useQuery<VideoWithLocalizedRelations[]>({
+  const { data: searchVideos = [], isLoading: searchLoading, isFetching: searchFetching } = useQuery<VideoWithLocalizedRelations[]>({
     queryKey: ["/api/videos?limit=100", i18n.language],
     enabled: showSearch,
     staleTime: 30 * 1000,
@@ -220,6 +220,7 @@ export default function Home() {
         onClose={() => setShowSearch(false)}
         results={searchVideos}
         categories={categories}
+        isLoading={searchLoading || searchFetching}
       />
 
       <Footer />

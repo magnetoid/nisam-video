@@ -1,17 +1,61 @@
 import { LazyVideoCard } from "./LazyVideoCard";
 import type { VideoWithLocalizedRelations } from "@shared/schema";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface VideoGridProps {
   videos: VideoWithLocalizedRelations[];
   title?: string;
+  isLoading?: boolean;
+  isFetching?: boolean;
+  skeletonCount?: number;
+  emptyMessage?: string;
 }
 
-export function VideoGrid({ videos, title }: VideoGridProps) {
+function VideoCardSkeleton() {
+  return (
+    <div className="space-y-2">
+      <Skeleton className="w-full aspect-video rounded-md" />
+      <Skeleton className="h-4 w-5/6" />
+      <div className="flex items-center justify-between gap-2">
+        <Skeleton className="h-3 w-2/5" />
+        <Skeleton className="h-6 w-10 rounded-md" />
+      </div>
+    </div>
+  );
+}
+
+export function VideoGrid({
+  videos,
+  title,
+  isLoading,
+  isFetching,
+  skeletonCount = 18,
+  emptyMessage = "No videos found",
+}: VideoGridProps) {
+  const showSkeleton = (isLoading || isFetching) && videos.length === 0;
+
+  if (showSkeleton) {
+    return (
+      <div className="space-y-6" data-testid="video-grid-skeleton">
+        {title && (
+          <h2 className="text-2xl font-bold" data-testid="text-section-title">
+            {title}
+          </h2>
+        )}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 sm:gap-6 md:gap-8">
+          {Array.from({ length: skeletonCount }).map((_, i) => (
+            <VideoCardSkeleton key={i} />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   if (videos.length === 0) {
     return (
       <div className="text-center py-16">
         <p className="text-muted-foreground text-lg">
-          No videos found
+          {emptyMessage}
         </p>
       </div>
     );

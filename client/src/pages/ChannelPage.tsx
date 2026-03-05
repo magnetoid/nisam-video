@@ -9,19 +9,8 @@ import { SEO } from "@/components/SEO";
 import { VideoGrid } from "@/components/VideoGrid";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 import { apiRequest } from "@/lib/queryClient";
 import type { Channel, VideoWithLocalizedRelations } from "@shared/schema";
-
-function VideoGridSkeleton() {
-  return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 sm:gap-6 md:gap-8">
-      {Array.from({ length: 12 }).map((_, i) => (
-        <Skeleton key={i} className="w-full aspect-video rounded-md" />
-      ))}
-    </div>
-  );
-}
 
 export default function ChannelPage() {
   const { t, i18n } = useTranslation();
@@ -203,7 +192,13 @@ export default function ChannelPage() {
             </div>
           )}
 
-          {!channelError && !videosError && (videosLoading ? <VideoGridSkeleton /> : <VideoGrid videos={videos} title={t("channelPage.videosTitle")} />)}
+          {!channelError && !videosError && (
+            <VideoGrid
+              videos={videos}
+              title={t("channelPage.videosTitle")}
+              isLoading={videosLoading}
+            />
+          )}
         </section>
       </main>
 

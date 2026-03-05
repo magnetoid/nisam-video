@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { VideoCard } from "./VideoCard";
 import type { VideoWithLocalizedRelations, LocalizedCategory } from "@shared/schema";
 
@@ -13,6 +14,7 @@ interface SearchOverlayProps {
   onSearch?: (query: string, categoryId?: string) => void;
   results?: VideoWithLocalizedRelations[];
   categories?: LocalizedCategory[];
+  isLoading?: boolean;
 }
 
 export function SearchOverlay({
@@ -21,6 +23,7 @@ export function SearchOverlay({
   onSearch,
   results = [],
   categories = [],
+  isLoading,
 }: SearchOverlayProps) {
   const [query, setQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<
@@ -101,7 +104,17 @@ export function SearchOverlay({
         </div>
 
         <div className="p-6">
-          {results.length > 0 ? (
+          {isLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" data-testid="search-skeleton">
+              {Array.from({ length: 9 }).map((_, i) => (
+                <div key={i} className="space-y-2">
+                  <Skeleton className="w-full aspect-video rounded-md" />
+                  <Skeleton className="h-4 w-5/6" />
+                  <Skeleton className="h-3 w-2/5" />
+                </div>
+              ))}
+            </div>
+          ) : results.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {results.map((video) => (
                 <VideoCard key={video.id} video={video} />

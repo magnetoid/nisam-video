@@ -25,7 +25,7 @@ export default function Categories() {
     setSelectedCategory(filter);
   }, [location]);
 
-  const { data: categories = [] } = useQuery<LocalizedCategory[]>({
+  const { data: categories = [], isLoading: categoriesLoading, isFetching: categoriesFetching } = useQuery<LocalizedCategory[]>({
     queryKey: ["/api/categories", i18n.language],
     queryFn: async () => {
       const res = await apiRequest("GET", `/api/categories?lang=${i18n.language}`);
@@ -65,7 +65,7 @@ export default function Categories() {
 
   const featuredVideo = featuredVideos[0] || null;
 
-  const { data: gridVideos = [] } = useQuery<VideoWithLocalizedRelations[]>({
+  const { data: gridVideos = [], isLoading: gridVideosLoading, isFetching: gridVideosFetching } = useQuery<VideoWithLocalizedRelations[]>({
     queryKey: ["/api/videos", "category-grid", selectedCategory, i18n.language],
     queryFn: async () => {
       if (!selectedCategory || selectedCategory === "others") {
@@ -250,6 +250,8 @@ export default function Categories() {
                     "Category Videos")
                 : "Latest Videos"
             }
+            isLoading={gridVideosLoading}
+            isFetching={gridVideosFetching}
           />
         )}
       </div>

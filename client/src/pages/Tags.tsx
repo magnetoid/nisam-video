@@ -16,7 +16,7 @@ export default function Tags() {
   const [selectedTag, setSelectedTag] = useState<string | "others" | null>(null);
   const { i18n } = useTranslation();
 
-  const { data: localizedTags = [] } = useQuery<LocalizedTag[]>({
+  const { data: localizedTags = [], isLoading: tagsLoading, isFetching: tagsFetching } = useQuery<LocalizedTag[]>({
       queryKey: ["/api/tags", i18n.language],
       queryFn: async () => {
           const res = await apiRequest("GET", `/api/tags?lang=${i18n.language}`);
@@ -88,7 +88,7 @@ export default function Tags() {
     }
   }, [location, sortedTags]);
 
-  const { data: videos = [] } = useQuery<VideoWithLocalizedRelations[]>({
+  const { data: videos = [], isLoading: videosLoading, isFetching: videosFetching } = useQuery<VideoWithLocalizedRelations[]>({
     queryKey: ["/api/videos", "tag-grid", selectedTagName, selectedTag, i18n.language],
     queryFn: async () => {
       if (!selectedTag || selectedTag === "others" || !selectedTagName) {
@@ -263,10 +263,15 @@ export default function Tags() {
             Select a tag from the list. “Others” contains the remaining {otherTags.length} tags.
           </div>
         ) : (
-          <VideoGrid videos={videos} title={selectedTagName ? `Videos tagged "${selectedTagName}"` : "Latest Videos"} />
+          <VideoGrid
+            videos={videos}
+            title={selectedTagName ? `Videos tagged "${selectedTagName}"` : "Latest Videos"}
+            isLoading={videosLoading}
+            isFetching={videosFetching}
+          />
         )}
 
-        {localizedTags.length === 0 && (
+        {!tagsLoading && !tagsFetching && localizedTags.length === 0 && (
           <div className="text-center py-16">
             <p className="text-muted-foreground text-lg">
               No tags found. AI categorization will generate tags automatically.
