@@ -1,5 +1,5 @@
 import { Router } from "express";
-import Jimp from "jimp";
+import { Jimp } from "jimp";
 import { getCache, setCache } from "../services/redis.js";
 
 const router = Router();
