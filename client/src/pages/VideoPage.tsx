@@ -36,12 +36,14 @@ export default function VideoPage() {
     retry: 2,
   });
 
-  const { data: allVideos = [] } = useQuery<VideoWithLocalizedRelations[]>({
-    queryKey: ["/api/videos", i18n.language],
+  const { data: similarVideos = [] } = useQuery<VideoWithLocalizedRelations[]>({
+    queryKey: ["/api/videos", video?.id, "similar", i18n.language],
     queryFn: async () => {
-      const res = await apiRequest("GET", `/api/videos?lang=${i18n.language}`);
+      if (!video?.id) return [];
+      const res = await apiRequest("GET", `/api/videos/${video.id}/similar?lang=${i18n.language}`);
       return res.json();
     },
+    enabled: !!video?.id,
   });
 
   // Track view when video is loaded
@@ -104,16 +106,6 @@ export default function VideoPage() {
   const embedUrl = isTikTok 
     ? (video.embedUrl || `https://www.tiktok.com/embed/v2/${video.videoId}`)
     : `https://www.youtube.com/embed/${video.videoId}?autoplay=1`;
-
-  const similarVideos = allVideos
-    .filter(
-      (v) =>
-        v.id !== video.id &&
-        v.categories?.some((cat) =>
-          video.categories?.some((vidCat) => vidCat.id === cat.id),
-        ),
-    )
-    .slice(0, 6);
 
   const seoTitle = video.title;
   const seoDescription =

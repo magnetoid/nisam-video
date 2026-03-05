@@ -76,10 +76,12 @@ export interface IStorage {
     lang?: string;
     limit?: number;
     offset?: number;
-    sort?: "publishDate" | "createdAt";
+    sort?: "publishDate" | "createdAt" | "views" | "popularity";
+    minViews?: number;
   }): Promise<VideoWithLocalizedRelations[]>;
   updateVideo(id: string, data: Partial<Video>): Promise<Video | undefined>;
   deleteVideo(id: string): Promise<void>;
+  deleteVideosBulk(ids: string[]): Promise<void>;
   getVideoByVideoId(videoId: string): Promise<Video | undefined>;
   getVideoIdsByChannel(channelId: string): Promise<string[]>;
   countVideosByChannel(channelId: string): Promise<number>;

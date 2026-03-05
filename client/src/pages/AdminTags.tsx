@@ -79,6 +79,26 @@ export default function AdminTags() {
     queryKey: ["/api/tag-images"],
   });
 
+  const regenerateMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest("POST", "/api/admin/regenerate?type=tags&mode=missing&limit=50");
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tags/stats"] });
+      toast({
+        title: "Regeneration Started",
+        description: `Processed ${data.processed} videos. generated ${data.tagsGenerated} tags.`,
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to regenerate tags",
+        variant: "destructive",
+      });
+    },
+  });
+
   const tagImageMap = tagImages.reduce((acc, img) => {
     acc[img.tagName] = img;
     return acc;
@@ -320,6 +340,22 @@ export default function AdminTags() {
             View and manage video tags and their images
           </p>
         </div>
+        <Button 
+          onClick={() => regenerateMutation.mutate()} 
+          disabled={regenerateMutation.isPending}
+        >
+          {regenerateMutation.isPending ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Regenerating...
+            </>
+          ) : (
+            <>
+              <Sparkles className="mr-2 h-4 w-4" />
+              Regenerate Missing Tags
+            </>
+          )}
+        </Button>
       </div>
 
           {/* Stats */}

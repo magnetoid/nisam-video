@@ -70,6 +70,26 @@ export default function AdminCategories() {
     queryKey: ["/api/admin/categories"],
   });
 
+  const regenerateMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest("POST", "/api/admin/regenerate?type=categories&mode=missing&limit=50");
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/categories"] });
+      toast({
+        title: "Regeneration Started",
+        description: `Processed ${data.processed} videos. Generated ${data.categoriesGenerated} categories.`,
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to regenerate categories",
+        variant: "destructive",
+      });
+    },
+  });
+
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
       return await apiRequest("POST", "/api/categories", data);
@@ -265,6 +285,24 @@ export default function AdminCategories() {
           >
             <Plus className="h-4 w-4" />
             Create Category
+          </Button>
+          <Button 
+            onClick={() => regenerateMutation.mutate()} 
+            disabled={regenerateMutation.isPending}
+            variant="secondary"
+            className="gap-2"
+          >
+            {regenerateMutation.isPending ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Regenerating...
+              </>
+            ) : (
+              <>
+                <Sparkles className="mr-2 h-4 w-4" />
+                Regenerate Missing
+              </>
+            )}
           </Button>
         </div>
 

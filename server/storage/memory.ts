@@ -29,6 +29,9 @@ import {
   type HeroVideo,
   type InsertHeroVideo,
   type HeroVideoWithVideo,
+  type HeroSettings,
+  type HeroImage,
+  type InsertHeroImage,
   type VideoWithLocalizedRelations,
   type AnalyticsEvent,
   type InsertAnalyticsEvent,
@@ -366,7 +369,8 @@ export class MemStorage implements IStorage {
     lang?: string;
     limit?: number;
     offset?: number;
-    sort?: "publishDate" | "createdAt";
+    sort?: "publishDate" | "createdAt" | "views" | "popularity";
+    minViews?: number;
   }): Promise<VideoWithLocalizedRelations[]> {
     let videos = Array.from(this.videos.values());
     const lang = filters?.lang || 'en';
@@ -387,11 +391,29 @@ export class MemStorage implements IStorage {
             .map(vc => vc.videoId);
         videos = videos.filter(v => videoIdsWithCategory.includes(v.id));
     }
+    if (filters?.minViews) {
+        videos = videos.filter(v => {
+            const views = parseInt(v.viewCount?.replace(/[^0-9]/g, '') || '0', 10);
+            return views >= (filters.minViews || 0);
+        });
+    }
 
     const sort = filters?.sort || "publishDate";
     videos.sort((a, b) => {
       if (sort === "createdAt") {
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      }
+      if (sort === "views") {
+        const viewsA = parseInt(a.viewCount?.replace(/[^0-9]/g, '') || '0', 10);
+        const viewsB = parseInt(b.viewCount?.replace(/[^0-9]/g, '') || '0', 10);
+        return viewsB - viewsA;
+      }
+      if (sort === "popularity") {
+        const getScore = (v: Video) => {
+            const views = parseInt(v.viewCount?.replace(/[^0-9]/g, '') || '0', 10);
+            return views * 0.3 + (v.internalViewsCount || 0) * 50 + (v.likesCount || 0) * 100;
+        };
+        return getScore(b) - getScore(a);
       }
       return new Date(b.publishDate || 0).getTime() - new Date(a.publishDate || 0).getTime();
     });
@@ -416,6 +438,20 @@ export class MemStorage implements IStorage {
 
   async deleteVideo(id: string): Promise<void> {
     this.videos.delete(id);
+  }
+
+  async deleteVideosBulk(ids: string[]): Promise<void> {
+    ids.forEach(id => this.videos.delete(id));
+  }
+
+  async getVideoIdsByChannel(channelId: string): Promise<string[]> {
+    return Array.from(this.videos.values())
+        .filter(v => v.channelId === channelId)
+        .map(v => v.videoId);
+  }
+
+  async countVideosByChannel(channelId: string): Promise<number> {
+    return Array.from(this.videos.values()).filter(v => v.channelId === channelId).length;
   }
 
   async getVideoByVideoId(videoId: string): Promise<Video | undefined> {
@@ -538,6 +574,10 @@ export class MemStorage implements IStorage {
         id,
         displayOrder: hv.displayOrder ?? index,
         videoId: hv.videoId || null,
+        title: hv.title || "Default Title", // Provide default
+        description: hv.description || null,
+        buttonText: hv.buttonText || null,
+        buttonLink: hv.buttonLink || null,
         thumbnailUrl: hv.thumbnailUrl || null,
         videoUrl: hv.videoUrl || null,
         duration: hv.duration || null,
@@ -551,6 +591,58 @@ export class MemStorage implements IStorage {
     });
     
     return this.getHeroVideos();
+  }
+
+  async getHeroSettings(): Promise<HeroSettings | null> {
+    return {
+        id: "1",
+        fallbackImages: [],
+        rotationInterval: 4000,
+        animationType: "fade",
+        defaultPlaceholderUrl: null,
+        enableRandom: true,
+        enableImages: true,
+        slideCount: 5,
+        homeHeroMode: 'primary',
+        popularPageMode: 'views',
+        popularSegments: [],
+        updatedAt: new Date()
+    };
+  }
+
+  async updateHeroSettings(data: Partial<HeroSettings>): Promise<HeroSettings> {
+    return {
+        id: "1",
+        fallbackImages: [],
+        rotationInterval: 4000,
+        animationType: "fade",
+        defaultPlaceholderUrl: null,
+        enableRandom: true,
+        enableImages: true,
+        slideCount: 5,
+        homeHeroMode: 'primary',
+        popularPageMode: 'views',
+        popularSegments: [],
+        updatedAt: new Date(),
+        ...data
+    };
+  }
+
+  async getHeroImages(): Promise<HeroImage[]> {
+    return [];
+  }
+
+  async upsertHeroImage(image: InsertHeroImage): Promise<HeroImage> {
+      return {
+          id: image.id || "new",
+          url: image.url || "",
+          alt: image.alt || "",
+          aspectRatio: image.aspectRatio || "16:9",
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          ...image
+      };
   }
 
   // Analytics Events

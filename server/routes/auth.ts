@@ -25,10 +25,17 @@ function getConfiguredAdmin() {
     return { username: normalizeCredential(ADMIN_USERNAME), password: normalizeCredential(ADMIN_PASSWORD) };
   }
 
-  return {
-    username: normalizeCredential(ADMIN_USERNAME || "admin"),
-    password: normalizeCredential(ADMIN_PASSWORD || "admin"),
-  };
+  if (process.env.NODE_ENV === "development") {
+    if (!ADMIN_USERNAME || !ADMIN_PASSWORD) {
+      console.warn("[Auth] Using default admin credentials (admin/admin) for development mode.");
+    }
+    return {
+      username: normalizeCredential(ADMIN_USERNAME || "admin"),
+      password: normalizeCredential(ADMIN_PASSWORD || "admin"),
+    };
+  }
+
+  return null;
 }
 
 const router = Router();

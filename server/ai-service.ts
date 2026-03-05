@@ -206,15 +206,15 @@ Description: ${description || "No description"}
 Return a JSON object with:
 - categories_en: array of up to 5 broad categories in English
 - categories_sr: array of up to 5 broad categories in Serbian (Latin script)
-- tags_en: array of up to 5 specific descriptive tags in English
-- tags_sr: array of up to 5 specific descriptive tags in Serbian (Latin script)
+- tags_en: array of up to 10 specific descriptive tags in English
+- tags_sr: array of up to 10 specific descriptive tags in Serbian (Latin script)
 
 Example JSON:
 {
   "categories_en": ["Technology", "Education"],
   "categories_sr": ["Tehnologija", "Obrazovanje"],
-  "tags_en": ["AI", "Coding"],
-  "tags_sr": ["Veštačka inteligencija", "Programiranje"]
+  "tags_en": ["AI", "Coding", "Tutorial", "Programming", "Tech", "Software", "Development", "Web", "JavaScript", "React"],
+  "tags_sr": ["Veštačka inteligencija", "Programiranje", "Tutorijal", "Kodiranje", "Tehnologija", "Softver", "Razvoj", "Veb", "JavaScript", "React"]
 }
 
 Return ONLY valid JSON. Do not include markdown formatting or explanations.`;

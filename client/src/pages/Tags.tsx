@@ -172,38 +172,6 @@ export default function Tags() {
       </div>
 
       <div className="px-4 sm:px-8 md:px-16 py-8">
-        <h2 className="text-2xl font-bold mb-6">Popular Tags</h2>
-        <div className="flex flex-wrap gap-2 sm:gap-3">
-          {top20Tags.slice(0, 12).map((tag) => {
-            const hasImage = !!(tag.tagName && tagImageMap[tag.tagName]);
-            const count = tagCountMap.get(tag.tagName) ?? 0;
-            return (
-              <button
-                key={tag.id}
-                onClick={() => setSelectedTag(tag.id)}
-                className={`relative px-4 py-2 rounded-full text-sm font-medium transition-colors overflow-hidden ${
-                  selectedTag === tag.id
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-card text-card-foreground hover-elevate"
-                }`}
-                data-testid={`button-popular-tag-${tag.id}`}
-              >
-                {hasImage && selectedTag !== tag.id && (
-                  <span className="absolute left-2 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-primary/60" />
-                )}
-                <span className={hasImage && selectedTag !== tag.id ? "ml-3" : ""}>
-                  {tag.tagName}
-                </span>
-                {count > 0 && (
-                  <span className="ml-2 text-xs opacity-70">{count} videos</span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      <div className="px-4 sm:px-8 md:px-16 py-8">
         <h2 className="text-2xl font-bold mb-6">Browse by Tag</h2>
         <div className="flex flex-wrap gap-2 sm:gap-3 mb-8">
           <button

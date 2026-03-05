@@ -19,6 +19,7 @@ import { eq } from "drizzle-orm";
 import { errorLogBus, listBookmarks, listErrorEvents, toggleBookmark } from "../error-log-service.js";
 import { invalidateCacheOnMutation } from "../cache-middleware.js";
 import { getPerformanceSummary } from "../performance-metrics.js";
+import pLimit from "p-limit";
 
 const router = Router();
 
@@ -409,116 +410,119 @@ router.post("/regenerate", requireAuth, async (req, res) => {
     let categoriesGenerated = 0;
     let tagsGenerated = 0;
 
-    for (const video of batch) {
-      try {
-        const startedAt = Date.now();
-        const categorizeResult = await categorizeVideo(
-          video.title,
-          video.description || "",
-          { timeoutMs: 20000 },
-        );
+    const concurrencyLimit = pLimit(5); // Process 5 videos concurrently
 
-        if (type === "all" || type === "categories") {
-          const categoriesEn = categorizeResult.categories.en || [];
-          const categoriesSr = categorizeResult.categories.sr || [];
-          const maxCategories = Math.max(categoriesEn.length, categoriesSr.length);
-          const categoryIds: string[] = [];
+    const tasks = batch.map((video) => 
+      concurrencyLimit(async () => {
+        try {
+          const startedAt = Date.now();
+          const categorizeResult = await categorizeVideo(
+            video.title,
+            video.description || "",
+            { timeoutMs: 30000 }, // Increased timeout for AI
+          );
 
-          for (let i = 0; i < maxCategories; i++) {
-            const nameEn = categoriesEn[i];
-            const nameSr = categoriesSr[i];
+          if (type === "all" || type === "categories") {
+            const categoriesEn = categorizeResult.categories.en || [];
+            const categoriesSr = categorizeResult.categories.sr || [];
+            const maxCategories = Math.max(categoriesEn.length, categoriesSr.length);
+            const categoryIds: string[] = [];
 
-            if (!nameEn) continue;
+            for (let i = 0; i < maxCategories; i++) {
+              const nameEn = categoriesEn[i];
+              const nameSr = categoriesSr[i];
 
-            const slug = generateSlug(nameEn);
-            let category = await storage.getLocalizedCategoryBySlug(slug, 'en');
+              if (!nameEn) continue;
 
-            if (!category) {
-               const translations = [];
-               translations.push({
-                 languageCode: 'en',
-                 name: nameEn,
-                 slug,
-                 description: null
-               });
+              const slug = generateSlug(nameEn);
+              let category = await storage.getLocalizedCategoryBySlug(slug, 'en');
 
-               if (nameSr) {
+              if (!category) {
+                 const translations = [];
                  translations.push({
-                   languageCode: 'sr-Latn',
-                   name: nameSr,
-                   slug, 
+                   languageCode: 'en',
+                   name: nameEn,
+                   slug,
                    description: null
                  });
-               }
 
-               category = await storage.createCategory({}, translations);
-            } else if (nameSr) {
-               try {
-                  await storage.addCategoryTranslation(category.id, {
-                    categoryId: category.id,
-                    languageCode: 'sr-Latn',
-                    name: nameSr,
-                    slug,
-                    description: null
-                  }).catch(() => {}); 
-               } catch (e) {
-                 // Ignore
-               }
-            }
-            categoryIds.push(category.id);
-          }
+                 if (nameSr) {
+                   translations.push({
+                     languageCode: 'sr-Latn',
+                     name: nameSr,
+                     slug, 
+                     description: null
+                   });
+                 }
 
-          if (categoryIds.length > 0) {
-            await storage.removeVideoCategories(video.id);
-            for (const categoryId of categoryIds) {
-              await storage.addVideoCategory(video.id, categoryId);
-              categoriesGenerated++;
-            }
-          }
-        }
-
-        if (type === "all" || type === "tags") {
-          const tagsEn = categorizeResult.tags.en || [];
-          const tagsSr = categorizeResult.tags.sr || [];
-          const maxTags = Math.max(tagsEn.length, tagsSr.length);
-
-          if (maxTags > 0) {
-            await storage.deleteTagsByVideoId(video.id);
-            
-            for (let i = 0; i < maxTags; i++) {
-              const tagEn = tagsEn[i];
-              const tagSr = tagsSr[i];
-              
-              if (!tagEn) continue;
-
-              const translations = [{
-                languageCode: 'en',
-                tagName: tagEn
-              }];
-
-              if (tagSr) {
-                translations.push({
-                  languageCode: 'sr-Latn',
-                  tagName: tagSr
-                });
+                 category = await storage.createCategory({}, translations);
+              } else if (nameSr) {
+                 try {
+                    await storage.addCategoryTranslation(category.id, {
+                      categoryId: category.id,
+                      languageCode: 'sr-Latn',
+                      name: nameSr,
+                      slug,
+                      description: null
+                    }).catch(() => {}); 
+                 } catch (e) {
+                   // Ignore
+                 }
               }
+              categoryIds.push(category.id);
+            }
 
-              await storage.createTag({ videoId: video.id }, translations);
-              tagsGenerated++;
+            if (categoryIds.length > 0) {
+              await storage.removeVideoCategories(video.id);
+              for (const categoryId of categoryIds) {
+                await storage.addVideoCategory(video.id, categoryId);
+                categoriesGenerated++;
+              }
             }
           }
-        }
 
-        processed++;
-        console.log(`[admin] regenerate processed video=${video.id} in ${Date.now() - startedAt}ms`);
-      } catch (error) {
-        const msg = error instanceof Error ? error.message : String(error);
-        console.error(`[admin] Error regenerating video ${video.id}:`, error);
-        if (msg.toLowerCase().includes("timeout") || msg.toLowerCase().includes("aborted")) {
-          console.warn(`[admin] regenerate timed out for video=${video.id}`);
+          if (type === "all" || type === "tags") {
+            const tagsEn = categorizeResult.tags.en || [];
+            const tagsSr = categorizeResult.tags.sr || [];
+            const maxTags = Math.max(tagsEn.length, tagsSr.length);
+
+            if (maxTags > 0) {
+              await storage.deleteTagsByVideoId(video.id);
+              
+              for (let i = 0; i < maxTags; i++) {
+                const tagEn = tagsEn[i];
+                const tagSr = tagsSr[i];
+                
+                if (!tagEn) continue;
+
+                const translations = [{
+                  languageCode: 'en',
+                  tagName: tagEn
+                }];
+
+                if (tagSr) {
+                  translations.push({
+                    languageCode: 'sr-Latn',
+                    tagName: tagSr
+                  });
+                }
+
+                await storage.createTag({ videoId: video.id }, translations);
+                tagsGenerated++;
+              }
+            }
+          }
+
+          processed++;
+          console.log(`[admin] regenerate processed video=${video.id} in ${Date.now() - startedAt}ms`);
+        } catch (error) {
+          const msg = error instanceof Error ? error.message : String(error);
+          console.error(`[admin] Error regenerating video ${video.id}:`, error);
         }
-      }
-    }
+      })
+    );
+
+    await Promise.all(tasks);
 
     const { cache: cacheModule } = await import("../cache.js");
     cacheModule.clear();

@@ -212,29 +212,6 @@ export default function Categories() {
         </div>
       </div>
 
-      {tagStats.length > 0 && (
-        <div className="px-4 sm:px-8 md:px-16 pb-8">
-          <h2 className="text-2xl font-bold mb-6">Popular Tags</h2>
-          <div className="flex flex-wrap gap-2 sm:gap-3">
-            {[...tagStats]
-              .filter((t) => (t.count ?? 0) > 0)
-              .sort((a, b) => (b.count ?? 0) - (a.count ?? 0))
-              .slice(0, 12)
-              .map((t) => (
-                <button
-                  key={t.tagName}
-                  onClick={() => setLocation(`/tags?filter=${encodeURIComponent(t.tagName)}`)}
-                  className="px-4 py-2 rounded-full text-sm font-medium transition-colors bg-card text-card-foreground hover-elevate"
-                  data-testid={`button-popular-tag-${t.tagName}`}
-                >
-                  {t.tagName}
-                  <span className="ml-2 text-xs opacity-70">{t.count} videos</span>
-                </button>
-              ))}
-          </div>
-        </div>
-      )}
-
       {/* Videos Grid */}
       <div className="px-4 sm:px-8 md:px-16 space-y-12 pb-16">
         {selectedCategory === "others" ? (

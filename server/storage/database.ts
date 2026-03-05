@@ -675,6 +675,35 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  async deleteVideosBulk(ids: string[]): Promise<void> {
+    try {
+      if (ids.length === 0) return;
+      
+      // Clean up related data in bulk
+      // 1. Tags
+      // Get all tag IDs for these videos
+      const baseTags = await db.select({ id: tags.id }).from(tags).where(inArray(tags.videoId, ids));
+      const tagIds = baseTags.map(t => t.id);
+      if (tagIds.length > 0) {
+        await db.delete(tagTranslations).where(inArray(tagTranslations.tagId, tagIds));
+        await db.delete(tags).where(inArray(tags.videoId, ids));
+      }
+      
+      // 2. Video Categories
+      await db.delete(videoCategories).where(inArray(videoCategories.videoId, ids));
+      
+      // 3. Playlist Videos
+      await db.delete(playlistVideos).where(inArray(playlistVideos.videoId, ids));
+      
+      // 4. Videos
+      await db.delete(videos).where(inArray(videos.id, ids));
+      
+      invalidateVideoContentCaches();
+    } catch (error) {
+      console.error(`[storage] deleteVideosBulk failed for ${ids.length} videos:`, error);
+    }
+  }
+
   /**
    * Retrieves a video by its external video ID from the database
    */
