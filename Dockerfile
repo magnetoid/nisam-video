@@ -16,8 +16,9 @@ ENV npm_config_libc=musl
 RUN npm install -g node-gyp
 
 COPY package.json package-lock.json* ./
-# Install with explicit Alpine flags so sharp downloads the binary instead of building
-RUN npm install --platform=linux --libc=musl --include=dev
+# Force-install the Alpine pre-built binary first, then the rest
+RUN npm install --platform=linux --libc=musl @img/sharp-linux-musl@0.34.5 && \
+    npm install --platform=linux --libc=musl --include=dev
 
 FROM base AS builder
 WORKDIR /app
@@ -46,7 +47,8 @@ COPY --from=builder /app/migrations ./migrations
 
 # Install production dependencies
 COPY package.json package-lock.json* ./
-RUN npm install --platform=linux --libc=musl --omit=dev
+RUN npm install --platform=linux --libc=musl @img/sharp-linux-musl@0.34.5 && \
+    npm install --platform=linux --libc=musl --omit=dev
 
 USER nodejs
 
