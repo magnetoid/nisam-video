@@ -1,5 +1,5 @@
 import { Router } from "express";
-import sharp from "sharp";
+import Jimp from "jimp";
 import { getCache, setCache } from "../services/redis.js";
 
 const router = Router();
@@ -40,18 +40,18 @@ router.get("/proxy", async (req, res) => {
     if (!response.ok) throw new Error("Failed to fetch image");
     
     const buffer = await response.arrayBuffer();
-    const optimizedBuffer = await sharp(buffer)
-      .resize({ width: 640, withoutEnlargement: true }) // Optimizacija velicine
-      .webp({ quality: 80 })
-      .toBuffer();
+    const image = await Jimp.read(Buffer.from(buffer));
+    const webpBuffer = await image
+      .resize(640, Jimp.AUTO) // keep aspect ratio
+      .quality(80)
+      .getBufferAsync(Jimp.MIME_WEBP);
 
     // 3. Save to Cache (7 days)
-    // Store as base64 in Redis
-    await setCache(cacheKey, optimizedBuffer.toString('base64'), 7 * 86400);
+    await setCache(cacheKey, webpBuffer.toString('base64'), 7 * 86400);
 
     res.setHeader("Content-Type", "image/webp");
     res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
-    res.send(optimizedBuffer);
+    res.send(webpBuffer);
   } catch (error) {
     console.error("Image proxy error:", error);
     res.status(500).send("Failed to process image");
