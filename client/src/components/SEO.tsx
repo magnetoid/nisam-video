@@ -104,7 +104,8 @@ export function SEO({
     }
 
     // Schema markup
-    if (meta.schemaMarkup) {
+    const effectiveSchema = meta.schemaMarkup || structuredData;
+    if (effectiveSchema) {
       let script = document.querySelector("#seo-schema-script");
       if (!script) {
         script = document.createElement('script');
@@ -112,7 +113,7 @@ export function SEO({
         script.setAttribute('type', 'application/ld+json');
         document.head.appendChild(script);
       }
-      script.textContent = JSON.stringify(meta.schemaMarkup);
+      script.textContent = JSON.stringify(effectiveSchema);
     }
 
     // Article meta tags (for videos and blog-like content)

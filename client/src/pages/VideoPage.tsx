@@ -11,7 +11,7 @@ import { VideoCard } from "@/components/VideoCard";
 import { LikeButton } from "@/components/LikeButton";
 import { useTranslation } from "react-i18next";
 import { useEffect, useState } from "react";
-import type { VideoWithLocalizedRelations } from "@shared/schema";
+import type { VideoWithLocalizedRelations, SupportedLanguage } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 
 export default function VideoPage() {
@@ -182,14 +182,37 @@ export default function VideoPage() {
     "@graph": [videoStructuredData, breadcrumbStructuredData],
   };
 
+  // Fetch supported languages for hreflang
+  const { data: languages = [] } = useQuery<SupportedLanguage[]>({
+    queryKey: ["/api/languages"],
+    staleTime: Infinity,
+  });
+
   // Current URL for canonical and hreflang - use slug for SEO
   const videoSlugOrId = video.slug || video.id;
-  const currentUrl = `${window.location.origin}/video/${videoSlugOrId}`;
-  const hreflangLinks = [
-    { lang: "sr-Latn", url: currentUrl },
-    { lang: "en", url: currentUrl },
-    { lang: "x-default", url: currentUrl },
-  ];
+  const origin = window.location.origin;
+  
+  // Construct language-specific URLs dynamically
+  const hreflangLinks = languages.map(lang => {
+    const prefix = lang.isDefault ? '' : `/${lang.code}`;
+    return {
+      lang: lang.code,
+      url: `${origin}${prefix}/video/${videoSlugOrId}`
+    };
+  });
+
+  // Add x-default pointing to default language (root)
+  hreflangLinks.push({ 
+    lang: "x-default", 
+    url: `${origin}/video/${videoSlugOrId}` 
+  });
+  
+  // Canonical should be the current page's full URL based on current language
+  const currentLang = languages.find(l => l.code === i18n.language);
+  const currentPrefix = currentLang?.isDefault ? '' : `/${i18n.language}`;
+  // Fallback to hardcoded check if languages not loaded yet
+  const effectivePrefix = currentLang ? currentPrefix : (i18n.language === 'en' ? '/en' : '');
+  const currentCanonical = `${origin}${effectivePrefix}/video/${videoSlugOrId}`;
 
   return (
     <>
@@ -197,17 +220,18 @@ export default function VideoPage() {
         title={seoTitle}
         description={seoDescription}
         image={seoImage}
-        path={`/video/${videoSlugOrId}`}
+        path={`${effectivePrefix}/video/${videoSlugOrId}`}
         type="video.other"
         structuredData={combinedStructuredData}
-        canonical={currentUrl}
+        canonical={currentCanonical}
         hreflang={hreflangLinks}
       />
 
       <Header />
 
-      <div className="min-h-screen bg-background pt-16">
-        {/* Back button - contained width */}
+      <main className="min-h-screen bg-background pt-16">
+        <article>
+          {/* Back button - contained width */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-4">
           <Link href="/">
             <Button
@@ -399,7 +423,8 @@ export default function VideoPage() {
             </div>
           )}
         </div>
-      </div>
+      </article>
+      </main>
 
       <Footer />
     </>

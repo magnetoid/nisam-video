@@ -29,10 +29,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const baseUrl = "https://nisam.video";
       const lang = typeof (req.query as any)?.lang === "string" ? String((req.query as any).lang) : "en";
-      const maxVideosRaw = typeof (req.query as any)?.maxVideos === "string" ? String((req.query as any).maxVideos) : "";
-      const maxVideos = Number.isFinite(parseInt(maxVideosRaw || "", 10)) ? Math.max(0, parseInt(maxVideosRaw, 10)) : 0;
+      const maxVideosRaw = typeof (req.query as any)?.maxVideos === "string" ? String((req.query as any).maxVideos) : undefined;
+      // Default to 50000 if not specified
+      const maxVideos = maxVideosRaw && Number.isFinite(parseInt(maxVideosRaw, 10)) 
+        ? Math.max(0, parseInt(maxVideosRaw, 10)) 
+        : 50000;
 
       const includeVideos = String((req.query as any)?.includeVideos ?? "1") !== "0";
+
       const includeCategories = String((req.query as any)?.includeCategories ?? "1") !== "0";
       const includeTags = String((req.query as any)?.includeTags ?? "1") !== "0";
       const includeChannels = String((req.query as any)?.includeChannels ?? "1") !== "0";
@@ -54,7 +58,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         includeVideos && maxVideos !== 0
           ? storage.getAllVideos({
               lang,
-              limit: maxVideos > 0 ? maxVideos : undefined,
+              limit: maxVideos, // 50000
               sort: "createdAt",
             })
           : Promise.resolve([]),

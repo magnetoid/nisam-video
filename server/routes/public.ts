@@ -4,6 +4,31 @@ import { cache } from "../cache.js";
 
 const router = Router();
 
+// Public Hero Config
+router.get("/hero/config", async (_req, res) => {
+  try {
+    const settings = await storage.getHeroSettings();
+    res.setHeader("Cache-Control", "public, max-age=300"); // Cache for 5 minutes
+    res.json(settings || { 
+      fallbackImages: [], 
+      rotationInterval: 4000, 
+      animationType: 'fade', 
+      defaultPlaceholderUrl: '', 
+      enableRandom: true, 
+      enableImages: true,
+      homeHeroMode: 'primary',
+      popularPageMode: 'views',
+      popularSegments: [],
+      showRecent: true,
+      showTrending: true,
+      showPopular: true
+    });
+  } catch (error) {
+    console.error("Error fetching hero config:", error);
+    res.status(500).json({ error: "Failed to fetch hero config" });
+  }
+});
+
 // Public Hero Random Images
 router.get("/hero/random", async (_req, res) => {
   try {

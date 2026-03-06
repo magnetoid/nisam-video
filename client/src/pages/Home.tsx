@@ -7,7 +7,7 @@ import { LazyCarouselRow } from "@/components/LazyCarouselRow";
 import { SearchOverlay } from "@/components/SearchOverlay";
 import { SEO } from "@/components/SEO";
 import { LikeStatusBatchProvider } from "@/components/LikeButton";
-import type { LocalizedCategory, VideoWithLocalizedRelations } from "@shared/schema";
+import type { LocalizedCategory, VideoWithLocalizedRelations, SupportedLanguage } from "@shared/schema";
 import { useTranslation } from "react-i18next";
 import { apiRequest } from "@/lib/queryClient";
 import { getMaxResolutionThumbnail } from "@/lib/video";
@@ -33,9 +33,9 @@ export default function Home() {
   const { t, i18n } = useTranslation();
 
   const { data: heroSettings } = useQuery<HeroSettings>({
-    queryKey: ['/api/admin/hero/config'],
+    queryKey: ['/api/hero/config'],
     queryFn: async () => {
-      const res = await apiRequest('GET', '/api/admin/hero/config');
+      const res = await apiRequest('GET', '/api/hero/config');
       return res.json();
     },
     staleTime: 5 * 60 * 1000,
@@ -138,19 +138,43 @@ export default function Home() {
     },
   };
 
-  const currentUrl = window.location.origin;
-  const hreflangLinks = [
-    { lang: "sr-Latn", url: currentUrl },
-    { lang: "en", url: currentUrl },
-    { lang: "x-default", url: currentUrl },
-  ];
+  // Fetch supported languages for hreflang
+  const { data: languages = [] } = useQuery<SupportedLanguage[]>({
+    queryKey: ["/api/languages"],
+    staleTime: Infinity,
+  });
+
+  const origin = window.location.origin;
+  
+  // Construct language-specific URLs dynamically
+  const hreflangLinks = languages.map(lang => {
+    // For home page, we want / or /en/
+    const prefix = lang.isDefault ? '/' : `/${lang.code}/`;
+    return {
+      lang: lang.code,
+      url: `${origin}${prefix}`
+    };
+  });
+
+  // Add x-default
+  hreflangLinks.push({ 
+    lang: "x-default", 
+    url: `${origin}/` 
+  });
+  
+  const currentLang = languages.find(l => l.code === i18n.language);
+  const currentPrefix = currentLang?.isDefault ? '/' : `/${i18n.language}/`;
+  // Fallback
+  const effectivePrefix = currentLang ? currentPrefix : (i18n.language === 'en' ? '/en/' : '/');
+  
+  const currentCanonical = `${origin}${effectivePrefix}`;
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <SEO
-        path="/"
+        path={effectivePrefix}
         structuredData={websiteStructuredData}
-        canonical={currentUrl}
+        canonical={currentCanonical}
         hreflang={hreflangLinks}
       />
       <Header onSearchClick={() => setShowSearch(true)} />
