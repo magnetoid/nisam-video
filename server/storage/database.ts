@@ -2613,7 +2613,10 @@ export class DatabaseStorage implements IStorage {
 
       const [upserted] = await db
         .insert(supportedLanguages)
-        .values(lang)
+        .values({
+          ...lang,
+          createdAt: new Date()
+        })
         .onConflictDoUpdate({
           target: supportedLanguages.code,
           set: { ...lang }

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import {
@@ -368,6 +368,12 @@ export default function AdminLanguages() {
 function TranslationRow({ tKey, enValue, currentValue, onSave }: { tKey: string, enValue: string, currentValue: string, onSave: (val: string) => void }) {
   const [value, setValue] = useState(currentValue);
   const [isDirty, setIsDirty] = useState(false);
+
+  useEffect(() => {
+    if (!isDirty) {
+      setValue(currentValue);
+    }
+  }, [currentValue, isDirty]);
 
   const handleBlur = () => {
     if (isDirty) {

@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import { useLocation } from "wouter";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -38,6 +37,7 @@ import {
   Settings,
   Share2,
   Tag,
+  Globe,
 } from "lucide-react";
 import { SitemapAndRobotsPanel } from "@/pages/admin-seo/SitemapAndRobotsPanel";
 
@@ -125,31 +125,30 @@ const seoSettingsSchema = z.object({
 
 type SeoSettingsFormValues = z.infer<typeof seoSettingsSchema>;
 
-function splitLocation(location: string) {
-  const idx = location.indexOf("?");
-  if (idx === -1) return { path: location, query: "" };
-  return { path: location.slice(0, idx), query: location.slice(idx + 1) };
+function getTabFromWindow() {
+  try {
+    return new URLSearchParams(window.location.search).get("tab") || "overview";
+  } catch {
+    return "overview";
+  }
 }
 
-function getTab(location: string) {
-  const { query } = splitLocation(location);
-  const params = new URLSearchParams(query);
-  return params.get("tab") || "overview";
-}
-
-function setTabParam(path: string, query: string, tab: string) {
-  const params = new URLSearchParams(query);
-  if (tab === "overview") params.delete("tab");
-  else params.set("tab", tab);
-  const q = params.toString();
-  return q ? `${path}?${q}` : path;
+function setTabOnUrl(tab: string) {
+  const url = new URL(window.location.href);
+  if (tab === "overview") url.searchParams.delete("tab");
+  else url.searchParams.set("tab", tab);
+  window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
 }
 
 export default function AdminSEO() {
   const { toast } = useToast();
-  const [location, setLocation] = useLocation();
-  const { path, query } = splitLocation(location);
-  const activeTab = getTab(location);
+  const [activeTab, setActiveTab] = useState(() => getTabFromWindow());
+
+  useEffect(() => {
+    const onPopState = () => setActiveTab(getTabFromWindow());
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
 
   const [metaSearch, setMetaSearch] = useState("");
   const [redirectSearch, setRedirectSearch] = useState("");
@@ -263,7 +262,10 @@ export default function AdminSEO() {
 
           <Tabs
             value={activeTab}
-            onValueChange={(tab) => setLocation(setTabParam(path, query, tab))}
+            onValueChange={(tab) => {
+              setActiveTab(tab);
+              setTabOnUrl(tab);
+            }}
             className="relative z-10"
           >
             <TabsList className="flex w-full flex-wrap justify-start gap-1 min-h-[44px] pointer-events-auto relative z-20">

@@ -148,10 +148,14 @@ export function AppRouter() {
   const [location] = useLocation();
 
   // Fetch supported languages to know which ones are secondary (need prefix)
-  const { data: languages = [] } = useQuery<SupportedLanguage[]>({
+  const { data: languages = [], isLoading } = useQuery<SupportedLanguage[]>({
     queryKey: ["/api/languages"],
     staleTime: Infinity, // Cache forever until reload
   });
+
+  if (isLoading) {
+    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+  }
 
   const defaultLang = languages.find(l => l.isDefault)?.code || "sr-Latn";
   
