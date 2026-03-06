@@ -8,6 +8,14 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
   }
 }
 
+export function requireAdmin(req: Request, res: Response, next: NextFunction) {
+  if (req.session.isAuthenticated && req.session.role === "admin") {
+    next();
+  } else {
+    res.status(403).json({ error: "Unauthorized: Admin access required" });
+  }
+}
+
 export function getUserIdentifier(req: Request): string {
   const fingerprint =
     req.headers["x-fingerprint"] ||

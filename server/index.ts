@@ -117,6 +117,7 @@ declare module "express-session" {
   interface SessionData {
     isAuthenticated?: boolean;
     username?: string;
+    role?: string;
   }
 }
 
