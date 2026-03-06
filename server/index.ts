@@ -113,14 +113,6 @@ process.on('uncaughtException', (error) => {
 // Cloudflare sets CF-Connecting-IP header
 app.set("trust proxy", true);
 
-declare module "express-session" {
-  interface SessionData {
-    isAuthenticated?: boolean;
-    username?: string;
-    role?: string;
-  }
-}
-
 const PgStore = connectPgSimple(session);
 
 const sessionConfig: session.SessionOptions = {
