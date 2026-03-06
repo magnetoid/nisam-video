@@ -2591,8 +2591,8 @@ export class DatabaseStorage implements IStorage {
       if (langs.length === 0) {
         // Seed defaults if empty
         const defaults = [
-          { code: 'en', name: 'English', isActive: true, isDefault: true, createdAt: new Date() },
-          { code: 'sr-Latn', name: 'Srpski', isActive: true, isDefault: false, createdAt: new Date() }
+          { code: 'sr-Latn', name: 'Srpski', isActive: true, isDefault: true, createdAt: new Date() },
+          { code: 'en', name: 'English', isActive: true, isDefault: false, createdAt: new Date() }
         ];
         await db.insert(supportedLanguages).values(defaults).onConflictDoNothing();
         return defaults;
@@ -2606,6 +2606,11 @@ export class DatabaseStorage implements IStorage {
 
   async upsertSupportedLanguage(lang: InsertSupportedLanguage): Promise<SupportedLanguage> {
     try {
+      // If setting as default, unset others first
+      if (lang.isDefault) {
+        await db.update(supportedLanguages).set({ isDefault: false });
+      }
+
       const [upserted] = await db
         .insert(supportedLanguages)
         .values(lang)

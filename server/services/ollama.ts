@@ -90,3 +90,46 @@ export async function testOllamaConnection(url: string, apiKey?: string): Promis
     return false;
   }
 }
+
+export async function generateOllamaCompletion(
+  url: string,
+  model: string,
+  systemPrompt: string,
+  userPrompt: string,
+  apiKey?: string
+): Promise<string> {
+  // Ensure URL has protocol
+  if (!url.startsWith("http")) {
+    url = `http://${url}`;
+  }
+  
+  // Remove trailing slash if present
+  const baseUrl = url.replace(/\/$/, "");
+  
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (apiKey) {
+    headers['Authorization'] = `Bearer ${apiKey}`;
+  }
+
+  const response = await fetch(`${baseUrl}/api/generate`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      model: model,
+      system: systemPrompt,
+      prompt: userPrompt,
+      stream: false,
+      format: "json", // Force JSON output
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Ollama API error: ${response.status} ${errorText}`);
+  }
+
+  const data = await response.json() as any;
+  return data.response || "";
+}

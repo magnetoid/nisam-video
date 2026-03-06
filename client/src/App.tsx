@@ -264,23 +264,48 @@ function AppRoutes() {
   );
 }
 
+import { useQuery } from "@tanstack/react-query";
+
+interface SupportedLanguage {
+  code: string;
+  isDefault: boolean;
+}
+
 function Router() {
   const [location] = useLocation();
 
-  if (location.startsWith("/en")) {
+  // Fetch supported languages to know which ones are secondary (need prefix)
+  const { data: languages = [] } = useQuery<SupportedLanguage[]>({
+    queryKey: ["/api/languages"],
+    staleTime: Infinity, // Cache forever until reload
+  });
+
+  const defaultLang = languages.find(l => l.isDefault)?.code || "sr-Latn";
+  
+  // Check if current path starts with any secondary language code
+  // e.g. /en/..., /de/..., /fr/...
+  // We need to match exactly /code or /code/
+  const pathSegments = location.split('/').filter(Boolean);
+  const firstSegment = pathSegments[0];
+  
+  const matchedLang = languages.find(l => l.code === firstSegment && !l.isDefault);
+
+  if (matchedLang) {
+    const langCode = matchedLang.code;
     return (
-      <WouterRouter base="/en">
-        <LanguageWrapper lang="en">
+      <WouterRouter base={`/${langCode}`}>
+        <LanguageWrapper lang={langCode}>
           <AppRoutes />
         </LanguageWrapper>
       </WouterRouter>
     );
   }
 
-  // For non-en routes (root), we don't enforce sr-Latn anymore to allow other languages
-  // configured in the admin panel.
+  // Root path -> Primary Language (default)
   return (
-    <AppRoutes />
+    <LanguageWrapper lang={defaultLang}>
+      <AppRoutes />
+    </LanguageWrapper>
   );
 }
 

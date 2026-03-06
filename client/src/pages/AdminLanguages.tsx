@@ -21,7 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, Trash2, Edit, Save, Globe } from "lucide-react";
+import { Loader2, Plus, Trash2, Edit, Save, Globe, Sparkles } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -104,6 +104,30 @@ export default function AdminLanguages() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/translations", selectedLangCode] });
       toast({ title: "Saved", description: "Translation updated" });
+    },
+  });
+
+  const autoTranslateMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/translate", {
+        targetLang: selectedLangCode,
+        sourceLang: "en"
+      });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/translations", selectedLangCode] });
+      toast({ 
+        title: "Translation Complete", 
+        description: data.message 
+      });
+    },
+    onError: (error: Error) => {
+      toast({ 
+        title: "Translation Failed", 
+        description: error.message || "Failed to auto-translate", 
+        variant: "destructive" 
+      });
     },
   });
 
@@ -206,8 +230,12 @@ export default function AdminLanguages() {
                           id="isDefault" 
                           checked={formData.isDefault} 
                           onCheckedChange={(c) => setFormData({...formData, isDefault: c as boolean})}
+                          disabled={editingLang?.isDefault}
                         />
-                        <Label htmlFor="isDefault">Default</Label>
+                        <Label htmlFor="isDefault">
+                          Primary Language
+                          {editingLang?.isDefault && <span className="text-xs text-muted-foreground ml-2">(Cannot be unset directly)</span>}
+                        </Label>
                       </div>
                     </div>
                     <Button type="submit" className="w-full" disabled={upsertLangMutation.isPending}>
@@ -224,6 +252,7 @@ export default function AdminLanguages() {
                   <TableRow>
                     <TableHead>Code</TableHead>
                     <TableHead>Name</TableHead>
+                    <TableHead>Type</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
@@ -231,17 +260,21 @@ export default function AdminLanguages() {
                 <TableBody>
                   {isLoadingLangs ? (
                     <TableRow>
-                      <TableCell colSpan={4} className="text-center py-4">Loading...</TableCell>
+                      <TableCell colSpan={5} className="text-center py-4">Loading...</TableCell>
                     </TableRow>
                   ) : languages.map((lang) => (
                     <TableRow key={lang.code}>
                       <TableCell className="font-mono">{lang.code}</TableCell>
                       <TableCell>{lang.name}</TableCell>
                       <TableCell>
-                        <div className="flex gap-2">
-                          {lang.isActive ? <Badge variant="default">Active</Badge> : <Badge variant="secondary">Inactive</Badge>}
-                          {lang.isDefault && <Badge variant="outline">Default</Badge>}
-                        </div>
+                        {lang.isDefault ? (
+                          <Badge variant="default">Primary</Badge>
+                        ) : (
+                          <Badge variant="secondary">Secondary</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {lang.isActive ? <Badge variant="outline" className="bg-green-500/10 text-green-500 hover:bg-green-500/20 border-green-500/20">Active</Badge> : <Badge variant="destructive">Inactive</Badge>}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
@@ -277,7 +310,20 @@ export default function AdminLanguages() {
                   <CardDescription>Edit UI strings for each language</CardDescription>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Globe className="h-4 w-4 text-muted-foreground" />
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => autoTranslateMutation.mutate()}
+                    disabled={selectedLangCode === "en" || autoTranslateMutation.isPending}
+                  >
+                    {autoTranslateMutation.isPending ? (
+                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                       <Sparkles className="mr-2 h-4 w-4" />
+                    )}
+                    Auto Translate
+                  </Button>
+                  <Globe className="h-4 w-4 text-muted-foreground ml-2" />
                   <select 
                     className="h-9 w-[150px] rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                     value={selectedLangCode}

@@ -14,6 +14,7 @@ interface SupportedLanguage {
   code: string;
   name: string;
   isActive: boolean;
+  isDefault: boolean;
 }
 
 export function LanguageSwitcher() {
@@ -28,8 +29,8 @@ export function LanguageSwitcher() {
 
   // If no languages loaded yet, fallback to static list or just show current
   const displayLanguages = activeLanguages.length > 0 ? activeLanguages : [
-    { code: "en", name: "English" },
-    { code: "sr-Latn", name: "Srpski" }
+    { code: "en", name: "English", isActive: true, isDefault: false },
+    { code: "sr-Latn", name: "Srpski", isActive: true, isDefault: true }
   ];
 
   const changeLanguage = (lng: string) => {
@@ -37,39 +38,39 @@ export function LanguageSwitcher() {
     localStorage.setItem("language", lng);
 
     const currentPath = window.location.pathname;
+    const targetLang = displayLanguages.find(l => l.code === lng);
+    const isDefault = targetLang?.isDefault;
+
+    // Remove any existing language prefix
+    // Assuming prefix is always /code/ or /code at start
+    // We need to know which codes are prefixes. 
+    // Simplest is to check against all known secondary codes.
     
-    // Only handle URL prefixing for 'en' if that's the established pattern
-    // The previous code had specific logic for 'en' vs others.
-    // We should probably keep it consistent or generalize it.
-    // Existing logic: "en" gets /en prefix, others (implied sr-Latn) get no prefix.
-    // If we add 'de', should it be /de? 
-    // The current router setup likely only handles /en explicitly or uses a wildcard?
-    // Let's look at client/src/App.tsx router setup.
-    // If router doesn't support dynamic language prefixes, we shouldn't force it here.
-    // The previous code hardcoded logic for 'en'.
+    let newPath = currentPath;
     
-    // For now, let's preserve the existing behavior for 'en' and default for others.
-    // If the user adds a new language, it will behave like 'sr-Latn' (no prefix) unless we update routing.
-    // UPDATING ROUTING IS RISKY without seeing it.
-    // Let's assume for now we just change the internal state.
-    // However, the previous code explicitly did a full page reload via window.location.href.
-    
-    if (lng === "en") {
-      if (!currentPath.startsWith("/en")) {
-        const newPath = `/en${currentPath === "/" ? "" : currentPath}`;
-        window.location.href = newPath;
+    // Check if path currently starts with any known secondary language code
+    const secondaryLangs = displayLanguages.filter(l => !l.isDefault).map(l => l.code);
+    for (const code of secondaryLangs) {
+      if (newPath.startsWith(`/${code}/`)) {
+        newPath = newPath.replace(`/${code}/`, "/");
+        break;
+      } else if (newPath === `/${code}`) {
+        newPath = "/";
+        break;
       }
+    }
+
+    // Now newPath is "clean" (root based)
+    
+    if (isDefault) {
+      // Default language -> Root path
+      window.location.href = newPath;
     } else {
-      // For any other language, we remove /en if present
-      if (currentPath.startsWith("/en")) {
-        const newPath = currentPath.replace(/^\/en/, "") || "/";
-        window.location.href = newPath;
-      } else {
-          // If we are already on a non-en path, just reload to ensure fresh content/SEO?
-          // Or just let react-i18next handle it.
-          // The previous code did a reload.
-          // If we are switching from sr-Latn to de, no path change needed if both are at root.
-      }
+      // Secondary language -> Prefix path
+      // Ensure we don't double slash
+      const prefix = `/${lng}`;
+      const finalPath = newPath === "/" ? prefix : `${prefix}${newPath}`;
+      window.location.href = finalPath;
     }
   };
 

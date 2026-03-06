@@ -224,7 +224,6 @@ router.patch("/enhanced/settings", requireAuth, async (req, res) => {
       await db.insert(seoSettings).values({
         ...validatedData,
         id: crypto.randomUUID(),
-        createdAt: sql`now()`,
         updatedAt: sql`now()`,
       });
     }

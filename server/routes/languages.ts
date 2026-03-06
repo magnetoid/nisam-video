@@ -138,6 +138,98 @@ router.get("/locales/:lng/:ns", async (req, res) => {
   }
 });
 
+import { translateContent } from "../services/translation-service.js";
+
+// ... (imports)
+
+// Helper to get all translations for a language (File + DB)
+async function getAllTranslations(lng: string) {
+    let fileData: Record<string, any> = {};
+    try {
+        const localePath = path.resolve(__dirname, "../../client/src/i18n/locales", `${lng}.json`);
+        const content = await fs.readFile(localePath, "utf-8");
+        fileData = JSON.parse(content);
+    } catch (e) {
+        // File might not exist
+    }
+
+    const flatten = (obj: any, prefix = '', res: Record<string, string> = {}) => {
+        for (const key in obj) {
+            const val = obj[key];
+            const newKey = prefix ? `${prefix}.${key}` : key;
+            if (val && typeof val === 'object') {
+                flatten(val, newKey, res);
+            } else {
+                res[newKey] = String(val);
+            }
+        }
+        return res;
+    };
+    const flatFile = flatten(fileData);
+    const dbData = await storage.getUiTranslations(lng, 'translation');
+    return { ...flatFile, ...dbData };
+}
+
+// Auto-translate missing keys
+router.post("/translate", requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { targetLang, sourceLang = "en" } = req.body;
+    
+    if (!targetLang) return res.status(400).json({ error: "Target language is required" });
+
+    // 1. Get Source (English)
+    const sourceTranslations = await getAllTranslations(sourceLang);
+    
+    // 2. Get Target
+    const targetTranslations = await getAllTranslations(targetLang);
+    
+    // 3. Find missing keys
+    const missingKeys: Record<string, string> = {};
+    for (const [key, value] of Object.entries(sourceTranslations)) {
+        if (!targetTranslations[key] || targetTranslations[key].trim() === "") {
+            missingKeys[key] = value;
+        }
+    }
+
+    if (Object.keys(missingKeys).length === 0) {
+        return res.json({ message: "No missing translations found.", translated: 0 });
+    }
+
+    // 4. Batch translate (chunking to avoid context limits if necessary, assume small for now or handle simple)
+    // For safety, let's limit to 50 keys per request or just do one batch if small.
+    // If huge, we might timeout. Let's start with a hard limit of 50 for now and let user re-click.
+    
+    const BATCH_SIZE = 50;
+    const keysToTranslate = Object.entries(missingKeys).slice(0, BATCH_SIZE);
+    const batchPayload = Object.fromEntries(keysToTranslate);
+    
+    // 5. Call AI
+    const translated = await translateContent(targetLang, batchPayload, sourceLang);
+    
+    // 6. Save results
+    let savedCount = 0;
+    for (const [key, value] of Object.entries(translated)) {
+        await storage.upsertUiTranslation({
+            languageCode: targetLang,
+            namespace: "translation",
+            key,
+            value: String(value)
+        });
+        savedCount++;
+    }
+
+    res.json({ 
+        message: `Translated ${savedCount} keys.`, 
+        translated: savedCount,
+        remaining: Object.keys(missingKeys).length - keysToTranslate.length
+    });
+
+  } catch (error: any) {
+    console.error("Auto-translation error:", error);
+    res.status(500).json({ error: error.message || "Translation failed" });
+  }
+});
+
 // Update a translation key (Admin only)
 router.post("/translations", requireAuth, requireAdmin, async (req, res) => {
   try {
