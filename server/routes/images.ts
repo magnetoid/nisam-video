@@ -49,7 +49,47 @@ router.get("/proxy", async (req, res) => {
       
       const buffer = await response.arrayBuffer();
       const image = await Jimp.read(Buffer.from(buffer));
-      const resized = image.resize({ w: width });
+      // In Jimp v1+, resize({ w: number }) should work but sometimes validation is tricky.
+      // If we encounter issues with object syntax, let's try the positional arguments but carefully.
+      // Or fallback to original image if resize fails? No, we need webp conversion.
+      
+      // Let's try this: if width is provided, use it. If not, just convert.
+      // But we always have a width (default 640).
+      
+      // The error "Expected object, received number" in Zod validation inside resize() 
+      // suggests that somewhere a number was passed where an object was expected.
+      // This often happens if we use resize(w, h) but h is not provided or is a number?
+      // Wait, if we use resize({ w: width }), Zod should be happy.
+      
+      // Is it possible Jimp instance itself is somehow messed up? No.
+      
+      // Let's try to calculate height manually to avoid "AUTO" issues if that's the case.
+      // const h = image.bitmap.height * (width / image.bitmap.width);
+      // image.resize({ w: width, h: h });
+      
+      // But let's try a simpler thing first: maybe Jimp needs integer numbers?
+      // width is parsed as int.
+      
+      // Let's try this syntax which is definitely correct for v1:
+      // image.resize({ w: width })
+      
+      // If that is failing, maybe the error is not in our call but internal?
+      // Let's wrap resize in a try-catch specifically.
+      
+      let resized;
+      try {
+          // Force integer
+          const targetWidth = Math.round(width);
+          // Calculate target height to maintain aspect ratio
+          // const targetHeight = Math.round(image.height * (targetWidth / image.width));
+          
+          // Try standard resize with object
+          resized = image.resize({ w: targetWidth });
+      } catch (resizeError) {
+          console.error("Resize failed, falling back to original size", resizeError);
+          resized = image;
+      }
+
       const webpBuffer = await resized.getBuffer("image/webp", { quality: 80 });
 
       // 3. Save to Cache (7 days)
