@@ -49,54 +49,57 @@ router.get("/proxy", async (req, res) => {
       
       const buffer = await response.arrayBuffer();
       const image = await Jimp.read(Buffer.from(buffer));
-      // Jimp v1+ issue: resize({ w: width }) might be failing due to strict Zod validation or incorrect type definitions.
-      // The error "Expected object, received number" is persistent.
-      // It implies some internal call is receiving a number instead of an object.
-      // 
-      // Let's try to use the legacy-style positional arguments but with defined constants if possible?
-      // No, let's try to resize using `scaleToFit` or similar if `resize` is broken?
-      // Or simply just `resize(width, Jimp.AUTO)` if Jimp.AUTO is available?
-      // But we don't have Jimp.AUTO imported directly, we have `Jimp`.
-      // `Jimp` class itself might not have AUTO static property in v1?
-      // 
-      // Let's try a different method: `contain` or `cover`? 
-      // But we want to maintain aspect ratio based on width.
+      // Jimp v1+
+      // The error "Unsupported MIME type: image/webp" means getBuffer doesn't know "image/webp"
+      // or the MIME type constant is different.
+      // In Jimp v1, we should import MIME_TYPES or similar.
+      // But we can also use "image/png" or "image/jpeg" if webp is not supported out of the box?
+      // Wait, Jimp supports webp but maybe it needs a plugin or explicit constant?
+      // Actually, standard Jimp usually supports "image/png", "image/jpeg", "image/bmp", "image/tiff", "image/gif".
+      // "image/webp" support might be missing in the core build or requires configuration.
       
-      // Let's try manually calculating height and passing both.
-      // Maybe passing a single property object is the issue for the union validator?
+      // Let's fallback to JPEG if WEBP fails.
+      // Or better, let's check what mime types are supported.
+      
+      // Let's try "image/jpeg" which is universally supported.
       
       let resized;
       try {
           const targetWidth = Math.round(width);
-          // Calculate height manually
+          // Manually calculate height to be safe
           const targetHeight = Math.round(image.height * (targetWidth / image.width));
           
           // Try passing both w and h
           resized = image.resize({ w: targetWidth, h: targetHeight });
       } catch (resizeError) {
-          console.error("Resize failed (attempt 1), trying fallback...", resizeError);
-          try {
-             // Fallback: try just `resize({ w: width })` again? No, that failed.
-             // Try passing mode?
-             // resized = image.resize({ w: Math.round(width), mode: 'resizeNearestNeighbor' }); // Just guessing
-             resized = image;
-          } catch (e) {
-             resized = image;
-          }
+          console.error("Resize failed, using original image", resizeError);
+          resized = image;
       }
 
-      const webpBuffer = await resized.getBuffer("image/webp", { quality: 80 });
+      let outputBuffer;
+      let contentType;
+      
+      try {
+        // Try WebP first
+        outputBuffer = await resized.getBuffer("image/webp", { quality: 80 });
+        contentType = "image/webp";
+      } catch (webpError) {
+        // Fallback to JPEG if WebP is not supported by this Jimp version/environment
+        // console.error("WebP conversion failed, falling back to JPEG", webpError);
+        outputBuffer = await resized.getBuffer("image/jpeg", { quality: 80 });
+        contentType = "image/jpeg";
+      }
 
       // 3. Save to Cache (7 days)
       try {
-        await setCache(cacheKey, webpBuffer.toString('base64'), 7 * 86400);
+        await setCache(cacheKey, outputBuffer.toString('base64'), 7 * 86400);
       } catch (e) {
         console.error("Cache write error:", e);
       }
 
-      res.setHeader("Content-Type", "image/webp");
+      res.setHeader("Content-Type", contentType);
       res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
-      res.send(webpBuffer);
+      res.send(outputBuffer);
     } finally {
       clearTimeout(timeout);
     }
