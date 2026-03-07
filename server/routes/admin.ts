@@ -732,6 +732,38 @@ router.put("/cache/settings", requireAuth, async (req, res) => {
   }
 });
 
+router.post("/cache/redis/connect", requireAuth, async (req, res) => {
+  try {
+    const { redisUrl } = req.body;
+    if (!redisUrl) return res.status(400).json({ error: "Redis URL is required" });
+
+    // Store in process.env for the current session (persistence would require DB or .env file write)
+    // For now, let's just test the connection
+    process.env.REDIS_URL = redisUrl;
+    
+    // Force reconnection logic (hacky but works for runtime switch)
+    const { getRedisClient } = await import("../services/redis.js");
+    // We need to reset the internal client first, but it's module-scoped. 
+    // Ideally we should add a reconnect method to redis.ts
+    
+    // Let's assume the user will restart or we just update the env and next call to getRedisClient might pick it up if we clear the old one?
+    // Actually redis.ts singleton pattern prevents this.
+    // Let's update redis.ts to allow manual connection.
+    
+    const { connectToRedis } = await import("../services/redis.js");
+    const success = await connectToRedis(redisUrl);
+    
+    if (success) {
+      res.json({ success: true, message: "Connected to Redis successfully" });
+    } else {
+      res.status(500).json({ error: "Failed to connect to Redis" });
+    }
+  } catch (error) {
+    console.error("Redis connect error:", error);
+    res.status(500).json({ error: "Failed to connect to Redis" });
+  }
+});
+
 router.get("/kv/stats", requireAuth, async (req, res) => {
   try {
     const stats = await kvService.getStats();

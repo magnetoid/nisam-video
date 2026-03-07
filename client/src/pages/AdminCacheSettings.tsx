@@ -173,6 +173,33 @@ export default function AdminCacheSettings() {
     );
   }
 
+  const [redisUrl, setRedisUrl] = useState("");
+
+  const connectRedisMutation = useMutation({
+    mutationFn: async (url: string) => {
+      return await apiRequest("POST", "/api/admin/cache/redis/connect", { redisUrl: url });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Redis Connected",
+        description: "Successfully connected to Redis instance.",
+      });
+      refetchStats();
+    },
+    onError: () => {
+      toast({
+        title: "Connection Failed",
+        description: "Could not connect to Redis. Check the URL and try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleConnectRedis = () => {
+    if (!redisUrl) return;
+    connectRedisMutation.mutate(redisUrl);
+  };
+
   return (
     <div className="space-y-6">
         <div>
@@ -186,6 +213,44 @@ export default function AdminCacheSettings() {
             Configure and monitor application caching for improved performance
           </p>
         </div>
+
+        {/* Redis Connection */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Database className="h-5 w-5" />
+              Redis Connection
+            </CardTitle>
+            <CardDescription>
+              Connect to an external Redis instance for distributed caching
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex gap-4">
+              <div className="flex-1">
+                <Label htmlFor="redis-url" className="sr-only">Redis URL</Label>
+                <Input 
+                  id="redis-url" 
+                  placeholder="redis://username:password@host:port" 
+                  value={redisUrl}
+                  onChange={(e) => setRedisUrl(e.target.value)}
+                />
+              </div>
+              <Button 
+                onClick={handleConnectRedis}
+                disabled={!redisUrl || connectRedisMutation.isPending}
+              >
+                {connectRedisMutation.isPending && (
+                  <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                )}
+                Connect
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Note: This connection is temporary for the current session unless configured in environment variables.
+            </p>
+          </CardContent>
+        </Card>
 
         {/* Cache Statistics */}
         <Card>

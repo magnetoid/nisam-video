@@ -59,6 +59,53 @@ declare global {
   var hasLoggedRedisWarning: boolean | undefined;
 }
 
+export async function connectToRedis(url: string): Promise<boolean> {
+  if (redisClient) {
+    try {
+      await redisClient.quit();
+    } catch (e) {
+      // Ignore close errors
+    }
+    redisClient = null;
+  }
+  
+  process.env.REDIS_URL = url;
+  const client = getRedisClient();
+  
+  if (!client) return false;
+
+  // Wait a bit to see if connection is successful
+  return new Promise((resolve) => {
+    // Check if ready or wait for connect
+    if (client.status === 'ready' || client.status === 'connect') {
+      resolve(true);
+    } else {
+      const onConnect = () => {
+        cleanup();
+        resolve(true);
+      };
+      const onError = () => {
+        cleanup();
+        resolve(false);
+      };
+      
+      const cleanup = () => {
+        client.off('connect', onConnect);
+        client.off('error', onError);
+      };
+
+      client.once('connect', onConnect);
+      client.once('error', onError);
+      
+      // Timeout
+      setTimeout(() => {
+        cleanup();
+        resolve(client.status === 'ready');
+      }, 5000);
+    }
+  });
+}
+
 // Helper functions for cache
 export async function getCache<T>(key: string): Promise<T | null> {
   const redis = getRedisClient();
