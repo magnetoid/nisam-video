@@ -5,6 +5,8 @@ import { LikeButton } from "./LikeButton";
 import type { VideoWithRelations } from "@shared/schema";
 import { getOptimizedThumbnail } from "@/lib/video";
 
+import { useTranslation } from "react-i18next";
+
 interface VideoCardProps {
   video: VideoWithRelations;
   onClick?: () => void;
@@ -12,6 +14,7 @@ interface VideoCardProps {
 }
 
 export const VideoCard = memo(function VideoCard({ video, onClick, variant = "carousel" }: VideoCardProps) {
+  const { t } = useTranslation();
   const [isHovered, setIsHovered] = useState(false);
   const [imgError, setImgError] = useState(false);
   const hoverTimeoutRef = useRef<NodeJS.Timeout>();
@@ -109,7 +112,7 @@ export const VideoCard = memo(function VideoCard({ video, onClick, variant = "ca
             className="text-xs text-muted-foreground"
             data-testid="text-channel-static"
           >
-            {video.channel?.name || 'Unknown Channel'}
+            {video.channel?.name || t('video.unknownChannel', 'Unknown Channel')}
           </p>
           <LikeButton
             videoId={video.id}

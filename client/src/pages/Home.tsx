@@ -209,7 +209,7 @@ export default function Home() {
             {carouselCategories.map((category) => (
               <LazyCarouselRow
                 key={category.id}
-                title={category.name || category.translations?.[0]?.name || "Category"}
+                title={category.name || category.translations?.[0]?.name || t("category.default", "Category")}
                 categoryId={category.id}
                 lang={i18n.language}
               />

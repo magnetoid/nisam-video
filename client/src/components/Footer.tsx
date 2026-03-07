@@ -70,7 +70,7 @@ export function Footer() {
                   className="text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                   data-testid="link-footer-recommend-channel"
                 >
-                  {t("footer.recommendChannel", "Recommend channel")}
+                  {t("footer.recommendChannel", "Recommend Channel")}
                 </span>
               </RecommendChannelDialog>
               <Link href="/admin">

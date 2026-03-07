@@ -100,7 +100,7 @@ export function Header({ onSearchClick, onMenuClick }: HeaderProps) {
                   className="text-sm font-medium text-foreground hover:text-primary transition-colors cursor-pointer"
                   data-testid="link-shorts"
                 >
-                  Shorts
+                  {t("nav.shorts", "Shorts")}
                 </span>
               </Link>
               <Link href="/about">
@@ -108,7 +108,7 @@ export function Header({ onSearchClick, onMenuClick }: HeaderProps) {
                   className="text-sm font-medium text-foreground hover:text-primary transition-colors cursor-pointer"
                   data-testid="link-about"
                 >
-                  About
+                  {t("nav.about", "About")}
                 </span>
               </Link>
             </nav>

@@ -117,10 +117,20 @@ export default function AdminLanguages() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/translations", selectedLangCode] });
-      toast({ 
-        title: "Translation Complete", 
-        description: data.message 
-      });
+      
+      if (data.remaining > 0) {
+        toast({ 
+          title: "Batch Complete", 
+          description: `Translated ${data.translated} keys. ${data.remaining} remaining. Continuing...` 
+        });
+        // Recursively call to translate next batch
+        setTimeout(() => autoTranslateMutation.mutate(), 1000);
+      } else {
+        toast({ 
+          title: "Translation Complete", 
+          description: `All keys translated successfully!` 
+        });
+      }
     },
     onError: (error: Error) => {
       toast({ 
@@ -317,11 +327,16 @@ export default function AdminLanguages() {
                     disabled={selectedLangCode === "en" || autoTranslateMutation.isPending}
                   >
                     {autoTranslateMutation.isPending ? (
-                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                       <>
+                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                         Translating...
+                       </>
                     ) : (
-                       <Sparkles className="mr-2 h-4 w-4" />
+                       <>
+                         <Sparkles className="mr-2 h-4 w-4" />
+                         Auto Translate All
+                       </>
                     )}
-                    Auto Translate
                   </Button>
                   <Globe className="h-4 w-4 text-muted-foreground ml-2" />
                   <select 

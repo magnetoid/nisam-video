@@ -19,11 +19,15 @@ export async function translateContent(
   }
 
   // 2. Construct Prompt
-  const systemPrompt = `You are a professional translator for a video platform application. 
+  const systemPrompt = `You are a professional translator for a video streaming platform application (similar to YouTube/Netflix). 
 Translate the provided JSON content from ${sourceLang} to ${targetLang}.
-Preserve all keys exactly.
-Preserve any interpolation variables like {{count}}, {{name}}, etc.
-Return ONLY valid JSON.`;
+
+Rules:
+1. Preserve all keys exactly.
+2. Preserve any interpolation variables like {{count}}, {{name}}, {{val}}, etc.
+3. Do not translate technical terms if they are standard in the target language (e.g. "API", "SEO", "JSON").
+4. Keep UI strings concise and natural for buttons/labels.
+5. Return ONLY valid JSON. No markdown formatting, no explanations.`;
 
   const userPrompt = JSON.stringify(content, null, 2);
 
@@ -56,10 +60,14 @@ Return ONLY valid JSON.`;
   // 4. Parse Response
   try {
     // Clean up potential markdown blocks if AI adds them (e.g. ```json ... ```)
-    const jsonStr = rawResponse.replace(/^```json\s*/, "").replace(/\s*```$/, "");
-    return JSON.parse(jsonStr);
+    const jsonStr = rawResponse.replace(/^```json\s*/, "").replace(/^```/, "").replace(/\s*```$/, "").trim();
+    // Sometimes LLMs add text before/after, try to extract first {...}
+    const match = jsonStr.match(/\{[\s\S]*\}/);
+    const parseTarget = match ? match[0] : jsonStr;
+    
+    return JSON.parse(parseTarget);
   } catch (e) {
     console.error("Failed to parse AI translation response:", rawResponse);
-    throw new Error("AI returned invalid JSON.");
+    throw new Error(`AI returned invalid JSON: ${rawResponse.substring(0, 100)}...`);
   }
 }
