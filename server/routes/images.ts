@@ -49,45 +49,40 @@ router.get("/proxy", async (req, res) => {
       
       const buffer = await response.arrayBuffer();
       const image = await Jimp.read(Buffer.from(buffer));
-      // In Jimp v1+, resize({ w: number }) should work but sometimes validation is tricky.
-      // If we encounter issues with object syntax, let's try the positional arguments but carefully.
-      // Or fallback to original image if resize fails? No, we need webp conversion.
+      // Jimp v1+ issue: resize({ w: width }) might be failing due to strict Zod validation or incorrect type definitions.
+      // The error "Expected object, received number" is persistent.
+      // It implies some internal call is receiving a number instead of an object.
+      // 
+      // Let's try to use the legacy-style positional arguments but with defined constants if possible?
+      // No, let's try to resize using `scaleToFit` or similar if `resize` is broken?
+      // Or simply just `resize(width, Jimp.AUTO)` if Jimp.AUTO is available?
+      // But we don't have Jimp.AUTO imported directly, we have `Jimp`.
+      // `Jimp` class itself might not have AUTO static property in v1?
+      // 
+      // Let's try a different method: `contain` or `cover`? 
+      // But we want to maintain aspect ratio based on width.
       
-      // Let's try this: if width is provided, use it. If not, just convert.
-      // But we always have a width (default 640).
-      
-      // The error "Expected object, received number" in Zod validation inside resize() 
-      // suggests that somewhere a number was passed where an object was expected.
-      // This often happens if we use resize(w, h) but h is not provided or is a number?
-      // Wait, if we use resize({ w: width }), Zod should be happy.
-      
-      // Is it possible Jimp instance itself is somehow messed up? No.
-      
-      // Let's try to calculate height manually to avoid "AUTO" issues if that's the case.
-      // const h = image.bitmap.height * (width / image.bitmap.width);
-      // image.resize({ w: width, h: h });
-      
-      // But let's try a simpler thing first: maybe Jimp needs integer numbers?
-      // width is parsed as int.
-      
-      // Let's try this syntax which is definitely correct for v1:
-      // image.resize({ w: width })
-      
-      // If that is failing, maybe the error is not in our call but internal?
-      // Let's wrap resize in a try-catch specifically.
+      // Let's try manually calculating height and passing both.
+      // Maybe passing a single property object is the issue for the union validator?
       
       let resized;
       try {
-          // Force integer
           const targetWidth = Math.round(width);
-          // Calculate target height to maintain aspect ratio
-          // const targetHeight = Math.round(image.height * (targetWidth / image.width));
+          // Calculate height manually
+          const targetHeight = Math.round(image.height * (targetWidth / image.width));
           
-          // Try standard resize with object
-          resized = image.resize({ w: targetWidth });
+          // Try passing both w and h
+          resized = image.resize({ w: targetWidth, h: targetHeight });
       } catch (resizeError) {
-          console.error("Resize failed, falling back to original size", resizeError);
-          resized = image;
+          console.error("Resize failed (attempt 1), trying fallback...", resizeError);
+          try {
+             // Fallback: try just `resize({ w: width })` again? No, that failed.
+             // Try passing mode?
+             // resized = image.resize({ w: Math.round(width), mode: 'resizeNearestNeighbor' }); // Just guessing
+             resized = image;
+          } catch (e) {
+             resized = image;
+          }
       }
 
       const webpBuffer = await resized.getBuffer("image/webp", { quality: 80 });
