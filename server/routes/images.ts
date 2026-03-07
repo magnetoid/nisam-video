@@ -49,13 +49,15 @@ router.get("/proxy", async (req, res) => {
       
       const buffer = await response.arrayBuffer();
       const image = await Jimp.read(Buffer.from(buffer));
-      const webpBuffer = await image
-        .resize(width, Jimp.AUTO) // keep aspect ratio
-        .quality(80)
-        .getBufferAsync(Jimp.MIME_WEBP);
+      const resized = image.resize({ w: width });
+      const webpBuffer = await resized.getBuffer("image/webp", { quality: 80 });
 
       // 3. Save to Cache (7 days)
-      await setCache(cacheKey, webpBuffer.toString('base64'), 7 * 86400);
+      try {
+        await setCache(cacheKey, webpBuffer.toString('base64'), 7 * 86400);
+      } catch (e) {
+        console.error("Cache write error:", e);
+      }
 
       res.setHeader("Content-Type", "image/webp");
       res.setHeader("Cache-Control", "public, max-age=31536000, immutable");

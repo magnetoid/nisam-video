@@ -66,10 +66,19 @@ export async function getCache<T>(key: string): Promise<T | null> {
 
   try {
     const data = await redis.get(key);
-    return data ? JSON.parse(data) : null;
+    if (!data) return null;
+    
+    // Attempt to parse JSON
+    try {
+      return JSON.parse(data);
+    } catch {
+      // If it's not valid JSON, return as is (useful for raw strings if stored differently)
+      // But our setCache uses JSON.stringify, so it SHOULD be valid JSON.
+      // If it fails, maybe it was stored raw?
+      return data as unknown as T;
+    }
   } catch (error) {
-    // Just log and return null, don't crash or disable client
-    // ioredis handles reconnection automatically
+    // Redis error
     return null;
   }
 }
