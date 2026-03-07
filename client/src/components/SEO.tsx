@@ -42,6 +42,9 @@ export function SEO({
   description,
   image,
   type = "website",
+  structuredData,
+  canonical,
+  hreflang,
   publishedTime,
   modifiedTime,
 }: SEOProps) {
@@ -93,14 +96,29 @@ export function SEO({
     updateMetaTag("twitter:image", meta.twitterImage || effectiveImage);
 
     // Canonical
-    if (meta.canonicalUrl) {
+    const effectiveCanonical = meta.canonicalUrl || canonical;
+    if (effectiveCanonical) {
       let link = document.querySelector("link[rel='canonical']");
       if (!link) {
         link = document.createElement('link');
         link.setAttribute('rel', 'canonical');
         document.head.appendChild(link);
       }
-      link.setAttribute('href', meta.canonicalUrl);
+      link.setAttribute('href', effectiveCanonical);
+    }
+
+    // Hreflang
+    if (hreflang && hreflang.length > 0) {
+      hreflang.forEach(({ lang, url }) => {
+        let link = document.querySelector(`link[rel='alternate'][hreflang='${lang}']`);
+        if (!link) {
+          link = document.createElement('link');
+          link.setAttribute('rel', 'alternate');
+          link.setAttribute('hreflang', lang);
+          document.head.appendChild(link);
+        }
+        link.setAttribute('href', url);
+      });
     }
 
     // Schema markup
@@ -123,7 +141,7 @@ export function SEO({
     if (modifiedTime) {
       updateMetaTag("article:modified_time", modifiedTime, true);
     }
-  }, [title, description, image, type, publishedTime, modifiedTime, settings, currentPath, seoMeta, fullTitle, url]);
+  }, [title, description, image, type, publishedTime, modifiedTime, settings, currentPath, seoMeta, fullTitle, url, structuredData, canonical, hreflang]);
 
   return null;
 }
