@@ -38,6 +38,6 @@ RUN npm install --omit=dev
 
 USER nodejs
 
-EXPOSE 5001
+EXPOSE 3000
 
 CMD ["npm", "start"]
