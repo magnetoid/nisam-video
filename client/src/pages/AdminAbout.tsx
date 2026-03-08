@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -21,6 +21,7 @@ export default function AdminAbout() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [content, setContent] = useState("");
+  const initializedRef = useRef(false);
 
   const { data: aboutData, isLoading } = useQuery({
     queryKey: ["/api/about"],
@@ -31,17 +32,12 @@ export default function AdminAbout() {
     },
   });
 
-  // Initialize content when data is loaded
-  useState(() => {
-    if (aboutData?.content) {
-      setContent(aboutData.content);
-    }
-  });
-
-  // Update local state when data changes (e.g. first load)
-  if (aboutData?.content && content === "" && !isLoading) {
+  useEffect(() => {
+    if (initializedRef.current) return;
+    if (aboutData?.content == null) return;
     setContent(aboutData.content);
-  }
+    initializedRef.current = true;
+  }, [aboutData?.content]);
 
   const saveMutation = useMutation({
     mutationFn: async (newContent: string) => {

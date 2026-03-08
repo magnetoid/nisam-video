@@ -1,5 +1,25 @@
 import { Component, ReactNode } from "react";
 
+async function clearCachesAndReload() {
+  try {
+    if ("serviceWorker" in navigator) {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(registrations.map((r) => r.unregister()));
+    }
+  } catch {
+  }
+
+  try {
+    if ("caches" in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map((k) => caches.delete(k)));
+    }
+  } catch {
+  }
+
+  window.location.reload();
+}
+
 export class AppErrorBoundary extends Component<
   { children: ReactNode },
   { error: unknown | null }
@@ -12,6 +32,24 @@ export class AppErrorBoundary extends Component<
 
   componentDidCatch(error: unknown, errorInfo: unknown) {
     console.error("AppErrorBoundary caught an error:", error, errorInfo);
+
+    const message = error instanceof Error ? error.message : String(error);
+    const isHookMismatch =
+      message.includes("Minified React error #310") ||
+      message.includes("Rendered more hooks than during the previous render");
+
+    if (isHookMismatch) {
+      try {
+        const key = "react_hook_mismatch_recovered_at";
+        const last = sessionStorage.getItem(key);
+        const now = Date.now();
+        if (!last || now - parseInt(last, 10) > 10_000) {
+          sessionStorage.setItem(key, String(now));
+          void clearCachesAndReload();
+        }
+      } catch {
+      }
+    }
   }
 
   render() {
@@ -31,6 +69,13 @@ export class AppErrorBoundary extends Component<
               onClick={() => window.location.reload()}
             >
               Reload Application
+            </button>
+            <button
+              className="inline-flex items-center justify-center rounded-md border border-border bg-background px-4 py-2 text-sm font-medium"
+              onClick={() => void clearCachesAndReload()}
+              type="button"
+            >
+              Reload (clear cache)
             </button>
           </div>
         </div>
