@@ -7,6 +7,7 @@ import { VideoDetailModal } from "@/components/VideoDetailModal";
 import { EditVideoDialog } from "@/components/EditVideoDialog";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import { useTranslation } from "react-i18next";
 import type {
   VideoWithRelations,
   Channel,
@@ -15,6 +16,7 @@ import type {
 } from "@shared/schema";
 
 export default function AdminVideos() {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const [selectedVideo, setSelectedVideo] = useState<VideoWithRelations | null>(
     null,
@@ -88,14 +90,14 @@ export default function AdminVideos() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/playlists"] });
       toast({
-        title: "Success",
-        description: "Video added to playlist",
+        title: t("common.success", "Success"),
+        description: t("admin.videoAddedToPlaylist", "Video added to playlist"),
       });
     },
     onError: () => {
       toast({
-        title: "Error",
-        description: "Failed to add video to playlist",
+        title: t("common.error", "Error"),
+        description: t("admin.failedToAddVideoToPlaylist", "Failed to add video to playlist"),
         variant: "destructive",
       });
     },
@@ -115,8 +117,8 @@ export default function AdminVideos() {
       queryClient.invalidateQueries({ queryKey: ["/api/videos"] });
       queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
       toast({
-        title: "AI Categorization complete",
-        description: "Video has been categorized and tagged",
+        title: t("admin.categorizationComplete", "AI Categorization complete"),
+        description: t("admin.videoCategorized", "Video has been categorized and tagged"),
       });
     },
     onError: (_, videoId) => {
@@ -126,8 +128,8 @@ export default function AdminVideos() {
         return next;
       });
       toast({
-        title: "Error",
-        description: "Failed to categorize video",
+        title: t("common.error", "Error"),
+        description: t("admin.failedToCategorizeVideo", "Failed to categorize video"),
         variant: "destructive",
       });
     },
@@ -140,14 +142,14 @@ export default function AdminVideos() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/videos"] });
       toast({
-        title: "Video deleted",
-        description: "Video has been removed",
+        title: t("admin.videoDeleted", "Video deleted"),
+        description: t("admin.videoRemoved", "Video has been removed"),
       });
     },
     onError: () => {
       toast({
-        title: "Error",
-        description: "Failed to delete video",
+        title: t("common.error", "Error"),
+        description: t("admin.failedToDeleteVideo", "Failed to delete video"),
         variant: "destructive",
       });
     },
@@ -168,14 +170,14 @@ export default function AdminVideos() {
       queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
       setEditingVideo(null);
       toast({
-        title: "Video updated",
-        description: "Video has been successfully updated",
+        title: t("admin.videoUpdated", "Video updated"),
+        description: t("admin.videoSuccessfullyUpdated", "Video has been successfully updated"),
       });
     },
     onError: () => {
       toast({
-        title: "Error",
-        description: "Failed to update video",
+        title: t("common.error", "Error"),
+        description: t("admin.failedToUpdateVideo", "Failed to update video"),
         variant: "destructive",
       });
     },
@@ -190,14 +192,14 @@ export default function AdminVideos() {
       queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
       setSelectedVideoIds([]);
       toast({
-        title: "Bulk categorization complete",
-        description: `Successfully categorized ${data.successful} of ${data.total} videos. ${data.failed > 0 ? `Failed: ${data.failed}` : ""}`,
+        title: t("admin.bulkCategorizationComplete", "Bulk categorization complete"),
+        description: t("admin.bulkCategorizationDesc", { successful: data.successful, total: data.total, failed: data.failed, defaultValue: "Successfully categorized {{successful}} of {{total}} videos. Failed: {{failed}}" }),
       });
     },
     onError: () => {
       toast({
-        title: "Error",
-        description: "Failed to bulk categorize videos",
+        title: t("common.error", "Error"),
+        description: t("admin.failedToBulkCategorize", "Failed to bulk categorize videos"),
         variant: "destructive",
       });
     },
@@ -217,14 +219,14 @@ export default function AdminVideos() {
       queryClient.invalidateQueries({ queryKey: ["/api/videos"] });
       setSelectedVideoIds([]);
       toast({
-        title: "Bulk tagging complete",
-        description: `Successfully tagged ${data.successful} of ${data.total} videos. ${data.failed > 0 ? `Failed: ${data.failed}` : ""}`,
+        title: t("admin.bulkTaggingComplete", "Bulk tagging complete"),
+        description: t("admin.bulkTaggingDesc", { successful: data.successful, total: data.total, failed: data.failed, defaultValue: "Successfully tagged {{successful}} of {{total}} videos. Failed: {{failed}}" }),
       });
     },
     onError: () => {
       toast({
-        title: "Error",
-        description: "Failed to bulk tag videos",
+        title: t("common.error", "Error"),
+        description: t("admin.failedToBulkTag", "Failed to bulk tag videos"),
         variant: "destructive",
       });
     },
@@ -238,14 +240,14 @@ export default function AdminVideos() {
       queryClient.invalidateQueries({ queryKey: ["/api/videos"] });
       setSelectedVideoIds([]);
       toast({
-        title: "Bulk deletion complete",
-        description: `Successfully deleted ${data.successful} of ${data.total} videos. ${data.failed > 0 ? `Failed: ${data.failed}` : ""}`,
+        title: t("admin.bulkDeletionComplete", "Bulk deletion complete"),
+        description: t("admin.bulkDeletionDesc", { successful: data.successful, total: data.total, failed: data.failed, defaultValue: "Successfully deleted {{successful}} of {{total}} videos. Failed: {{failed}}" }),
       });
     },
     onError: () => {
       toast({
-        title: "Error",
-        description: "Failed to bulk delete videos",
+        title: t("common.error", "Error"),
+        description: t("admin.failedToBulkDelete", "Failed to bulk delete videos"),
         variant: "destructive",
       });
     },
@@ -259,14 +261,14 @@ export default function AdminVideos() {
       queryClient.invalidateQueries({ queryKey: ["/api/videos"] });
       queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
       toast({
-        title: "AI Categorization complete",
-        description: `Categorized ${data.successful} of ${data.total} missing videos. ${data.failed > 0 ? `Failed: ${data.failed}` : ""}`,
+        title: t("admin.categorizationComplete", "AI Categorization complete"),
+        description: t("admin.categorizeMissingDesc", { successful: data.successful, total: data.total, failed: data.failed, defaultValue: "Categorized {{successful}} of {{total}} missing videos. Failed: {{failed}}" }),
       });
     },
     onError: (error: any) => {
-      const message = error?.message || "Failed to categorize missing videos";
+      const message = error?.message || t("admin.failedToCategorizeMissing", "Failed to categorize missing videos");
       toast({
-        title: "Error",
+        title: t("common.error", "Error"),
         description: message,
         variant: "destructive",
       });
@@ -303,7 +305,7 @@ export default function AdminVideos() {
     if (selectedVideoIds.length === 0) return;
     if (
       confirm(
-        `Are you sure you want to delete ${selectedVideoIds.length} videos? This action cannot be undone.`,
+        t("admin.confirmBulkDelete", { count: selectedVideoIds.length, defaultValue: "Are you sure you want to delete {{count}} videos? This action cannot be undone." })
       )
     ) {
       bulkDeleteMutation.mutate(selectedVideoIds);

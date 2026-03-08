@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -148,13 +149,13 @@ export default function AdminAISettings() {
       const data = form.getValues();
       form.reset(data);
       toast({
-        title: "Settings Saved",
-        description: "AI configuration has been updated successfully.",
+        title: t("common.success", "Success"),
+        description: t("admin.aiSettingsSaved", "AI configuration has been updated successfully."),
       });
     },
     onError: (error: any) => {
       toast({
-        title: "Save Failed",
+        title: t("common.error", "Error"),
         description: error.message,
         variant: "destructive",
       });
@@ -169,13 +170,13 @@ export default function AdminAISettings() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/ai/models"] });
       toast({
-        title: "Sync Complete",
-        description: `Successfully synced ${data.count} models.`,
+        title: t("admin.syncComplete", "Sync Complete"),
+        description: t("admin.syncCompleteDesc", { count: data.count, defaultValue: "Successfully synced {{count}} models." }),
       });
     },
     onError: (error: any) => {
       toast({
-        title: "Sync Failed",
+        title: t("admin.syncFailed", "Sync Failed"),
         description: error.message,
         variant: "destructive",
       });
@@ -191,13 +192,13 @@ export default function AdminAISettings() {
       setTestResult(data);
       if (data.success) {
         toast({
-          title: "Connection Successful",
-          description: "Successfully connected to the AI provider.",
+          title: t("common.connected", "Connected"),
+          description: t("admin.aiConnectionSuccess", "Successfully connected to the AI provider."),
         });
       } else {
         toast({
-          title: "Connection Failed",
-          description: data.error || "Could not connect to provider.",
+          title: t("admin.connectionFailed", "Connection Failed"),
+          description: data.error || t("admin.connectionFailedDesc", "Could not connect to provider."),
           variant: "destructive",
         });
       }
@@ -205,7 +206,7 @@ export default function AdminAISettings() {
     onError: (error: any) => {
       setTestResult({ success: false, message: error.message });
       toast({
-        title: "Test Failed",
+        title: t("admin.testFailed", "Test Failed"),
         description: error.message,
         variant: "destructive",
       });
@@ -289,7 +290,7 @@ export default function AdminAISettings() {
   });
 
   const handleMigration = () => {
-    if (confirm("Run database migration to create missing AI tables?")) {
+    if (confirm(t("admin.confirmMigration", "Run database migration to create missing AI tables?"))) {
       runMigrationMutation.mutate();
     }
   };
@@ -300,10 +301,10 @@ export default function AdminAISettings() {
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-3">
             <Bot className="h-8 w-8 text-primary" />
-            AI Settings
+            {t("admin.aiSettings", "AI Settings")}
           </h1>
           <p className="text-muted-foreground mt-1">
-            Configure AI providers and manage models
+            {t("admin.aiSettingsDesc", "Configure AI providers and manage models")}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -314,10 +315,10 @@ export default function AdminAISettings() {
             className="mr-2"
           >
             <Database className="h-4 w-4 mr-2" />
-            Fix Database Tables
+            {t("admin.fixDbTables", "Fix Database Tables")}
           </Button>
           <Badge variant={config?.provider === "ollama" ? "secondary" : "default"}>
-            Current Provider: {config?.provider === "ollama" ? "Ollama" : "OpenAI"}
+            {t("admin.currentProvider", "Current Provider")}: {config?.provider === "ollama" ? "Ollama" : "OpenAI"}
           </Badge>
         </div>
       </div>
@@ -329,10 +330,10 @@ export default function AdminAISettings() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Settings2 className="h-5 w-5" />
-                Provider Settings
+                {t("admin.providerSettings", "Provider Settings")}
               </CardTitle>
               <CardDescription>
-                Choose and configure your AI backend
+                {t("admin.providerSettingsDesc", "Choose and configure your AI backend")}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -343,7 +344,7 @@ export default function AdminAISettings() {
                     name="provider"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>AI Provider</FormLabel>
+                        <FormLabel>{t("admin.aiProvider", "AI Provider")}</FormLabel>
                         <Select
                           onValueChange={field.onChange}
                           defaultValue={field.value}
@@ -351,7 +352,7 @@ export default function AdminAISettings() {
                         >
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Select provider" />
+                              <SelectValue placeholder={t("admin.selectProvider", "Select provider")} />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
@@ -371,7 +372,7 @@ export default function AdminAISettings() {
                         name="openaiApiKey"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>API Key</FormLabel>
+                            <FormLabel>{t("admin.apiKey", "API Key")}</FormLabel>
                             <FormControl>
                               <Input type="password" placeholder="sk-..." {...field} />
                             </FormControl>
@@ -384,7 +385,7 @@ export default function AdminAISettings() {
                         name="openaiModel"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Model</FormLabel>
+                            <FormLabel>{t("common.model", "Model")}</FormLabel>
                             <Select
                               value={
                                 OPENAI_MODEL_PRESETS.some((m) => m.value === field.value)
@@ -401,7 +402,7 @@ export default function AdminAISettings() {
                             >
                               <FormControl>
                                 <SelectTrigger>
-                                  <SelectValue placeholder="Select a model" />
+                                  <SelectValue placeholder={t("admin.selectModel", "Select a model")} />
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
@@ -410,16 +411,16 @@ export default function AdminAISettings() {
                                     {m.label}
                                   </SelectItem>
                                 ))}
-                                <SelectItem value="custom">Custom…</SelectItem>
+                                <SelectItem value="custom">{t("admin.custom", "Custom...")}</SelectItem>
                               </SelectContent>
                             </Select>
                             {!OPENAI_MODEL_PRESETS.some((m) => m.value === form.watch("openaiModel")) && (
                               <FormControl>
-                                <Input placeholder="Custom model id" {...field} />
+                                <Input placeholder={t("admin.customModelId", "Custom model id")} {...field} />
                               </FormControl>
                             )}
                             <FormDescription>
-                              Pick a preset or enter a custom model id.
+                              {t("admin.modelDesc", "Pick a preset or enter a custom model id.")}
                             </FormDescription>
                             <FormMessage />
                           </FormItem>
@@ -433,7 +434,7 @@ export default function AdminAISettings() {
                         name="ollamaUrl"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Ollama URL</FormLabel>
+                            <FormLabel>{t("admin.ollamaUrl", "Ollama URL")}</FormLabel>
                             <div className="flex gap-2 items-center relative z-20">
                               <FormControl>
                                 <Input 
@@ -451,11 +452,11 @@ export default function AdminAISettings() {
                                 onClick={() => form.setValue("ollamaUrl", "https://ollama.com", { shouldDirty: true })}
                                 title="Set to Official Cloud URL"
                               >
-                                Cloud
+                                {t("admin.cloud", "Cloud")}
                               </Button>
                             </div>
                             <FormDescription>
-                              URL of your Ollama instance. Use 'https://ollama.com' for official cloud.
+                              {t("admin.ollamaUrlDesc", "URL of your Ollama instance. Use 'https://ollama.com' for official cloud.")}
                             </FormDescription>
                             <FormMessage />
                           </FormItem>
@@ -467,12 +468,12 @@ export default function AdminAISettings() {
                         name="ollamaApiKey"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Ollama API Key (Optional)</FormLabel>
+                            <FormLabel>{t("admin.ollamaApiKey", "Ollama API Key (Optional)")}</FormLabel>
                             <FormControl>
-                              <Input type="password" placeholder="Key for remote auth" {...field} />
+                              <Input type="password" placeholder={t("admin.keyForRemoteAuth", "Key for remote auth")} {...field} />
                             </FormControl>
                             <FormDescription>
-                              Required if your remote Ollama service uses authentication.
+                              {t("admin.ollamaApiKeyDesc", "Required if your remote Ollama service uses authentication.")}
                             </FormDescription>
                             <FormMessage />
                           </FormItem>
@@ -484,19 +485,19 @@ export default function AdminAISettings() {
                         name="ollamaModel"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Selected Model</FormLabel>
+                            <FormLabel>{t("admin.selectedModel", "Selected Model")}</FormLabel>
                             <Select
                               onValueChange={field.onChange}
                               value={field.value}
                             >
                               <FormControl>
                                 <SelectTrigger>
-                                  <SelectValue placeholder="Select a model" />
+                                  <SelectValue placeholder={t("admin.selectModel", "Select a model")} />
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
                                 {models.length === 0 ? (
-                                   <SelectItem value="_placeholder" disabled>Sync models first</SelectItem>
+                                   <SelectItem value="_placeholder" disabled>{t("admin.syncModelsFirst", "Sync models first")}</SelectItem>
                                 ) : (
                                    models.filter(m => m.isActive).map((m) => (
                                      <SelectItem key={m.id} value={m.name}>
@@ -507,7 +508,7 @@ export default function AdminAISettings() {
                               </SelectContent>
                             </Select>
                             <FormDescription>
-                              Model used for categorization and tagging.
+                              {t("admin.modelCategorizationDesc", "Model used for categorization and tagging.")}
                             </FormDescription>
                             <FormMessage />
                           </FormItem>
@@ -518,7 +519,7 @@ export default function AdminAISettings() {
 
                   <div className="flex flex-col gap-2 pt-2">
                     <Button type="submit" disabled={updateConfigMutation.isPending}>
-                      {updateConfigMutation.isPending ? "Saving..." : "Save Settings"}
+                      {updateConfigMutation.isPending ? t("common.saving", "Saving...") : t("common.saveSettings", "Save Settings")}
                     </Button>
                     
                     <div className="flex gap-2">
@@ -529,7 +530,7 @@ export default function AdminAISettings() {
                         onClick={handleTest}
                         disabled={isTesting}
                       >
-                        {isTesting ? "Testing..." : "Test Connection"}
+                        {isTesting ? t("admin.testing", "Testing...") : t("admin.testConnection", "Test Connection")}
                       </Button>
                       {testResult && (
                         <div className="flex items-center justify-center px-2">
@@ -556,10 +557,10 @@ export default function AdminAISettings() {
                 <div>
                   <CardTitle className="flex items-center gap-2">
                     <Database className="h-5 w-5" />
-                    Available Models
+                    {t("admin.availableModels", "Available Models")}
                   </CardTitle>
                   <CardDescription>
-                    Manage models from your Ollama server
+                    {t("admin.availableModelsDesc", "Manage models from your Ollama server")}
                   </CardDescription>
                 </div>
                 <Button
@@ -569,7 +570,7 @@ export default function AdminAISettings() {
                   disabled={isSyncing}
                 >
                   <RefreshCw className={`h-4 w-4 mr-2 ${isSyncing ? "animate-spin" : ""}`} />
-                  Sync Models
+                  {t("admin.syncModels", "Sync Models")}
                 </Button>
               </CardHeader>
               <CardContent>
@@ -577,18 +578,18 @@ export default function AdminAISettings() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Family</TableHead>
-                        <TableHead>Size</TableHead>
-                        <TableHead>Params</TableHead>
-                        <TableHead className="text-right">Enabled</TableHead>
+                        <TableHead>{t("common.name", "Name")}</TableHead>
+                        <TableHead>{t("admin.family", "Family")}</TableHead>
+                        <TableHead>{t("common.size", "Size")}</TableHead>
+                        <TableHead>{t("admin.params", "Params")}</TableHead>
+                        <TableHead className="text-right">{t("common.enabled", "Enabled")}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {models.length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                            No models found. Click "Sync Models" to fetch from server.
+                            {t("admin.noModelsFound", "No models found. Click \"Sync Models\" to fetch from server.")}
                           </TableCell>
                         </TableRow>
                       ) : (
@@ -598,7 +599,7 @@ export default function AdminAISettings() {
                               <div className="flex items-center gap-2">
                                 {model.name}
                                 {form.watch("ollamaModel") === model.name && (
-                                  <Badge variant="secondary" className="text-[10px] h-5">Selected</Badge>
+                                  <Badge variant="secondary" className="text-[10px] h-5">{t("common.selected", "Selected")}</Badge>
                                 )}
                               </div>
                             </TableCell>
@@ -627,7 +628,7 @@ export default function AdminAISettings() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Server className="h-5 w-5" />
-                    OpenAI Status
+                    {t("admin.openaiStatus", "OpenAI Status")}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -638,11 +639,11 @@ export default function AdminAISettings() {
                           <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
                         </div>
                         <div>
-                          <div className="font-medium">Service Status</div>
-                          <div className="text-sm text-muted-foreground">Configured by API key</div>
+                          <div className="font-medium">{t("admin.serviceStatus", "Service Status")}</div>
+                          <div className="text-sm text-muted-foreground">{t("admin.configuredByEnv", "Configured by API key")}</div>
                         </div>
                       </div>
-                      <Badge variant="outline">Info</Badge>
+                      <Badge variant="outline">{t("common.info", "Info")}</Badge>
                     </div>
 
                     <div className="flex items-center justify-between p-4 border rounded-lg">
@@ -651,7 +652,7 @@ export default function AdminAISettings() {
                           <Cpu className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                         </div>
                         <div>
-                          <div className="font-medium">Selected Model</div>
+                          <div className="font-medium">{t("admin.selectedModel", "Selected Model")}</div>
                           <div className="text-sm text-muted-foreground">{form.watch("openaiModel")}</div>
                         </div>
                       </div>
@@ -664,10 +665,10 @@ export default function AdminAISettings() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Cpu className="h-5 w-5" />
-                    Available OpenAI Models
+                    {t("admin.availableOpenaiModels", "Available OpenAI Models")}
                   </CardTitle>
                   <CardDescription>
-                    Presets you can choose from in this app
+                    {t("admin.presetsDesc", "Presets you can choose from in this app")}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -675,9 +676,9 @@ export default function AdminAISettings() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Name</TableHead>
-                          <TableHead>Notes</TableHead>
-                          <TableHead className="text-right">Action</TableHead>
+                          <TableHead>{t("common.name", "Name")}</TableHead>
+                          <TableHead>{t("common.notes", "Notes")}</TableHead>
+                          <TableHead className="text-right">{t("common.action", "Action")}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -691,7 +692,7 @@ export default function AdminAISettings() {
                                 variant={form.watch("openaiModel") === m.value ? "default" : "outline"}
                                 onClick={() => form.setValue("openaiModel", m.value, { shouldDirty: true })}
                               >
-                                Use
+                                {t("common.use", "Use")}
                               </Button>
                             </TableCell>
                           </TableRow>

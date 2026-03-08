@@ -118,9 +118,7 @@ export default function Donate() {
                 className="text-2xl font-bold mb-6 text-center"
                 data-testid="text-donation-form"
               >
-                {currentLang === "sr-Latn"
-                  ? "Izaberite iznos"
-                  : "Choose Amount"}
+                {t("donate.chooseAmount", "Choose Amount")}
               </h2>
 
               {/* Donorbox Widget */}

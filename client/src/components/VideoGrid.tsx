@@ -1,6 +1,7 @@
 import { LazyVideoCard } from "./LazyVideoCard";
 import type { VideoWithLocalizedRelations } from "@shared/schema";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTranslation } from "react-i18next";
 
 interface VideoGridProps {
   videos: VideoWithLocalizedRelations[];
@@ -30,9 +31,11 @@ export function VideoGrid({
   isLoading,
   isFetching,
   skeletonCount = 18,
-  emptyMessage = "No videos found",
+  emptyMessage,
 }: VideoGridProps) {
+  const { t } = useTranslation();
   const showSkeleton = (isLoading || isFetching) && videos.length === 0;
+  const message = emptyMessage || t("common.noVideosFound", "No videos found");
 
   if (showSkeleton) {
     return (
@@ -55,7 +58,7 @@ export function VideoGrid({
     return (
       <div className="text-center py-16">
         <p className="text-muted-foreground text-lg">
-          {emptyMessage}
+          {message}
         </p>
       </div>
     );

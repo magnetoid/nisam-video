@@ -12,8 +12,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { formatDistanceToNow } from "date-fns";
+import { useTranslation } from "react-i18next";
 
 export default function AdminChannels() {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<"channels" | "recommendations">(
     "channels",
@@ -52,14 +54,14 @@ export default function AdminChannels() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/channels"] });
       toast({
-        title: "Channel added",
-        description: "YouTube channel has been added successfully",
+        title: t("admin.channelAdded", "Channel added"),
+        description: t("admin.channelAddedDesc", "YouTube channel has been added successfully"),
       });
     },
     onError: () => {
       toast({
-        title: "Error",
-        description: "Failed to add channel",
+        title: t("common.error", "Error"),
+        description: t("admin.failedToAddChannel", "Failed to add channel"),
         variant: "destructive",
       });
     },
@@ -73,14 +75,14 @@ export default function AdminChannels() {
       queryClient.invalidateQueries({ queryKey: ["/api/channels"] });
       queryClient.invalidateQueries({ queryKey: ["/api/videos"] });
       toast({
-        title: "Scraping started",
-        description: "Channel is being scraped for videos",
+        title: t("admin.scrapingStarted", "Scraping started"),
+        description: t("admin.channelScrapingDesc", "Channel is being scraped for videos"),
       });
     },
     onError: () => {
       toast({
-        title: "Error",
-        description: "Failed to start scraping",
+        title: t("common.error", "Error"),
+        description: t("admin.failedToStartScraping", "Failed to start scraping"),
         variant: "destructive",
       });
     },
@@ -94,14 +96,14 @@ export default function AdminChannels() {
       queryClient.invalidateQueries({ queryKey: ["/api/channels"] });
       queryClient.invalidateQueries({ queryKey: ["/api/videos"] });
       toast({
-        title: "Channel deleted",
-        description: "Channel and its videos have been removed",
+        title: t("admin.channelDeleted", "Channel deleted"),
+        description: t("admin.channelDeletedDesc", "Channel and its videos have been removed"),
       });
     },
     onError: () => {
       toast({
-        title: "Error",
-        description: "Failed to delete channel",
+        title: t("common.error", "Error"),
+        description: t("admin.failedToDeleteChannel", "Failed to delete channel"),
         variant: "destructive",
       });
     },
@@ -119,12 +121,12 @@ export default function AdminChannels() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/channels"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/channel-recommendations"] });
-      toast({ title: "Approved", description: "Channel was added to Channels." });
+      toast({ title: t("admin.approved", "Approved"), description: t("admin.channelAddedToChannels", "Channel was added to Channels.") });
     },
     onError: () => {
       toast({
-        title: "Error",
-        description: "Failed to approve recommendation",
+        title: t("common.error", "Error"),
+        description: t("admin.failedToApproveRecommendation", "Failed to approve recommendation"),
         variant: "destructive",
       });
     },
@@ -141,13 +143,13 @@ export default function AdminChannels() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/channel-recommendations"] });
-      toast({ title: "Rejected" });
+      toast({ title: t("admin.rejected", "Rejected") });
       setRejectDialog({ open: false, id: null, reason: "" });
     },
     onError: () => {
       toast({
-        title: "Error",
-        description: "Failed to reject recommendation",
+        title: t("common.error", "Error"),
+        description: t("admin.failedToRejectRecommendation", "Failed to reject recommendation"),
         variant: "destructive",
       });
     },
@@ -157,17 +159,17 @@ export default function AdminChannels() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold" data-testid="text-page-title">
-          Channel Management
+          {t("admin.channelManagement", "Channel Management")}
         </h1>
         <p className="text-muted-foreground mt-1">
-          Manage channels and review community recommendations
+          {t("admin.channelManagementDesc", "Manage channels and review community recommendations")}
         </p>
       </div>
 
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
         <TabsList>
-          <TabsTrigger value="channels">Channels</TabsTrigger>
-          <TabsTrigger value="recommendations">Recommendations</TabsTrigger>
+          <TabsTrigger value="channels">{t("admin.channels", "Channels")}</TabsTrigger>
+          <TabsTrigger value="recommendations">{t("admin.recommendations", "Recommendations")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="channels">
@@ -183,9 +185,9 @@ export default function AdminChannels() {
         <TabsContent value="recommendations" className="space-y-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="text-xl font-semibold">Recommended Channels</h2>
+              <h2 className="text-xl font-semibold">{t("admin.recommendedChannels", "Recommended Channels")}</h2>
               <p className="text-sm text-muted-foreground">
-                Approve to add to Channels, or reject.
+                {t("admin.recommendationsDesc", "Approve to add to Channels, or reject.")}
               </p>
             </div>
             <Select
@@ -196,10 +198,10 @@ export default function AdminChannels() {
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="approved">Approved</SelectItem>
-                <SelectItem value="rejected">Rejected</SelectItem>
-                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="pending">{t("status.pending", "Pending")}</SelectItem>
+                <SelectItem value="approved">{t("status.approved", "Approved")}</SelectItem>
+                <SelectItem value="rejected">{t("status.rejected", "Rejected")}</SelectItem>
+                <SelectItem value="all">{t("common.all", "All")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -209,24 +211,24 @@ export default function AdminChannels() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="min-w-[260px]">URL</TableHead>
-                    <TableHead className="min-w-[260px]">Description</TableHead>
-                    <TableHead className="whitespace-nowrap">Submitted</TableHead>
-                    <TableHead className="whitespace-nowrap">Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead className="min-w-[260px]">{t("common.url", "URL")}</TableHead>
+                    <TableHead className="min-w-[260px]">{t("common.description", "Description")}</TableHead>
+                    <TableHead className="whitespace-nowrap">{t("admin.submitted", "Submitted")}</TableHead>
+                    <TableHead className="whitespace-nowrap">{t("common.status", "Status")}</TableHead>
+                    <TableHead className="text-right">{t("common.actions", "Actions")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {recsLoading ? (
                     <TableRow>
                       <TableCell colSpan={5} className="py-10 text-center text-muted-foreground">
-                        Loading...
+                        {t("common.loading", "Loading...")}
                       </TableCell>
                     </TableRow>
                   ) : recommendations.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={5} className="py-10 text-center text-muted-foreground">
-                        No recommendations.
+                        {t("admin.noRecommendations", "No recommendations.")}
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -263,7 +265,7 @@ export default function AdminChannels() {
                                 approveRecommendationMutation.isPending
                               }
                             >
-                              Approve
+                              {t("admin.approve", "Approve")}
                             </Button>
                             <Button
                               size="sm"
@@ -273,7 +275,7 @@ export default function AdminChannels() {
                               }
                               disabled={r.status !== "pending"}
                             >
-                              Reject
+                              {t("admin.reject", "Reject")}
                             </Button>
                           </div>
                         </TableCell>
@@ -295,11 +297,11 @@ export default function AdminChannels() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Reject recommendation</DialogTitle>
+            <DialogTitle>{t("admin.rejectRecommendation", "Reject recommendation")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <div className="space-y-2">
-              <Label htmlFor="reject-reason">Reason (optional)</Label>
+              <Label htmlFor="reject-reason">{t("admin.reasonOptional", "Reason (optional)")}</Label>
               <Textarea
                 id="reject-reason"
                 value={rejectDialog.reason}
@@ -315,7 +317,7 @@ export default function AdminChannels() {
                 variant="outline"
                 onClick={() => setRejectDialog({ open: false, id: null, reason: "" })}
               >
-                Cancel
+                {t("common.cancel", "Cancel")}
               </Button>
               <Button
                 type="button"
@@ -328,7 +330,7 @@ export default function AdminChannels() {
                 }}
                 disabled={rejectRecommendationMutation.isPending || !rejectDialog.id}
               >
-                {rejectRecommendationMutation.isPending ? "Rejecting..." : "Reject"}
+                {rejectRecommendationMutation.isPending ? t("admin.rejecting", "Rejecting...") : t("admin.reject", "Reject")}
               </Button>
             </div>
           </div>

@@ -29,6 +29,7 @@ import { Badge } from "@/components/ui/badge";
 interface SupportedLanguage {
   code: string;
   name: string;
+  rootUri: string | null;
   isActive: boolean;
   isDefault: boolean;
 }
@@ -38,7 +39,10 @@ interface UiTranslation {
   value: string;
 }
 
+import { useTranslation } from "react-i18next";
+
 export default function AdminLanguages() {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -72,10 +76,10 @@ export default function AdminLanguages() {
       queryClient.invalidateQueries({ queryKey: ["/api/languages"] });
       setIsAddOpen(false);
       setEditingLang(null);
-      toast({ title: "Success", description: "Language saved successfully" });
+      toast({ title: t("admin.languages.saved_success"), description: t("admin.languages.saved_desc") });
     },
     onError: (error) => {
-      toast({ title: "Error", description: "Failed to save language", variant: "destructive" });
+      toast({ title: t("common.error"), description: t("admin.languages.save_error"), variant: "destructive" });
     },
   });
 
@@ -85,10 +89,10 @@ export default function AdminLanguages() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/languages"] });
-      toast({ title: "Success", description: "Language deleted" });
+      toast({ title: t("common.success"), description: t("admin.languages.deleted_success") });
     },
     onError: () => {
-      toast({ title: "Error", description: "Cannot delete default language", variant: "destructive" });
+      toast({ title: t("common.error"), description: t("admin.languages.delete_error"), variant: "destructive" });
     },
   });
 
@@ -103,7 +107,7 @@ export default function AdminLanguages() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/translations", selectedLangCode] });
-      toast({ title: "Saved", description: "Translation updated" });
+      toast({ title: t("common.saved"), description: t("admin.languages.translation_updated") });
     },
   });
 
@@ -120,22 +124,22 @@ export default function AdminLanguages() {
       
       if (data.remaining > 0) {
         toast({ 
-          title: "Batch Complete", 
-          description: `Translated ${data.translated} keys. ${data.remaining} remaining. Continuing...` 
+          title: t("admin.languages.batch_complete"), 
+          description: t("admin.languages.batch_desc", { translated: data.translated, remaining: data.remaining })
         });
         // Recursively call to translate next batch
         setTimeout(() => autoTranslateMutation.mutate(), 1000);
       } else {
         toast({ 
-          title: "Translation Complete", 
-          description: `All keys translated successfully!` 
+          title: t("admin.languages.translation_complete"), 
+          description: t("admin.languages.translation_complete_desc")
         });
       }
     },
     onError: (error: Error) => {
       toast({ 
-        title: "Translation Failed", 
-        description: error.message || "Failed to auto-translate", 
+        title: t("admin.languages.translation_failed"), 
+        description: error.message || t("admin.languages.auto_translate_error"), 
         variant: "destructive" 
       });
     },
@@ -145,6 +149,7 @@ export default function AdminLanguages() {
   const [formData, setFormData] = useState<Partial<SupportedLanguage>>({
     code: "",
     name: "",
+    rootUri: "",
     isActive: true,
     isDefault: false,
   });
@@ -156,7 +161,7 @@ export default function AdminLanguages() {
   };
 
   const handleAdd = () => {
-    setFormData({ code: "", name: "", isActive: true, isDefault: false });
+    setFormData({ code: "", name: "", rootUri: "", isActive: true, isDefault: false });
     setEditingLang(null);
     setIsAddOpen(true);
   };
@@ -176,39 +181,39 @@ export default function AdminLanguages() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Languages & Localization</h1>
-          <p className="text-muted-foreground">Manage supported languages and translations</p>
+          <h1 className="text-3xl font-bold tracking-tight">{t("admin.languages.title")}</h1>
+          <p className="text-muted-foreground">{t("admin.languages.subtitle")}</p>
         </div>
       </div>
 
       <Tabs defaultValue="languages" className="w-full">
         <TabsList>
-          <TabsTrigger value="languages">Languages</TabsTrigger>
-          <TabsTrigger value="translations">Translations</TabsTrigger>
+          <TabsTrigger value="languages">{t("admin.languages.tab_languages")}</TabsTrigger>
+          <TabsTrigger value="translations">{t("admin.languages.tab_translations")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="languages" className="space-y-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
-                <CardTitle>Supported Languages</CardTitle>
+                <CardTitle>{t("admin.languages.supported_languages")}</CardTitle>
                 <CardDescription>
-                  Languages available in the language switcher
+                  {t("admin.languages.supported_languages_desc")}
                 </CardDescription>
               </div>
               <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
                 <DialogTrigger asChild>
                   <Button onClick={handleAdd}>
-                    <Plus className="mr-2 h-4 w-4" /> Add Language
+                    <Plus className="mr-2 h-4 w-4" /> {t("admin.languages.add_language")}
                   </Button>
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>{editingLang ? "Edit Language" : "Add Language"}</DialogTitle>
+                    <DialogTitle>{editingLang ? t("admin.languages.edit_language") : t("admin.languages.add_language")}</DialogTitle>
                   </DialogHeader>
                   <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="space-y-2">
-                      <Label>Language Code (ISO 639-1)</Label>
+                      <Label>{t("admin.languages.language_code")}</Label>
                       <Input 
                         placeholder="e.g. fr, de, es" 
                         value={formData.code} 
@@ -218,13 +223,24 @@ export default function AdminLanguages() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Display Name</Label>
+                      <Label>{t("admin.languages.display_name")}</Label>
                       <Input 
                         placeholder="e.g. Français" 
                         value={formData.name} 
                         onChange={e => setFormData({...formData, name: e.target.value})}
                         required
                       />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>{t("admin.languages.root_uri")}</Label>
+                      <Input 
+                        placeholder={t("admin.languages.root_uri_placeholder")} 
+                        value={formData.rootUri || ""} 
+                        onChange={e => setFormData({...formData, rootUri: e.target.value})}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        {t("admin.languages.root_uri_help", { code: formData.code })}
+                      </p>
                     </div>
                     <div className="flex items-center gap-4">
                       <div className="flex items-center space-x-2">
@@ -233,7 +249,7 @@ export default function AdminLanguages() {
                           checked={formData.isActive} 
                           onCheckedChange={(c) => setFormData({...formData, isActive: c as boolean})}
                         />
-                        <Label htmlFor="isActive">Active</Label>
+                        <Label htmlFor="isActive">{t("admin.languages.active")}</Label>
                       </div>
                       <div className="flex items-center space-x-2">
                         <Checkbox 
@@ -243,14 +259,14 @@ export default function AdminLanguages() {
                           disabled={editingLang?.isDefault}
                         />
                         <Label htmlFor="isDefault">
-                          Primary Language
-                          {editingLang?.isDefault && <span className="text-xs text-muted-foreground ml-2">(Cannot be unset directly)</span>}
+                          {t("admin.languages.primary_language")}
+                          {editingLang?.isDefault && <span className="text-xs text-muted-foreground ml-2">{t("admin.languages.cannot_unset")}</span>}
                         </Label>
                       </div>
                     </div>
                     <Button type="submit" className="w-full" disabled={upsertLangMutation.isPending}>
                       {upsertLangMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      Save
+                      {t("common.save")}
                     </Button>
                   </form>
                 </DialogContent>
@@ -260,31 +276,33 @@ export default function AdminLanguages() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Code</TableHead>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Actions</TableHead>
+                    <TableHead>{t("admin.languages.code")}</TableHead>
+                    <TableHead>{t("admin.languages.name")}</TableHead>
+                    <TableHead>{t("admin.languages.root_uri")}</TableHead>
+                    <TableHead>{t("admin.languages.type")}</TableHead>
+                    <TableHead>{t("admin.languages.status")}</TableHead>
+                    <TableHead>{t("admin.languages.actions")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {isLoadingLangs ? (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center py-4">Loading...</TableCell>
+                      <TableCell colSpan={5} className="text-center py-4">{t("common.loading")}</TableCell>
                     </TableRow>
                   ) : languages.map((lang) => (
                     <TableRow key={lang.code}>
                       <TableCell className="font-mono">{lang.code}</TableCell>
                       <TableCell>{lang.name}</TableCell>
+                      <TableCell className="font-mono text-xs">{lang.rootUri || `/${lang.code}`}</TableCell>
                       <TableCell>
                         {lang.isDefault ? (
-                          <Badge variant="default">Primary</Badge>
+                          <Badge variant="default">{t("admin.languages.primary")}</Badge>
                         ) : (
-                          <Badge variant="secondary">Secondary</Badge>
+                          <Badge variant="secondary">{t("admin.languages.secondary")}</Badge>
                         )}
                       </TableCell>
                       <TableCell>
-                        {lang.isActive ? <Badge variant="outline" className="bg-green-500/10 text-green-500 hover:bg-green-500/20 border-green-500/20">Active</Badge> : <Badge variant="destructive">Inactive</Badge>}
+                        {lang.isActive ? <Badge variant="outline" className="bg-green-500/10 text-green-500 hover:bg-green-500/20 border-green-500/20">{t("admin.languages.status_active")}</Badge> : <Badge variant="destructive">{t("admin.languages.status_inactive")}</Badge>}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
@@ -295,7 +313,7 @@ export default function AdminLanguages() {
                             variant="ghost" 
                             size="sm" 
                             onClick={() => {
-                              if (confirm(`Delete ${lang.name}?`)) deleteLangMutation.mutate(lang.code);
+                              if (confirm(t("admin.languages.confirm_delete", { name: lang.name }))) deleteLangMutation.mutate(lang.code);
                             }}
                             disabled={lang.isDefault || lang.code === 'en'}
                           >
@@ -316,8 +334,8 @@ export default function AdminLanguages() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle>Translation Editor</CardTitle>
-                  <CardDescription>Edit UI strings for each language</CardDescription>
+                  <CardTitle>{t("admin.languages.translation_editor")}</CardTitle>
+                  <CardDescription>{t("admin.languages.translation_editor_desc")}</CardDescription>
                 </div>
                 <div className="flex items-center gap-2">
                   <Button 
@@ -329,12 +347,12 @@ export default function AdminLanguages() {
                     {autoTranslateMutation.isPending ? (
                        <>
                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                         Translating...
+                         {t("admin.languages.translating")}
                        </>
                     ) : (
                        <>
                          <Sparkles className="mr-2 h-4 w-4" />
-                         Auto Translate All
+                         {t("admin.languages.auto_translate_all")}
                        </>
                     )}
                   </Button>
@@ -353,13 +371,13 @@ export default function AdminLanguages() {
             </CardHeader>
             <CardContent>
               {isLoadingTrans ? (
-                <div className="text-center py-8">Loading translations...</div>
+                <div className="text-center py-8">{t("admin.languages.loading_translations")}</div>
               ) : (
                 <div className="space-y-4">
                   <div className="grid grid-cols-12 gap-4 font-medium text-sm text-muted-foreground border-b pb-2">
-                    <div className="col-span-4">Key</div>
-                    <div className="col-span-4">English (Reference)</div>
-                    <div className="col-span-4">Translation</div>
+                    <div className="col-span-4">{t("admin.languages.key")}</div>
+                    <div className="col-span-4">{t("admin.languages.english_reference")}</div>
+                    <div className="col-span-4">{t("admin.languages.translation")}</div>
                   </div>
                   {translationKeys.map((key) => (
                     <TranslationRow 

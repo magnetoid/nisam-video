@@ -24,7 +24,10 @@ import { Badge } from "@/components/ui/badge";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 
+import { useTranslation } from "react-i18next";
+
 export default function AdminRegenerate() {
+  const { t } = useTranslation();
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [progress, setProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState("");
@@ -55,7 +58,7 @@ export default function AdminRegenerate() {
   const handleRegenerate = async (type: "all" | "categories" | "tags") => {
     setIsRegenerating(true);
     setProgress(0);
-    setCurrentStep("Starting regeneration...");
+    setCurrentStep(t("admin.regenerate.starting"));
     setResult(null);
 
     try {
@@ -82,7 +85,7 @@ export default function AdminRegenerate() {
         const data = await response.json();
 
         if (regenerationMode === "missing" && data.total > 0 && (data.processed || 0) === 0) {
-          throw new Error("No progress made while processing missing items. Check AI provider settings and server logs.");
+          throw new Error(t("admin.regenerate.no_progress_error"));
         }
 
         if (initialTotal === 0 && data.total > 0) {
@@ -104,16 +107,16 @@ export default function AdminRegenerate() {
           if (initialTotal > 0) {
             const pct = Math.min(100, Math.round((processedTotal / initialTotal) * 100));
             setProgress(pct);
-            setCurrentStep(`Processing ${processedTotal} of ${initialTotal} (missing)...`);
+            setCurrentStep(t("admin.regenerate.processing_missing", { processed: processedTotal, total: initialTotal }));
           }
         } else {
           if (total > 0) {
             const pct = Math.min(100, Math.round((offset / total) * 100));
             setProgress(pct);
             const end = Math.min(total, offset);
-            setCurrentStep(`Processing ${end} of ${total} videos...`);
+            setCurrentStep(t("admin.regenerate.processing_videos", { processed: end, total }));
           } else {
-            setCurrentStep("Processing...");
+            setCurrentStep(t("admin.regenerate.processing"));
           }
         }
 
@@ -126,7 +129,7 @@ export default function AdminRegenerate() {
       }
 
       setProgress(100);
-      setCurrentStep("Completed!");
+      setCurrentStep(t("admin.regenerate.completed"));
       setResult({
         success: true,
         processed: processedTotal,
@@ -136,17 +139,17 @@ export default function AdminRegenerate() {
       });
 
       toast({
-        title: "Regeneration Complete",
-        description: `Successfully processed ${processedTotal || 0} videos`,
+        title: t("admin.regenerate.complete_title"),
+        description: t("admin.regenerate.complete_desc", { count: processedTotal || 0 }),
       });
     } catch (error) {
       console.error("Regeneration error:", error);
       toast({
-        title: "Regeneration Failed",
-        description: "Failed to regenerate content. Please try again.",
+        title: t("admin.regenerate.failed_title"),
+        description: t("admin.regenerate.failed_desc"),
         variant: "destructive",
       });
-      setCurrentStep("Failed");
+      setCurrentStep(t("common.failed"));
     } finally {
       setIsRegenerating(false);
     }
@@ -155,7 +158,7 @@ export default function AdminRegenerate() {
   const handleRegenerateSlugs = async () => {
     setIsRegenerating(true);
     setProgress(0);
-    setCurrentStep("Regenerating SEO-friendly URLs...");
+    setCurrentStep(t("admin.regenerate.regenerating_urls"));
     setResult(null);
 
     try {
@@ -179,7 +182,7 @@ export default function AdminRegenerate() {
         const data = await response.json();
 
         if (regenerationMode === "missing" && data.total > 0 && (data.processed || 0) === 0) {
-          throw new Error("No progress made while processing missing slugs.");
+          throw new Error(t("admin.regenerate.no_progress_slugs_error"));
         }
         total = typeof data.total === "number" ? data.total : total;
         processedTotal += data.processed || 0;
@@ -189,7 +192,7 @@ export default function AdminRegenerate() {
           const pct = Math.min(100, Math.round((offset / total) * 100));
           setProgress(pct);
           const end = Math.min(total, offset);
-          setCurrentStep(`Updating ${end} of ${total} URLs...`);
+          setCurrentStep(t("admin.regenerate.updating_urls", { processed: end, total }));
         }
 
         if (data.done) {
@@ -205,21 +208,21 @@ export default function AdminRegenerate() {
       }
 
       setProgress(100);
-      setCurrentStep("Completed!");
+      setCurrentStep(t("admin.regenerate.completed"));
 
       toast({
-        title: "URL Regeneration Complete",
+        title: t("admin.regenerate.url_complete_title"),
         description:
-          `Successfully regenerated ${processedTotal || 0} video URLs`,
+          t("admin.regenerate.url_complete_desc", { count: processedTotal || 0 }),
       });
     } catch (error) {
       console.error("Slug regeneration error:", error);
       toast({
-        title: "URL Regeneration Failed",
-        description: "Failed to regenerate URLs. Please try again.",
+        title: t("admin.regenerate.url_failed_title"),
+        description: t("admin.regenerate.url_failed_desc"),
         variant: "destructive",
       });
-      setCurrentStep("Failed");
+      setCurrentStep(t("common.failed"));
     } finally {
       setIsRegenerating(false);
     }
@@ -232,25 +235,25 @@ export default function AdminRegenerate() {
             className="text-3xl font-bold text-foreground"
             data-testid="text-page-title"
           >
-            Regenerate Content
+            {t("admin.regenerate.title")}
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Use AI to generate missing categories, tags, and URLs
+            {t("admin.regenerate.subtitle")}
           </p>
           {aiStatus?.openai && (
             <div className="mt-3 flex items-center gap-2 text-sm">
               <Badge variant="secondary">AI</Badge>
               <Badge variant={aiStatus.openai.configured ? "default" : "destructive"}>
-                OpenAI: {aiStatus.openai.configured ? "configured" : "missing key"}
+                OpenAI: {aiStatus.openai.configured ? t("admin.regenerate.configured") : t("admin.regenerate.missing_key")}
               </Badge>
-              <span className="text-muted-foreground">Model: {aiStatus.openai.model}</span>
+              <span className="text-muted-foreground">{t("admin.regenerate.model")}: {aiStatus.openai.model}</span>
             </div>
           )}
 
           <Card className="mt-6">
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">Regeneration Mode</CardTitle>
-              <CardDescription>Only missing items are processed to reduce costs</CardDescription>
+              <CardTitle className="text-base">{t("admin.regenerate.mode_title")}</CardTitle>
+              <CardDescription>{t("admin.regenerate.mode_desc")}</CardDescription>
             </CardHeader>
             <CardContent>
               <RadioGroup
@@ -262,9 +265,9 @@ export default function AdminRegenerate() {
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="missing" id="missing" />
                   <Label htmlFor="missing" className="cursor-pointer">
-                    <span className="font-medium">Missing Metadata Only</span>
+                    <span className="font-medium">{t("admin.regenerate.missing_metadata")}</span>
                     <p className="text-xs text-muted-foreground">
-                      Only process videos without categories/tags/slugs
+                      {t("admin.regenerate.missing_metadata_desc")}
                     </p>
                   </Label>
                 </div>
@@ -278,7 +281,7 @@ export default function AdminRegenerate() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Loader2 className="h-5 w-5 animate-spin" />
-                Regenerating...
+                {t("admin.regenerate.regenerating")}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -298,15 +301,15 @@ export default function AdminRegenerate() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-green-600">
                 <CheckCircle2 className="h-5 w-5" />
-                Regeneration Complete
+                {t("admin.regenerate.regeneration_complete")}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">
                   {result.type === "slugs"
-                    ? "URLs Updated:"
-                    : "Videos Processed:"}
+                    ? t("admin.regenerate.urls_updated")
+                    : t("admin.regenerate.videos_processed")}
                 </span>
                 <Badge variant="secondary">{result.processed || 0}</Badge>
               </div>
@@ -314,7 +317,7 @@ export default function AdminRegenerate() {
                 <>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">
-                      Categories Generated:
+                      {t("admin.regenerate.categories_generated")}
                     </span>
                     <Badge variant="secondary">
                       {result.categoriesGenerated || 0}
@@ -322,7 +325,7 @@ export default function AdminRegenerate() {
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">
-                      Tags Generated:
+                      {t("admin.regenerate.tags_generated")}
                     </span>
                     <Badge variant="secondary">
                       {result.tagsGenerated || 0}
@@ -344,10 +347,10 @@ export default function AdminRegenerate() {
             <CardHeader>
               <div className="flex items-center gap-2">
                 <FolderTree className="h-5 w-5 text-primary" />
-                <CardTitle className="text-lg">Categories Only</CardTitle>
+                <CardTitle className="text-lg">{t("admin.regenerate.categories_only")}</CardTitle>
               </div>
               <CardDescription>
-                Generate categories for videos missing categories
+                {t("admin.regenerate.categories_only_desc")}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -361,7 +364,7 @@ export default function AdminRegenerate() {
                 <FolderTree
                   className={`h-4 w-4 ${isRegenerating ? "animate-spin" : ""}`}
                 />
-                Regenerate Categories
+                {t("admin.regenerate.regenerate_categories")}
               </Button>
             </CardContent>
           </Card>
@@ -370,10 +373,10 @@ export default function AdminRegenerate() {
             <CardHeader>
               <div className="flex items-center gap-2">
                 <Tag className="h-5 w-5 text-primary" />
-                <CardTitle className="text-lg">Tags Only</CardTitle>
+                <CardTitle className="text-lg">{t("admin.regenerate.tags_only")}</CardTitle>
               </div>
               <CardDescription>
-                Generate tags for videos missing tags
+                {t("admin.regenerate.tags_only_desc")}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -387,7 +390,7 @@ export default function AdminRegenerate() {
                 <Tag
                   className={`h-4 w-4 ${isRegenerating ? "animate-spin" : ""}`}
                 />
-                Regenerate Tags
+                {t("admin.regenerate.regenerate_tags")}
               </Button>
             </CardContent>
           </Card>
@@ -396,9 +399,9 @@ export default function AdminRegenerate() {
             <CardHeader>
               <div className="flex items-center gap-2">
                 <Link2 className="h-5 w-5 text-primary" />
-                <CardTitle className="text-lg">SEO URLs</CardTitle>
+                <CardTitle className="text-lg">{t("admin.regenerate.seo_urls")}</CardTitle>
               </div>
-              <CardDescription>Generate SEO-friendly URLs for videos missing slugs</CardDescription>
+              <CardDescription>{t("admin.regenerate.seo_urls_desc")}</CardDescription>
             </CardHeader>
             <CardContent>
               <Button
@@ -411,14 +414,13 @@ export default function AdminRegenerate() {
                 <Link2
                   className={`h-4 w-4 ${isRegenerating ? "animate-spin" : ""}`}
                 />
-                Regenerate URLs
+                {t("admin.regenerate.regenerate_urls")}
               </Button>
               <div className="mt-4 p-3 bg-muted rounded-md">
                 <div className="flex items-start gap-2">
                   <AlertCircle className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
                   <p className="text-xs text-muted-foreground">
-                    Updates all video URLs to be SEO-friendly based on current
-                    titles
+                    {t("admin.regenerate.seo_urls_help")}
                   </p>
                 </div>
               </div>
@@ -428,18 +430,17 @@ export default function AdminRegenerate() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Important Information</CardTitle>
+            <CardTitle>{t("admin.regenerate.important_info")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm text-muted-foreground">
             <div className="flex gap-2">
               <Sparkles className="h-5 w-5 text-primary flex-shrink-0" />
               <div>
                 <p className="font-medium text-foreground">
-                  AI-Powered Analysis
+                  {t("admin.regenerate.ai_powered")}
                 </p>
                 <p>
-                  Uses OpenAI to analyze video titles and descriptions for
-                  intelligent categorization
+                  {t("admin.regenerate.ai_powered_desc")}
                 </p>
               </div>
             </div>
@@ -447,21 +448,19 @@ export default function AdminRegenerate() {
               <RefreshCw className="h-5 w-5 text-primary flex-shrink-0" />
               <div>
                 <p className="font-medium text-foreground">
-                  When to Regenerate
+                  {t("admin.regenerate.when_to_regenerate")}
                 </p>
                 <p>
-                  Use this after importing new videos, or when you want to
-                  refresh the AI analysis with updated algorithms
+                  {t("admin.regenerate.when_to_regenerate_desc")}
                 </p>
               </div>
             </div>
             <div className="flex gap-2">
               <AlertCircle className="h-5 w-5 text-primary flex-shrink-0" />
               <div>
-                <p className="font-medium text-foreground">Processing Time</p>
+                <p className="font-medium text-foreground">{t("admin.regenerate.processing_time")}</p>
                 <p>
-                  The regeneration process may take several minutes. You can
-                  continue using the site while this tab stays open
+                  {t("admin.regenerate.processing_time_desc")}
                 </p>
               </div>
             </div>

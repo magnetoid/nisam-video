@@ -103,7 +103,7 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
               {t("nav.settings") || "Settings"}
             </p>
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Language</span>
+              <span className="text-sm font-medium">{t("settings.language", "Language")}</span>
               <LanguageSwitcher />
             </div>
           </div>

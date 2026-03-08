@@ -82,7 +82,7 @@ export default function Login() {
             </div>
           </div>
           <CardTitle className="text-2xl font-bold text-center">
-            Admin Login
+            {t("login.title", "Admin Login")}
           </CardTitle>
           <CardDescription className="text-center">
             {t("login.adminAccess")}
@@ -91,13 +91,13 @@ export default function Login() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="username">Username</Label>
+              <Label htmlFor="username">{t("auth.username", "Username")}</Label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="username"
                   type="text"
-                  placeholder="Username"
+                  placeholder={t("auth.username", "Username")}
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   required
@@ -108,13 +108,13 @@ export default function Login() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">{t("auth.password", "Password")}</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="password"
                   type="password"
-                  placeholder="Password"
+                  placeholder={t("auth.password", "Password")}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required

@@ -55,8 +55,8 @@ function ChannelGridCard({ channel }: { channel: Channel }) {
     typeof channel.videoCount === "number" && channel.videoCount > 0
       ? t("channelsDirectory.videosCount", { count: channel.videoCount })
       : channel.platform === "tiktok"
-        ? "TikTok"
-        : "YouTube";
+        ? t("platforms.tiktok", "TikTok")
+        : t("platforms.youtube", "YouTube");
 
   return (
     <div className="group relative w-full" data-testid={`card-channel-${channel.id}`}>
@@ -89,7 +89,7 @@ function ChannelGridCard({ channel }: { channel: Channel }) {
                 <div className="flex items-center gap-2">
                   {channel.platform && (
                     <Badge variant="secondary" className="text-[10px] px-2 py-0.5">
-                      {channel.platform === "tiktok" ? "TikTok" : "YouTube"}
+                      {channel.platform === "tiktok" ? t("platforms.tiktok", "TikTok") : t("platforms.youtube", "YouTube")}
                     </Badge>
                   )}
                 </div>

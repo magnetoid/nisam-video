@@ -28,7 +28,10 @@ interface SchedulerStatus extends SchedulerSettings {
   runtimeMode?: "serverless" | "process";
 }
 
+import { useTranslation } from "react-i18next";
+
 export default function AdminScheduler() {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const [selectedInterval, setSelectedInterval] = useState(6);
 
@@ -49,14 +52,14 @@ export default function AdminScheduler() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/scheduler"] });
       toast({
-        title: "Scheduler Started",
-        description: "Automated scraping is now enabled",
+        title: t("admin.scheduler.started_title"),
+        description: t("admin.scheduler.started_desc"),
       });
     },
     onError: () => {
       toast({
-        title: "Error",
-        description: "Failed to start scheduler",
+        title: t("common.error"),
+        description: t("admin.scheduler.start_error"),
         variant: "destructive",
       });
     },
@@ -69,14 +72,14 @@ export default function AdminScheduler() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/scheduler"] });
       toast({
-        title: "Scheduler Stopped",
-        description: "Automated scraping has been disabled",
+        title: t("admin.scheduler.stopped_title"),
+        description: t("admin.scheduler.stopped_desc"),
       });
     },
     onError: () => {
       toast({
-        title: "Error",
-        description: "Failed to stop scheduler",
+        title: t("common.error"),
+        description: t("admin.scheduler.stop_error"),
         variant: "destructive",
       });
     },
@@ -89,14 +92,14 @@ export default function AdminScheduler() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/scheduler"] });
       toast({
-        title: "Interval Updated",
-        description: "Scraping interval has been changed",
+        title: t("admin.scheduler.interval_updated_title"),
+        description: t("admin.scheduler.interval_updated_desc"),
       });
     },
     onError: () => {
       toast({
-        title: "Error",
-        description: "Failed to update interval",
+        title: t("common.error"),
+        description: t("admin.scheduler.update_interval_error"),
         variant: "destructive",
       });
     },
@@ -108,21 +111,21 @@ export default function AdminScheduler() {
     },
     onSuccess: () => {
       toast({
-        title: "Scrape Job Completed",
-        description: "Scraping finished.",
+        title: t("admin.scheduler.job_completed_title"),
+        description: t("admin.scheduler.job_completed_desc"),
       });
     },
     onError: () => {
       toast({
-        title: "Error",
-        description: "Failed to start scrape job",
+        title: t("common.error"),
+        description: t("admin.scheduler.job_start_error"),
         variant: "destructive",
       });
     },
   });
 
   const formatDate = (date: string | Date | null | undefined) => {
-    if (!date) return "Never";
+    if (!date) return t("common.never");
     const dateObj = typeof date === "string" ? new Date(date) : date;
     return dateObj.toLocaleString();
   };
@@ -131,28 +134,28 @@ export default function AdminScheduler() {
     if (scheduler?.isRunning) {
       return (
         <Badge variant="default" className="bg-green-600">
-          Running Job
+          {t("admin.scheduler.status_running")}
         </Badge>
       );
     }
     if (scheduler?.isEnabled) {
       return (
         <Badge variant="default" className="bg-blue-600">
-          Enabled
+          {t("admin.scheduler.status_enabled")}
         </Badge>
       );
     }
-    return <Badge variant="secondary">Stopped</Badge>;
+    return <Badge variant="secondary">{t("admin.scheduler.status_stopped")}</Badge>;
   };
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div>
         <h1 className="text-3xl font-bold" data-testid="text-page-title">
-          Automated Scheduler
+          {t("admin.scheduler.title")}
         </h1>
         <p className="text-muted-foreground mt-1">
-          Configure automated scraping for all channels
+          {t("admin.scheduler.subtitle")}
         </p>
       </div>
 
@@ -161,7 +164,7 @@ export default function AdminScheduler() {
               <CardContent className="py-12 text-center">
                 <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-2 text-muted-foreground" />
                 <p className="text-muted-foreground">
-                  Loading scheduler status...
+                  {t("admin.scheduler.loading")}
                 </p>
               </CardContent>
             </Card>
@@ -171,9 +174,9 @@ export default function AdminScheduler() {
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <div>
-                      <CardTitle>Scheduler Status</CardTitle>
+                      <CardTitle>{t("admin.scheduler.status_title")}</CardTitle>
                       <CardDescription>
-                        Current status and schedule information
+                        {t("admin.scheduler.status_desc")}
                       </CardDescription>
                     </div>
                     {getStatusBadge()}
@@ -182,14 +185,13 @@ export default function AdminScheduler() {
                 <CardContent className="space-y-4">
                   {scheduler?.isEnabled && scheduler?.runtimeMode === "serverless" && scheduler?.hasTask === false && (
                     <div className="rounded-lg border border-border bg-muted/30 p-3 text-sm text-muted-foreground">
-                      Scheduler is enabled, but this deployment does not keep background timers running. Use an external cron
-                      trigger to call <span className="font-mono">/api/scheduler/run-now</span>.
+                      {t("admin.scheduler.serverless_warning", { endpoint: "/api/scheduler/run-now" })}
                     </div>
                   )}
 
                   {scheduler?.isEnabled && !scheduler?.isRunning && (
                     <div className="text-sm text-muted-foreground">
-                      "Running Job" only shows while a scrape is executing, then it returns to Enabled.
+                      {t("admin.scheduler.running_job_note")}
                     </div>
                   )}
 
@@ -197,7 +199,7 @@ export default function AdminScheduler() {
                     <div className="space-y-1">
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Clock className="h-4 w-4" />
-                        <span>Last Run</span>
+                        <span>{t("admin.scheduler.last_run")}</span>
                       </div>
                       <p
                         className="text-lg font-medium"
@@ -209,7 +211,7 @@ export default function AdminScheduler() {
                     <div className="space-y-1">
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Calendar className="h-4 w-4" />
-                        <span>Next Run</span>
+                        <span>{t("admin.scheduler.next_run")}</span>
                       </div>
                       <p
                         className="text-lg font-medium"
@@ -222,10 +224,10 @@ export default function AdminScheduler() {
 
                   <div className="space-y-1">
                     <p className="text-sm text-muted-foreground">
-                      Scrape Interval
+                      {t("admin.scheduler.scrape_interval")}
                     </p>
                     <p className="text-lg font-medium">
-                      Every {scheduler?.intervalHours} hours
+                      {t("admin.scheduler.every_hours", { count: scheduler?.intervalHours })}
                     </p>
                   </div>
                 </CardContent>
@@ -233,9 +235,9 @@ export default function AdminScheduler() {
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Controls</CardTitle>
+                  <CardTitle>{t("admin.scheduler.controls_title")}</CardTitle>
                   <CardDescription>
-                    Manage the automated scraping scheduler
+                    {t("admin.scheduler.controls_desc")}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -249,7 +251,7 @@ export default function AdminScheduler() {
                         data-testid="button-stop-scheduler"
                       >
                         <Square className="h-4 w-4" />
-                        Stop Scheduler
+                        {t("admin.scheduler.stop")}
                       </Button>
                     ) : (
                       <Button
@@ -259,7 +261,7 @@ export default function AdminScheduler() {
                         data-testid="button-start-scheduler"
                       >
                         <Play className="h-4 w-4" />
-                        Start Scheduler
+                        {t("admin.scheduler.start")}
                       </Button>
                     )}
 
@@ -275,13 +277,13 @@ export default function AdminScheduler() {
                       <RefreshCw
                         className={`h-4 w-4 ${scheduler?.isRunning ? "animate-spin" : ""}`}
                       />
-                      {scheduler?.isRunning ? "Scraping..." : "Run Now"}
+                      {scheduler?.isRunning ? t("admin.scheduler.scraping") : t("admin.scheduler.run_now")}
                     </Button>
                   </div>
 
                   <div className="space-y-2">
                     <label className="text-sm font-medium">
-                      Scrape Interval
+                      {t("admin.scheduler.scrape_interval")}
                     </label>
                     <div className="flex gap-3">
                       <Select
@@ -297,10 +299,10 @@ export default function AdminScheduler() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="1">Every 1 hour</SelectItem>
-                          <SelectItem value="6">Every 6 hours</SelectItem>
-                          <SelectItem value="12">Every 12 hours</SelectItem>
-                          <SelectItem value="24">Every 24 hours</SelectItem>
+                          <SelectItem value="1">{t("admin.scheduler.every_1_hour")}</SelectItem>
+                          <SelectItem value="6">{t("admin.scheduler.every_6_hours")}</SelectItem>
+                          <SelectItem value="12">{t("admin.scheduler.every_12_hours")}</SelectItem>
+                          <SelectItem value="24">{t("admin.scheduler.every_24_hours")}</SelectItem>
                         </SelectContent>
                       </Select>
                       <Button
@@ -314,7 +316,7 @@ export default function AdminScheduler() {
                         variant="outline"
                         data-testid="button-update-interval"
                       >
-                        Update Interval
+                        {t("admin.scheduler.update_interval")}
                       </Button>
                     </div>
                   </div>
@@ -323,28 +325,23 @@ export default function AdminScheduler() {
 
               <Card>
                 <CardHeader>
-                  <CardTitle>How It Works</CardTitle>
+                  <CardTitle>{t("admin.scheduler.how_it_works")}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2 text-sm text-muted-foreground">
                   <p>
-                    • The scheduler automatically scrapes all channels at the
-                    configured interval
+                    • {t("admin.scheduler.how_it_works_1")}
                   </p>
                   <p>
-                    • New videos are added to the database and existing videos
-                    are skipped
+                    • {t("admin.scheduler.how_it_works_2")}
                   </p>
                   <p>
-                    • Each channel's last scraped time is updated after
-                    successful scraping
+                    • {t("admin.scheduler.how_it_works_3")}
                   </p>
                   <p>
-                    • You can manually trigger a scrape with "Run Now" at any
-                    time
+                    • {t("admin.scheduler.how_it_works_4")}
                   </p>
                   <p>
-                    • The scheduler will continue running even after server
-                    restarts
+                    • {t("admin.scheduler.how_it_works_5")}
                   </p>
                 </CardContent>
               </Card>

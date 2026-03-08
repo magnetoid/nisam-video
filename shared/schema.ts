@@ -1111,6 +1111,7 @@ export const aiModels = pgTable("ai_models", {
 export const supportedLanguages = pgTable("supported_languages", {
   code: varchar("code", { length: 10 }).primaryKey(), // e.g., 'en', 'sr-Latn'
   name: text("name").notNull(), // e.g., 'English', 'Srpski'
+  rootUri: text("root_uri"), // e.g., '/en', '/sr'
   isActive: boolean("is_active").notNull().default(true),
   isDefault: boolean("is_default").notNull().default(false),
   createdAt: timestamp("created_at").notNull().default(sql`now()`),

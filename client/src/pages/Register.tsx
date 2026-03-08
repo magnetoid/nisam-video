@@ -107,7 +107,7 @@ export default function Register() {
                 <Input
                   id="username"
                   type="text"
-                  placeholder="Username"
+                  placeholder={t("auth.username", "Username")}
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   required
@@ -118,7 +118,7 @@ export default function Register() {
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="email">{t("auth.email", "Email")} (Optional)</Label>
+              <Label htmlFor="email">{t("auth.email", "Email")} ({t("common.optional", "Optional")})</Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input

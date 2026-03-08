@@ -1,6 +1,7 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Header } from "@/components/Header";
 import { AdminSidebar } from "@/components/AdminSidebar";
+import { useTranslation } from "react-i18next";
 import {
   Card,
   CardContent,
@@ -40,6 +41,7 @@ import { formatDistanceToNow } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 
 export default function AdminDashboard() {
+  const { t } = useTranslation();
   const { toast } = useToast();
 
   // Fetch Analytics
@@ -64,7 +66,7 @@ export default function AdminDashboard() {
     mutationFn: async () => apiRequest("POST", "/api/scheduler/start", {}),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/scheduler"] });
-      toast({ title: "Scheduler started" });
+      toast({ title: t("admin.schedulerStarted", "Scheduler started") });
     },
   });
 
@@ -72,7 +74,7 @@ export default function AdminDashboard() {
     mutationFn: async () => apiRequest("POST", "/api/scheduler/stop", {}),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/scheduler"] });
-      toast({ title: "Scheduler stopped" });
+      toast({ title: t("admin.schedulerStopped", "Scheduler stopped") });
     },
   });
 
@@ -81,7 +83,7 @@ export default function AdminDashboard() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/scheduler"] });
       queryClient.invalidateQueries({ queryKey: ["/api/scheduler/jobs"] });
-      toast({ title: "Manual scrape job started" });
+      toast({ title: t("admin.jobStarted", "Manual scrape job started") });
     },
   });
 
@@ -102,9 +104,9 @@ export default function AdminDashboard() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">Dashboard</h1>
+          <h1 className="text-3xl font-bold">{t("admin.dashboard", "Dashboard")}</h1>
           <p className="text-muted-foreground mt-1">
-            Platform overview and system health
+            {t("admin.dashboardDesc", "Platform overview and system health")}
           </p>
         </div>
             <div className="flex gap-2">
@@ -114,7 +116,7 @@ export default function AdminDashboard() {
                 onClick={() => queryClient.invalidateQueries()}
               >
                 <RefreshCw className="h-4 w-4 mr-2" />
-                Refresh
+                {t("common.refresh", "Refresh")}
               </Button>
             </div>
           </div>
@@ -124,7 +126,7 @@ export default function AdminDashboard() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
-                  Total Channels
+                  {t("admin.totalChannels", "Total Channels")}
                 </CardTitle>
                 <TvIcon className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
@@ -134,7 +136,7 @@ export default function AdminDashboard() {
                 </div>
                 <Link href="/admin/channels">
                   <a className="text-xs text-primary hover:underline">
-                    View channels →
+                    {t("admin.viewChannels", "View channels")} →
                   </a>
                 </Link>
               </CardContent>
@@ -143,7 +145,7 @@ export default function AdminDashboard() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
-                  Total Videos
+                  {t("admin.totalVideos", "Total Videos")}
                 </CardTitle>
                 <VideoIcon className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
@@ -153,7 +155,7 @@ export default function AdminDashboard() {
                 </div>
                 <Link href="/admin/videos">
                   <a className="text-xs text-primary hover:underline">
-                    Manage videos →
+                    {t("admin.manageVideos", "Manage videos")} →
                   </a>
                 </Link>
               </CardContent>
@@ -161,7 +163,7 @@ export default function AdminDashboard() {
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Categories</CardTitle>
+                <CardTitle className="text-sm font-medium">{t("admin.categories", "Categories")}</CardTitle>
                 <FolderIcon className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
@@ -170,7 +172,7 @@ export default function AdminDashboard() {
                 </div>
                 <Link href="/admin/categories">
                   <a className="text-xs text-primary hover:underline">
-                    Manage categories →
+                    {t("admin.manageCategories", "Manage categories")} →
                   </a>
                 </Link>
               </CardContent>
@@ -178,21 +180,21 @@ export default function AdminDashboard() {
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Scheduler Status</CardTitle>
+                <CardTitle className="text-sm font-medium">{t("admin.schedulerStatus", "Scheduler Status")}</CardTitle>
                 <Activity className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="flex items-center gap-2">
                   <div className={`w-3 h-3 rounded-full ${scheduler?.isActive ? 'bg-green-500' : 'bg-red-500'}`} />
                   <span className="font-medium">
-                    {scheduler?.isActive ? "Active" : "Stopped"}
+                    {scheduler?.isActive ? t("common.active", "Active") : t("common.stopped", "Stopped")}
                   </span>
                   {scheduler?.isRunning && (
-                    <Badge variant="secondary" className="ml-auto animate-pulse">Running</Badge>
+                    <Badge variant="secondary" className="ml-auto animate-pulse">{t("common.running", "Running")}</Badge>
                   )}
                 </div>
                 <div className="text-xs text-muted-foreground mt-1">
-                  Next run: {scheduler?.nextRun ? formatDistanceToNow(new Date(scheduler.nextRun), { addSuffix: true }) : 'N/A'}
+                  {t("admin.nextRun", "Next run")}: {scheduler?.nextRun ? formatDistanceToNow(new Date(scheduler.nextRun), { addSuffix: true }) : 'N/A'}
                 </div>
               </CardContent>
             </Card>
@@ -202,9 +204,9 @@ export default function AdminDashboard() {
             {/* Charts Section */}
             <Card className="col-span-4">
               <CardHeader>
-                <CardTitle>Content Growth</CardTitle>
+                <CardTitle>{t("admin.contentGrowth", "Content Growth")}</CardTitle>
                 <CardDescription>
-                  New videos added over the last 30 days
+                  {t("admin.contentGrowthDesc", "New videos added over the last 30 days")}
                 </CardDescription>
               </CardHeader>
               <CardContent className="pl-2">
@@ -236,7 +238,7 @@ export default function AdminDashboard() {
                     </ResponsiveContainer>
                   ) : (
                     <div className="flex items-center justify-center h-full text-muted-foreground">
-                      No data available
+                      {t("common.noData", "No data available")}
                     </div>
                   )}
                 </div>
@@ -246,8 +248,8 @@ export default function AdminDashboard() {
             {/* Scheduler Control & Recent Jobs */}
             <Card className="col-span-3">
               <CardHeader>
-                <CardTitle>System & Jobs</CardTitle>
-                <CardDescription>Manage synchronization</CardDescription>
+                <CardTitle>{t("admin.systemAndJobs", "System & Jobs")}</CardTitle>
+                <CardDescription>{t("admin.manageSync", "Manage synchronization")}</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -261,7 +263,7 @@ export default function AdminDashboard() {
                         className="flex-1"
                       >
                         <StopCircle className="h-4 w-4 mr-2" />
-                        Stop Scheduler
+                        {t("admin.stopScheduler", "Stop Scheduler")}
                       </Button>
                     ) : (
                       <Button 
@@ -272,7 +274,7 @@ export default function AdminDashboard() {
                         className="flex-1"
                       >
                         <Play className="h-4 w-4 mr-2" />
-                        Start Scheduler
+                        {t("admin.startScheduler", "Start Scheduler")}
                       </Button>
                     )}
                     <Button 
@@ -283,12 +285,12 @@ export default function AdminDashboard() {
                       className="flex-1"
                     >
                       <RefreshCw className="h-4 w-4 mr-2" />
-                      Run Now
+                      {t("admin.runNow", "Run Now")}
                     </Button>
                   </div>
 
                   <div className="space-y-2 mt-4">
-                    <h4 className="text-sm font-medium text-muted-foreground mb-2">Recent Jobs</h4>
+                    <h4 className="text-sm font-medium text-muted-foreground mb-2">{t("admin.recentJobs", "Recent Jobs")}</h4>
                     <div className="space-y-2 max-h-[250px] overflow-y-auto pr-2">
                       {recentJobs.length > 0 ? (
                         recentJobs.map((job: any) => (
@@ -309,14 +311,14 @@ export default function AdminDashboard() {
                               </span>
                             </div>
                             <div className="text-right text-xs">
-                              <div className="font-medium">{job.videosAdded} videos</div>
+                              <div className="font-medium">{job.videosAdded} {t("common.videos", "videos")}</div>
                               <div className="text-muted-foreground">{job.processedChannels} / {job.totalChannels} ch</div>
                             </div>
                           </div>
                         ))
                       ) : (
                         <div className="text-center text-sm text-muted-foreground py-4">
-                          No recent jobs
+                          {t("admin.noRecentJobs", "No recent jobs")}
                         </div>
                       )}
                     </div>
@@ -330,8 +332,8 @@ export default function AdminDashboard() {
              {/* Top Channels */}
              <Card>
               <CardHeader>
-                <CardTitle>Top Channels</CardTitle>
-                <CardDescription>By video count</CardDescription>
+                <CardTitle>{t("admin.topChannels", "Top Channels")}</CardTitle>
+                <CardDescription>{t("admin.byVideoCount", "By video count")}</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -343,7 +345,7 @@ export default function AdminDashboard() {
                          </div>
                          <span className="text-sm font-medium">{channel.name}</span>
                        </div>
-                       <span className="text-sm text-muted-foreground">{channel.videoCount} videos</span>
+                       <span className="text-sm text-muted-foreground">{channel.videoCount} {t("common.videos", "videos")}</span>
                      </div>
                    ))}
                 </div>
@@ -353,8 +355,8 @@ export default function AdminDashboard() {
             {/* Top Categories */}
             <Card>
               <CardHeader>
-                <CardTitle>Category Distribution</CardTitle>
-                <CardDescription>Videos per category</CardDescription>
+                <CardTitle>{t("admin.categoryDistribution", "Category Distribution")}</CardTitle>
+                <CardDescription>{t("admin.videosPerCategory", "Videos per category")}</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="h-[200px]">

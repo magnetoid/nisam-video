@@ -64,8 +64,8 @@ export default function Popular() {
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
-    name: "Popular Videos",
-    description: "Watch the most popular and trending videos",
+    name: t("popular.title", "Popular Videos"),
+    description: t("popular.description", "Watch the most popular and trending videos"),
     url: currentUrl,
     numberOfItems: videos.length,
   };
@@ -73,8 +73,8 @@ export default function Popular() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <SEO
-        title="Popular Videos"
-        description="Watch the most popular and trending videos. Discover what's hot across all categories sorted by view count."
+        title={t("popular.title", "Popular Videos")}
+        description={t("popular.metaDescription", "Watch the most popular and trending videos. Discover what's hot across all categories sorted by view count.")}
         path="/popular"
         canonical={currentUrl}
         hreflang={hreflangLinks}
@@ -110,7 +110,7 @@ export default function Popular() {
                   <div className="flex items-center gap-3">
                     <span className="bg-primary text-primary-foreground px-3 py-1 text-xs md:text-sm font-bold uppercase tracking-wider rounded-md flex items-center gap-2">
                       <TrendingUp className="h-3 w-3 md:h-4 md:w-4" />
-                      #1 Trending
+                      {t("popular.numberOneTrending", "#1 Trending")}
                     </span>
                   </div>
 
@@ -121,7 +121,7 @@ export default function Popular() {
                   <div className="flex items-center gap-4 text-white/90 font-medium text-sm md:text-lg">
                     <div className="flex items-center gap-2">
                       <Eye className="h-5 w-5" />
-                      <span>{topVideo.viewCount} views</span>
+                      <span>{topVideo.viewCount} {t("common.views", "views")}</span>
                     </div>
                     {topVideo.publishDate && (
                       <>
@@ -140,7 +140,7 @@ export default function Popular() {
                       size="lg" 
                       className="gap-2 text-base md:text-lg h-12 md:h-14 px-8 bg-white text-black hover:bg-white/90 border-none font-bold shadow-xl shadow-black/20"
                     >
-                      <Play className="h-5 w-5 fill-current" /> Play Now
+                      <Play className="h-5 w-5 fill-current" /> {t("popular.playNow", "Play Now")}
                     </Button>
                   </div>
                 </div>
@@ -153,7 +153,7 @@ export default function Popular() {
             <div className="flex items-center justify-between">
               <h2 className="text-2xl md:text-3xl font-bold flex items-center gap-3">
                 <TrendingUp className="h-6 w-6 md:h-8 md:w-8 text-primary" />
-                Trending Now
+                {t("popular.trendingNow", "Trending Now")}
               </h2>
             </div>
 
@@ -194,7 +194,7 @@ export default function Popular() {
                         {video.title}
                       </h3>
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <span>{video.viewCount} views</span>
+                        <span>{video.viewCount} {t("common.views", "views")}</span>
                         <span>•</span>
                         <span>{video.publishDate}</span>
                       </div>
@@ -205,7 +205,7 @@ export default function Popular() {
             ) : (
               <div className="text-center py-20">
                 <p className="text-muted-foreground text-lg">
-                  No videos found. Check back later!
+                  {t("popular.noVideosFound", "No videos found. Check back later!")}
                 </p>
               </div>
             )}

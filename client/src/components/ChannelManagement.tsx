@@ -21,6 +21,7 @@ import {
 import { AddChannelDialog } from "./AddChannelDialog";
 import type { Channel } from "@shared/schema";
 import { formatDistanceToNow } from "date-fns";
+import { useTranslation } from "react-i18next";
 
 interface ChannelManagementProps {
   channels: Channel[];
@@ -40,6 +41,7 @@ export function ChannelManagement({
   onDelete,
   isLoading = false,
 }: ChannelManagementProps) {
+  const { t } = useTranslation();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [platformFilter, setPlatformFilter] = useState<string>("all");
@@ -96,10 +98,10 @@ export function ChannelManagement({
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold" data-testid="text-page-title">
-            Channel Management
+            {t("admin.channelManagement", "Channel Management")}
           </h1>
           <p className="text-muted-foreground mt-1">
-            Add and manage YouTube channels for video aggregation
+            {t("admin.manageChannelsDesc", "Add and manage YouTube channels for video aggregation")}
           </p>
         </div>
         <Button
@@ -108,7 +110,7 @@ export function ChannelManagement({
           className="gap-2"
         >
           <Plus className="h-5 w-5" />
-          Add Channel
+          {t("channels.addChannel", "Add Channel")}
         </Button>
       </div>
 
@@ -116,7 +118,7 @@ export function ChannelManagement({
         <div className="relative flex-1">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search channels..."
+            placeholder={t("common.search", "Search channels...")}
             className="pl-8"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -124,16 +126,16 @@ export function ChannelManagement({
         </div>
         <Select value={platformFilter} onValueChange={setPlatformFilter}>
           <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Platform" />
+            <SelectValue placeholder={t("admin.platform", "Platform")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Platforms</SelectItem>
-            <SelectItem value="youtube">YouTube</SelectItem>
-            <SelectItem value="tiktok">TikTok</SelectItem>
+            <SelectItem value="all">{t("admin.allPlatforms", "All Platforms")}</SelectItem>
+            <SelectItem value="youtube">{t("platforms.youtube", "YouTube")}</SelectItem>
+            <SelectItem value="tiktok">{t("platforms.tiktok", "TikTok")}</SelectItem>
           </SelectContent>
         </Select>
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <span>{filteredAndSortedChannels.length} channels</span>
+            <span>{t("admin.channelsCount", { count: filteredAndSortedChannels.length, defaultValue: "{{count}} channels" })}</span>
         </div>
       </div>
 
@@ -144,22 +146,22 @@ export function ChannelManagement({
             className="text-lg font-semibold mb-2"
             data-testid="text-empty-state"
           >
-            No channels added yet
+            {t("admin.noChannelsAdded", "No channels added yet")}
           </h3>
           <p className="text-muted-foreground mb-4">
-            Add your first YouTube channel to start aggregating videos
+            {t("admin.addFirstChannelTip", "Add your first YouTube channel to start aggregating videos")}
           </p>
           <Button
             onClick={() => setDialogOpen(true)}
             data-testid="button-add-first-channel"
           >
             <Plus className="h-5 w-5 mr-2" />
-            Add Channel
+            {t("channels.addChannel", "Add Channel")}
           </Button>
         </div>
       ) : filteredAndSortedChannels.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground">
-              No channels found matching your filters.
+              {t("admin.noChannelsFound", "No channels found matching your filters.")}
           </div>
       ) : (
         <div className="border border-border rounded-lg overflow-hidden">
@@ -169,20 +171,20 @@ export function ChannelManagement({
                 <TableRow>
                   <TableHead className="min-w-[250px] cursor-pointer hover:bg-muted/50" onClick={() => toggleSort("name")}>
                     <div className="flex items-center gap-1">
-                      Channel <ArrowUpDown className="h-3 w-3" />
+                      {t("admin.channel", "Channel")} <ArrowUpDown className="h-3 w-3" />
                     </div>
                   </TableHead>
                   <TableHead className="whitespace-nowrap cursor-pointer hover:bg-muted/50" onClick={() => toggleSort("videoCount")}>
                     <div className="flex items-center gap-1">
-                      Videos <ArrowUpDown className="h-3 w-3" />
+                      {t("admin.videosCount", "Videos")} <ArrowUpDown className="h-3 w-3" />
                     </div>
                   </TableHead>
                   <TableHead className="whitespace-nowrap cursor-pointer hover:bg-muted/50" onClick={() => toggleSort("lastScraped")}>
                     <div className="flex items-center gap-1">
-                      Last Scraped <ArrowUpDown className="h-3 w-3" />
+                      {t("admin.lastScraped", "Last Scraped")} <ArrowUpDown className="h-3 w-3" />
                     </div>
                   </TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead className="text-right">{t("common.actions", "Actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -211,7 +213,7 @@ export function ChannelManagement({
                           >
                             <span className="truncate">{channel.name}</span>
                             {channel.platform === 'tiktok' && (
-                              <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 flex-shrink-0">TikTok</Badge>
+                              <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 flex-shrink-0">{t("platforms.tiktok", "TikTok")}</Badge>
                             )}
                           </div>
                           <a
@@ -221,7 +223,7 @@ export function ChannelManagement({
                             className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 truncate"
                             data-testid="link-channel-url"
                           >
-                            View on {channel.platform === 'tiktok' ? 'TikTok' : 'YouTube'}
+                            {t("channels.viewOn", { platform: channel.platform === 'tiktok' ? 'TikTok' : 'YouTube', defaultValue: `View on ${channel.platform === 'tiktok' ? 'TikTok' : 'YouTube'}` })}
                             <ExternalLink className="h-3 w-3 flex-shrink-0" />
                           </a>
                         </div>
@@ -239,7 +241,7 @@ export function ChannelManagement({
                       >
                         {channel.lastScraped
                           ? formatDistanceToNow(new Date(channel.lastScraped), { addSuffix: true })
-                          : "Never"}
+                          : t("common.never", "Never")}
                       </span>
                     </TableCell>
                     <TableCell className="text-right">
@@ -255,7 +257,7 @@ export function ChannelManagement({
                           <RefreshCw
                             className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
                           />
-                          <span className="hidden sm:inline">Scrape</span>
+                          <span className="hidden sm:inline">{t("channels.scrape", "Scrape")}</span>
                         </Button>
                         <Button
                           size="sm"

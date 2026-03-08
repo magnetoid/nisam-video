@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useTranslation } from "react-i18next";
 import {
   Card,
   CardContent,
@@ -69,6 +70,7 @@ import {
 import { Label } from "@/components/ui/label";
 
 export default function AdminSystemSettings() {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("general");
@@ -91,14 +93,14 @@ export default function AdminSystemSettings() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/system/settings"] });
       toast({
-        title: "Settings Updated",
-        description: "System settings have been saved successfully.",
+        title: t("admin.settingsUpdated", "Settings Updated"),
+        description: t("admin.systemSettingsSaved", "System settings have been saved successfully."),
       });
     },
     onError: () => {
       toast({
-        title: "Error",
-        description: "Failed to update system settings.",
+        title: t("common.error", "Error"),
+        description: t("admin.failedToUpdateSettings", "Failed to update system settings."),
         variant: "destructive",
       });
     },
@@ -160,12 +162,12 @@ export default function AdminSystemSettings() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/email-settings"] });
-      toast({ title: "Email settings saved" });
+      toast({ title: t("admin.emailSettingsSaved", "Email settings saved") });
     },
     onError: () => {
       toast({
-        title: "Error",
-        description: "Failed to save email settings",
+        title: t("common.error", "Error"),
+        description: t("admin.failedToSaveEmailSettings", "Failed to save email settings"),
         variant: "destructive",
       });
     },
@@ -231,10 +233,10 @@ export default function AdminSystemSettings() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/analytics/events"] });
       setIsEventDialogOpen(false);
-      toast({ title: "Event created" });
+      toast({ title: t("admin.eventCreated", "Event created") });
     },
     onError: () => {
-      toast({ title: "Failed to create event", variant: "destructive" });
+      toast({ title: t("admin.failedToCreateEvent", "Failed to create event"), variant: "destructive" });
     },
   });
 
@@ -246,10 +248,10 @@ export default function AdminSystemSettings() {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/analytics/events"] });
       setIsEventDialogOpen(false);
       setEditingEvent(null);
-      toast({ title: "Event updated" });
+      toast({ title: t("admin.eventUpdated", "Event updated") });
     },
     onError: () => {
-      toast({ title: "Failed to update event", variant: "destructive" });
+      toast({ title: t("admin.failedToUpdateEvent", "Failed to update event"), variant: "destructive" });
     },
   });
 
@@ -259,14 +261,14 @@ export default function AdminSystemSettings() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/analytics/events"] });
-      toast({ title: "Event deleted" });
+      toast({ title: t("admin.eventDeleted", "Event deleted") });
     },
   });
 
   if (isLoadingSettings || isLoadingEmailSettings) {
     return (
       <div className="flex items-center justify-center h-screen bg-background">
-        <div className="text-muted-foreground">Loading settings...</div>
+        <div className="text-muted-foreground">{t("admin.loadingSettings", "Loading settings...")}</div>
       </div>
     );
   }
@@ -276,10 +278,10 @@ export default function AdminSystemSettings() {
       <div>
         <h1 className="text-3xl font-bold flex items-center gap-2">
                 <Settings className="h-8 w-8" />
-                System Settings
+                {t("admin.systemSettings", "System Settings")}
               </h1>
               <p className="text-muted-foreground mt-1">
-                Configure general application settings, analytics, and events
+                {t("admin.systemSettingsDesc", "Configure general application settings, analytics, and events")}
               </p>
             </div>
 
@@ -287,23 +289,23 @@ export default function AdminSystemSettings() {
               <TabsList className="grid w-full grid-cols-5">
                 <TabsTrigger value="general" className="flex items-center gap-2">
                   <Sliders className="h-4 w-4" />
-                  General
+                  {t("admin.general", "General")}
                 </TabsTrigger>
                 <TabsTrigger value="pwa" className="flex items-center gap-2">
                   <Smartphone className="h-4 w-4" />
-                  PWA & Mobile
+                  {t("admin.pwaMobile", "PWA & Mobile")}
                 </TabsTrigger>
                 <TabsTrigger value="email" className="flex items-center gap-2">
                   <Code className="h-4 w-4" />
-                  Email
+                  {t("admin.email", "Email")}
                 </TabsTrigger>
                 <TabsTrigger value="analytics" className="flex items-center gap-2">
                   <BarChart3 className="h-4 w-4" />
-                  GA4 & GTM
+                  {t("admin.ga4Gtm", "GA4 & GTM")}
                 </TabsTrigger>
                 <TabsTrigger value="events" className="flex items-center gap-2">
                   <Activity className="h-4 w-4" />
-                  Advanced Events
+                  {t("admin.advancedEvents", "Advanced Events")}
                 </TabsTrigger>
               </TabsList>
 
@@ -316,10 +318,10 @@ export default function AdminSystemSettings() {
                       <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                           <AlertTriangle className="h-5 w-5" />
-                          Maintenance Mode
+                          {t("admin.maintenanceMode", "Maintenance Mode")}
                         </CardTitle>
                         <CardDescription>
-                          Prevent public access while you make updates
+                          {t("admin.maintenanceModeDesc", "Prevent public access while you make updates")}
                         </CardDescription>
                       </CardHeader>
                       <CardContent className="space-y-4">
@@ -329,9 +331,9 @@ export default function AdminSystemSettings() {
                           render={({ field }) => (
                             <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
                               <div className="space-y-0.5">
-                                <FormLabel className="text-base">Enable Maintenance Mode</FormLabel>
+                                <FormLabel className="text-base">{t("admin.enableMaintenanceMode", "Enable Maintenance Mode")}</FormLabel>
                                 <FormDescription>
-                                  Visitors will see a maintenance message
+                                  {t("admin.maintenanceModeHelp", "Visitors will see a maintenance message")}
                                 </FormDescription>
                               </div>
                               <FormControl>
@@ -348,10 +350,10 @@ export default function AdminSystemSettings() {
                           name="maintenanceMessage"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Maintenance Message</FormLabel>
+                              <FormLabel>{t("admin.maintenanceMessage", "Maintenance Message")}</FormLabel>
                               <FormControl>
                                 <Textarea
-                                  placeholder="We're currently performing maintenance..."
+                                  placeholder={t("admin.maintenanceMessagePlaceholder", "We're currently performing maintenance...")}
                                   {...field}
                                   rows={3}
                                 />
@@ -368,7 +370,7 @@ export default function AdminSystemSettings() {
                       <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                           <Sliders className="h-5 w-5" />
-                          Display & Features
+                          {t("admin.displayFeatures", "Display & Features")}
                         </CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-4">
@@ -378,7 +380,7 @@ export default function AdminSystemSettings() {
                             name="itemsPerPage"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Items Per Page</FormLabel>
+                                <FormLabel>{t("admin.itemsPerPage", "Items Per Page")}</FormLabel>
                                 <FormControl>
                                   <Input
                                     type="number"
@@ -389,7 +391,7 @@ export default function AdminSystemSettings() {
                                     onChange={(e) => field.onChange(parseInt(e.target.value))}
                                   />
                                 </FormControl>
-                                <FormDescription>Videos per page (12-48)</FormDescription>
+                                <FormDescription>{t("admin.videosPerPage", "Videos per page (12-48)")}</FormDescription>
                                 <FormMessage />
                               </FormItem>
                             )}
@@ -403,8 +405,8 @@ export default function AdminSystemSettings() {
                             render={({ field }) => (
                                 <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
                                 <div className="space-y-0.5">
-                                    <FormLabel className="text-base">PWA Enabled</FormLabel>
-                                    <FormDescription>Allow mobile installation</FormDescription>
+                                    <FormLabel className="text-base">{t("admin.pwaEnabled", "PWA Enabled")}</FormLabel>
+                                    <FormDescription>{t("admin.allowMobileInstall", "Allow mobile installation")}</FormDescription>
                                 </div>
                                 <FormControl>
                                     <Switch
@@ -422,8 +424,8 @@ export default function AdminSystemSettings() {
                             render={({ field }) => (
                                 <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
                                 <div className="space-y-0.5">
-                                    <FormLabel className="text-base">Allow Registration</FormLabel>
-                                    <FormDescription>Public user signup</FormDescription>
+                                    <FormLabel className="text-base">{t("admin.allowRegistration", "Allow Registration")}</FormLabel>
+                                    <FormDescription>{t("admin.publicSignup", "Public user signup")}</FormDescription>
                                 </div>
                                 <FormControl>
                                     <Switch
@@ -440,7 +442,7 @@ export default function AdminSystemSettings() {
 
                     <div className="flex justify-end">
                       <Button type="submit" disabled={updateSettingsMutation.isPending}>
-                        {updateSettingsMutation.isPending ? "Saving..." : "Save General Settings"}
+                        {updateSettingsMutation.isPending ? t("common.saving", "Saving...") : t("admin.saveGeneralSettings", "Save General Settings")}
                       </Button>
                     </div>
                   </form>
@@ -455,10 +457,10 @@ export default function AdminSystemSettings() {
                       <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                           <Smartphone className="h-5 w-5" />
-                          Progressive Web App Configuration
+                          {t("admin.pwaConfig", "Progressive Web App Configuration")}
                         </CardTitle>
                         <CardDescription>
-                          Configure how the app appears when installed on devices (Mobile, TV, Desktop)
+                          {t("admin.pwaConfigDesc", "Configure how the app appears when installed on devices (Mobile, TV, Desktop)")}
                         </CardDescription>
                       </CardHeader>
                       <CardContent className="space-y-4">
@@ -468,9 +470,9 @@ export default function AdminSystemSettings() {
                           render={({ field }) => (
                             <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
                               <div className="space-y-0.5">
-                                <FormLabel className="text-base">Enable PWA</FormLabel>
+                                <FormLabel className="text-base">{t("admin.enablePwa", "Enable PWA")}</FormLabel>
                                 <FormDescription>
-                                  Allow users to install the app on their devices
+                                  {t("admin.enablePwaDesc", "Allow users to install the app on their devices")}
                                 </FormDescription>
                               </div>
                               <FormControl>
@@ -489,11 +491,11 @@ export default function AdminSystemSettings() {
                             name="pwaName"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>App Name</FormLabel>
+                                <FormLabel>{t("admin.appName", "App Name")}</FormLabel>
                                 <FormControl>
                                   <Input placeholder="nisam.video - AI Video Hub" {...field} />
                                 </FormControl>
-                                <FormDescription>Full name of the application</FormDescription>
+                                <FormDescription>{t("admin.appNameDesc", "Full name of the application")}</FormDescription>
                                 <FormMessage />
                               </FormItem>
                             )}
@@ -503,11 +505,11 @@ export default function AdminSystemSettings() {
                             name="pwaShortName"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Short Name</FormLabel>
+                                <FormLabel>{t("admin.shortName", "Short Name")}</FormLabel>
                                 <FormControl>
                                   <Input placeholder="nisam.video" {...field} />
                                 </FormControl>
-                                <FormDescription>Used on home screen icons</FormDescription>
+                                <FormDescription>{t("admin.shortNameDesc", "Used on home screen icons")}</FormDescription>
                                 <FormMessage />
                               </FormItem>
                             )}
@@ -519,9 +521,9 @@ export default function AdminSystemSettings() {
                           name="pwaDescription"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Description</FormLabel>
+                              <FormLabel>{t("common.description", "Description")}</FormLabel>
                               <FormControl>
-                                <Textarea placeholder="App description..." {...field} />
+                                <Textarea placeholder={t("admin.appDescription", "App description...")} {...field} />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -534,7 +536,7 @@ export default function AdminSystemSettings() {
                             name="pwaThemeColor"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Theme Color</FormLabel>
+                                <FormLabel>{t("admin.themeColor", "Theme Color")}</FormLabel>
                                 <div className="flex gap-2">
                                   <div className="w-10 h-10 rounded border" style={{ backgroundColor: field.value }}></div>
                                   <FormControl>
@@ -550,7 +552,7 @@ export default function AdminSystemSettings() {
                             name="pwaBackgroundColor"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Background Color</FormLabel>
+                                <FormLabel>{t("admin.backgroundColor", "Background Color")}</FormLabel>
                                 <div className="flex gap-2">
                                   <div className="w-10 h-10 rounded border" style={{ backgroundColor: field.value }}></div>
                                   <FormControl>
@@ -569,7 +571,7 @@ export default function AdminSystemSettings() {
                             name="pwaIcon192"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Icon 192x192 URL</FormLabel>
+                                <FormLabel>{t("admin.icon192", "Icon 192x192 URL")}</FormLabel>
                                 <FormControl>
                                   <Input placeholder="/icon-192.png" {...field} />
                                 </FormControl>
@@ -582,7 +584,7 @@ export default function AdminSystemSettings() {
                             name="pwaIcon512"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Icon 512x512 URL</FormLabel>
+                                <FormLabel>{t("admin.icon512", "Icon 512x512 URL")}</FormLabel>
                                 <FormControl>
                                   <Input placeholder="/icon-512.png" {...field} />
                                 </FormControl>
@@ -595,7 +597,7 @@ export default function AdminSystemSettings() {
                     </Card>
                     <div className="flex justify-end">
                       <Button type="submit" disabled={updateSettingsMutation.isPending}>
-                        {updateSettingsMutation.isPending ? "Saving..." : "Save PWA Settings"}
+                        {updateSettingsMutation.isPending ? t("common.saving", "Saving...") : t("admin.savePwaSettings", "Save PWA Settings")}
                       </Button>
                     </div>
                   </form>
@@ -610,9 +612,9 @@ export default function AdminSystemSettings() {
                   >
                     <Card>
                       <CardHeader>
-                        <CardTitle>Email (SMTP / IMAP)</CardTitle>
+                        <CardTitle>{t("admin.emailSettings", "Email (SMTP / IMAP)")}</CardTitle>
                         <CardDescription>
-                          Configure email sending (SMTP) or mailbox access (IMAP)
+                          {t("admin.emailSettingsDesc", "Configure email sending (SMTP) or mailbox access (IMAP)")}
                         </CardDescription>
                       </CardHeader>
                       <CardContent className="space-y-6">
@@ -621,7 +623,7 @@ export default function AdminSystemSettings() {
                           name="mode"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Mode</FormLabel>
+                              <FormLabel>{t("admin.mode", "Mode")}</FormLabel>
                               <Select
                                 value={field.value}
                                 onValueChange={field.onChange}
@@ -632,8 +634,8 @@ export default function AdminSystemSettings() {
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                  <SelectItem value="smtp">SMTP (send mail)</SelectItem>
-                                  <SelectItem value="imap">IMAP (read mailbox)</SelectItem>
+                                  <SelectItem value="smtp">{t("admin.smtp", "SMTP (send mail)")}</SelectItem>
+                                  <SelectItem value="imap">{t("admin.imap", "IMAP (read mailbox)")}</SelectItem>
                                 </SelectContent>
                               </Select>
                               <FormMessage />
@@ -649,7 +651,7 @@ export default function AdminSystemSettings() {
                                 name="smtpHost"
                                 render={({ field }) => (
                                   <FormItem>
-                                    <FormLabel>SMTP Host</FormLabel>
+                                    <FormLabel>{t("admin.smtpHost", "SMTP Host")}</FormLabel>
                                     <FormControl>
                                       <Input placeholder="smtp.example.com" {...field} />
                                     </FormControl>
@@ -662,7 +664,7 @@ export default function AdminSystemSettings() {
                                 name="smtpPort"
                                 render={({ field }) => (
                                   <FormItem>
-                                    <FormLabel>SMTP Port</FormLabel>
+                                    <FormLabel>{t("admin.smtpPort", "SMTP Port")}</FormLabel>
                                     <FormControl>
                                       <Input
                                         type="number"
@@ -687,7 +689,7 @@ export default function AdminSystemSettings() {
                                 name="smtpUsername"
                                 render={({ field }) => (
                                   <FormItem>
-                                    <FormLabel>SMTP Username</FormLabel>
+                                    <FormLabel>{t("admin.smtpUsername", "SMTP Username")}</FormLabel>
                                     <FormControl>
                                       <Input placeholder="user@example.com" {...field} />
                                     </FormControl>
@@ -700,7 +702,7 @@ export default function AdminSystemSettings() {
                                 name="smtpPassword"
                                 render={({ field }) => (
                                   <FormItem>
-                                    <FormLabel>SMTP Password</FormLabel>
+                                    <FormLabel>{t("admin.smtpPassword", "SMTP Password")}</FormLabel>
                                     <FormControl>
                                       <Input type="password" {...field} />
                                     </FormControl>
@@ -716,9 +718,9 @@ export default function AdminSystemSettings() {
                               render={({ field }) => (
                                 <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
                                   <div className="space-y-0.5">
-                                    <FormLabel className="text-base">Use TLS/SSL</FormLabel>
+                                    <FormLabel className="text-base">{t("admin.useTlsSsl", "Use TLS/SSL")}</FormLabel>
                                     <FormDescription>
-                                      Enable secure connection to SMTP server
+                                      {t("admin.smtpSecureDesc", "Enable secure connection to SMTP server")}
                                     </FormDescription>
                                   </div>
                                   <FormControl>
@@ -739,7 +741,7 @@ export default function AdminSystemSettings() {
                                 name="smtpFromEmail"
                                 render={({ field }) => (
                                   <FormItem>
-                                    <FormLabel>From Email</FormLabel>
+                                    <FormLabel>{t("admin.fromEmail", "From Email")}</FormLabel>
                                     <FormControl>
                                       <Input placeholder="no-reply@example.com" {...field} />
                                     </FormControl>
@@ -752,7 +754,7 @@ export default function AdminSystemSettings() {
                                 name="smtpFromName"
                                 render={({ field }) => (
                                   <FormItem>
-                                    <FormLabel>From Name</FormLabel>
+                                    <FormLabel>{t("admin.fromName", "From Name")}</FormLabel>
                                     <FormControl>
                                       <Input placeholder="nisam.video" {...field} />
                                     </FormControl>
@@ -770,7 +772,7 @@ export default function AdminSystemSettings() {
                                 name="imapHost"
                                 render={({ field }) => (
                                   <FormItem>
-                                    <FormLabel>IMAP Host</FormLabel>
+                                    <FormLabel>{t("admin.imapHost", "IMAP Host")}</FormLabel>
                                     <FormControl>
                                       <Input placeholder="imap.example.com" {...field} />
                                     </FormControl>
@@ -783,7 +785,7 @@ export default function AdminSystemSettings() {
                                 name="imapPort"
                                 render={({ field }) => (
                                   <FormItem>
-                                    <FormLabel>IMAP Port</FormLabel>
+                                    <FormLabel>{t("admin.imapPort", "IMAP Port")}</FormLabel>
                                     <FormControl>
                                       <Input
                                         type="number"
@@ -808,7 +810,7 @@ export default function AdminSystemSettings() {
                                 name="imapUsername"
                                 render={({ field }) => (
                                   <FormItem>
-                                    <FormLabel>IMAP Username</FormLabel>
+                                    <FormLabel>{t("admin.imapUsername", "IMAP Username")}</FormLabel>
                                     <FormControl>
                                       <Input placeholder="user@example.com" {...field} />
                                     </FormControl>
@@ -821,7 +823,7 @@ export default function AdminSystemSettings() {
                                 name="imapPassword"
                                 render={({ field }) => (
                                   <FormItem>
-                                    <FormLabel>IMAP Password</FormLabel>
+                                    <FormLabel>{t("admin.imapPassword", "IMAP Password")}</FormLabel>
                                     <FormControl>
                                       <Input type="password" {...field} />
                                     </FormControl>
@@ -837,9 +839,9 @@ export default function AdminSystemSettings() {
                               render={({ field }) => (
                                 <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
                                   <div className="space-y-0.5">
-                                    <FormLabel className="text-base">Use TLS/SSL</FormLabel>
+                                    <FormLabel className="text-base">{t("admin.useTlsSsl", "Use TLS/SSL")}</FormLabel>
                                     <FormDescription>
-                                      Enable secure connection to IMAP server
+                                      {t("admin.imapSecureDesc", "Enable secure connection to IMAP server")}
                                     </FormDescription>
                                   </div>
                                   <FormControl>
@@ -859,7 +861,7 @@ export default function AdminSystemSettings() {
                               name="imapMailbox"
                               render={({ field }) => (
                                 <FormItem>
-                                  <FormLabel>Mailbox</FormLabel>
+                                  <FormLabel>{t("admin.mailbox", "Mailbox")}</FormLabel>
                                   <FormControl>
                                     <Input placeholder="INBOX" {...field} />
                                   </FormControl>
@@ -874,7 +876,7 @@ export default function AdminSystemSettings() {
 
                     <div className="flex justify-end">
                       <Button type="submit" disabled={updateEmailSettingsMutation.isPending}>
-                        {updateEmailSettingsMutation.isPending ? "Saving..." : "Save Email Settings"}
+                        {updateEmailSettingsMutation.isPending ? t("common.saving", "Saving...") : t("admin.saveEmailSettings", "Save Email Settings")}
                       </Button>
                     </div>
                   </form>
@@ -889,10 +891,10 @@ export default function AdminSystemSettings() {
                       <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                           <BarChart3 className="h-5 w-5" />
-                          Google Analytics & Tag Manager
+                          {t("admin.googleAnalyticsTagManager", "Google Analytics & Tag Manager")}
                         </CardTitle>
                         <CardDescription>
-                          Configure tracking IDs and custom scripts
+                          {t("admin.googleAnalyticsTagManagerDesc", "Configure tracking IDs and custom scripts")}
                         </CardDescription>
                       </CardHeader>
                       <CardContent className="space-y-4">
@@ -902,7 +904,7 @@ export default function AdminSystemSettings() {
                             name="gtmId"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Google Tag Manager ID (GTM-XXXXXX)</FormLabel>
+                                <FormLabel>{t("admin.gtmId", "Google Tag Manager ID (GTM-XXXXXX)")}</FormLabel>
                                 <FormControl>
                                   <Input placeholder="GTM-XXXXXX" {...field} />
                                 </FormControl>
@@ -915,7 +917,7 @@ export default function AdminSystemSettings() {
                             name="ga4Id"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Google Analytics 4 ID (G-XXXXXXXXXX)</FormLabel>
+                                <FormLabel>{t("admin.ga4Id", "Google Analytics 4 ID (G-XXXXXXXXXX)")}</FormLabel>
                                 <FormControl>
                                   <Input placeholder="G-XXXXXXXXXX" {...field} />
                                 </FormControl>
@@ -931,10 +933,10 @@ export default function AdminSystemSettings() {
                       <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                           <Code className="h-5 w-5" />
-                          Custom Code Injection
+                          {t("admin.customCodeInjection", "Custom Code Injection")}
                         </CardTitle>
                         <CardDescription>
-                          Inject custom scripts into the page
+                          {t("admin.customCodeInjectionDesc", "Inject custom scripts into the page")}
                         </CardDescription>
                       </CardHeader>
                       <CardContent className="space-y-4">
@@ -943,7 +945,7 @@ export default function AdminSystemSettings() {
                           name="customHeadCode"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Head Code (&lt;head&gt;)</FormLabel>
+                              <FormLabel>{t("admin.headCode", "Head Code (<head>)")}</FormLabel>
                               <FormControl>
                                 <Textarea
                                   placeholder="<!-- Code for <head> -->"
@@ -962,7 +964,7 @@ export default function AdminSystemSettings() {
                             name="customBodyStartCode"
                             render={({ field }) => (
                                 <FormItem>
-                                <FormLabel>Body Start (&lt;body&gt;)</FormLabel>
+                                <FormLabel>{t("admin.bodyStart", "Body Start (<body>)")}</FormLabel>
                                 <FormControl>
                                     <Textarea
                                     placeholder="<!-- Code after <body> -->"
@@ -980,7 +982,7 @@ export default function AdminSystemSettings() {
                             name="customBodyEndCode"
                             render={({ field }) => (
                                 <FormItem>
-                                <FormLabel>Body End (&lt;/body&gt;)</FormLabel>
+                                <FormLabel>{t("admin.bodyEnd", "Body End (</body>)")}</FormLabel>
                                 <FormControl>
                                     <Textarea
                                     placeholder="<!-- Code before </body> -->"
@@ -999,7 +1001,7 @@ export default function AdminSystemSettings() {
 
                     <div className="flex justify-end">
                       <Button type="submit" disabled={updateSettingsMutation.isPending}>
-                        {updateSettingsMutation.isPending ? "Saving..." : "Save Analytics Settings"}
+                        {updateSettingsMutation.isPending ? t("common.saving", "Saving...") : t("admin.saveAnalyticsSettings", "Save Analytics Settings")}
                       </Button>
                     </div>
                   </form>
@@ -1011,21 +1013,21 @@ export default function AdminSystemSettings() {
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between">
                     <div>
-                      <CardTitle>Custom Event Tracking</CardTitle>
+                      <CardTitle>{t("admin.customEventTracking", "Custom Event Tracking")}</CardTitle>
                       <CardDescription>
-                        Define custom events to track user interactions
+                        {t("admin.customEventTrackingDesc", "Define custom events to track user interactions")}
                       </CardDescription>
                     </div>
                     <Dialog open={isEventDialogOpen} onOpenChange={setIsEventDialogOpen}>
                       <DialogTrigger asChild>
                         <Button onClick={() => setEditingEvent(null)}>
                           <Plus className="h-4 w-4 mr-2" />
-                          Add Event
+                          {t("admin.addEvent", "Add Event")}
                         </Button>
                       </DialogTrigger>
                       <DialogContent>
                         <DialogHeader>
-                          <DialogTitle>{editingEvent ? "Edit Event" : "Create Event"}</DialogTitle>
+                          <DialogTitle>{editingEvent ? t("admin.editEvent", "Edit Event") : t("admin.createEvent", "Create Event")}</DialogTitle>
                         </DialogHeader>
                         <form
                           onSubmit={(e) => {
@@ -1050,7 +1052,7 @@ export default function AdminSystemSettings() {
                         >
                           <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label htmlFor="eventName">Internal Event Name</Label>
+                                <Label htmlFor="eventName">{t("admin.internalEventName", "Internal Event Name")}</Label>
                                 <Input
                                     id="eventName"
                                     name="eventName"
@@ -1060,7 +1062,7 @@ export default function AdminSystemSettings() {
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="ga4EventName">GA4 Event Name (Optional)</Label>
+                                <Label htmlFor="ga4EventName">{t("admin.ga4EventName", "GA4 Event Name (Optional)")}</Label>
                                 <Input
                                     id="ga4EventName"
                                     name="ga4EventName"
@@ -1071,21 +1073,21 @@ export default function AdminSystemSettings() {
                           </div>
 
                           <div className="space-y-2">
-                            <Label htmlFor="triggerType">Trigger Type</Label>
+                            <Label htmlFor="triggerType">{t("admin.triggerType", "Trigger Type")}</Label>
                             <Select name="triggerType" defaultValue={editingEvent?.triggerType || "click"}>
                                <SelectTrigger>
                                   <SelectValue />
                                </SelectTrigger>
                                <SelectContent>
-                                 <SelectItem value="click">Click</SelectItem>
-                                 <SelectItem value="form_submit">Form Submit</SelectItem>
-                                 <SelectItem value="page_view">Page View</SelectItem>
+                                 <SelectItem value="click">{t("admin.click", "Click")}</SelectItem>
+                                 <SelectItem value="form_submit">{t("admin.formSubmit", "Form Submit")}</SelectItem>
+                                 <SelectItem value="page_view">{t("admin.pageView", "Page View")}</SelectItem>
                                </SelectContent>
                             </Select>
                           </div>
                           
                           <div className="space-y-2">
-                            <Label htmlFor="selector">CSS Selector / URL Pattern</Label>
+                            <Label htmlFor="selector">{t("admin.cssSelector", "CSS Selector / URL Pattern")}</Label>
                             <Input
                               id="selector"
                               name="selector"
@@ -1101,7 +1103,7 @@ export default function AdminSystemSettings() {
                                     name="isActive"
                                     defaultChecked={editingEvent ? editingEvent.isActive === 1 : true}
                                 />
-                                <Label htmlFor="isActive">Active</Label>
+                                <Label htmlFor="isActive">{t("common.active", "Active")}</Label>
                             </div>
                             <div className="flex items-center space-x-2">
                                 <Switch
@@ -1109,12 +1111,12 @@ export default function AdminSystemSettings() {
                                     name="sendToGa4"
                                     defaultChecked={editingEvent ? editingEvent.sendToGa4 : true}
                                 />
-                                <Label htmlFor="sendToGa4">Send to Google Analytics 4</Label>
+                                <Label htmlFor="sendToGa4">{t("admin.sendToGa4", "Send to Google Analytics 4")}</Label>
                             </div>
                           </div>
 
                           <Button type="submit" className="w-full">
-                            {editingEvent ? "Update Event" : "Create Event"}
+                            {editingEvent ? t("admin.updateEvent", "Update Event") : t("admin.createEvent", "Create Event")}
                           </Button>
                         </form>
                       </DialogContent>
@@ -1122,18 +1124,18 @@ export default function AdminSystemSettings() {
                   </CardHeader>
                   <CardContent>
                     {isLoadingEvents ? (
-                      <div className="text-center py-4">Loading events...</div>
+                      <div className="text-center py-4">{t("admin.loadingEvents", "Loading events...")}</div>
                     ) : (
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead>Event Name</TableHead>
-                            <TableHead>GA4 Mapping</TableHead>
-                            <TableHead>Type</TableHead>
-                            <TableHead>Selector</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead>GA4</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
+                            <TableHead>{t("admin.eventName", "Event Name")}</TableHead>
+                            <TableHead>{t("admin.ga4Mapping", "GA4 Mapping")}</TableHead>
+                            <TableHead>{t("admin.type", "Type")}</TableHead>
+                            <TableHead>{t("admin.selector", "Selector")}</TableHead>
+                            <TableHead>{t("common.status", "Status")}</TableHead>
+                            <TableHead>{t("admin.ga4", "GA4")}</TableHead>
+                            <TableHead className="text-right">{t("common.actions", "Actions")}</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -1147,14 +1149,14 @@ export default function AdminSystemSettings() {
                                 <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                                   event.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-700"
                                 }`}>
-                                  {event.isActive ? "Active" : "Inactive"}
+                                  {event.isActive ? t("common.active", "Active") : t("common.inactive", "Inactive")}
                                 </div>
                               </TableCell>
                               <TableCell>
                                 <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                                   event.sendToGa4 ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-700"
                                 }`}>
-                                  {event.sendToGa4 ? "On" : "Off"}
+                                  {event.sendToGa4 ? t("common.on", "On") : t("common.off", "Off")}
                                 </div>
                               </TableCell>
                               <TableCell className="text-right">
@@ -1173,7 +1175,7 @@ export default function AdminSystemSettings() {
                                   size="icon"
                                   className="text-destructive"
                                   onClick={() => {
-                                    if (confirm("Are you sure?")) {
+                                    if (confirm(t("common.areYouSure", "Are you sure?"))) {
                                       deleteEventMutation.mutate(event.id);
                                     }
                                   }}

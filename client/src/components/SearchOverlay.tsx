@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { VideoCard } from "./VideoCard";
 import type { VideoWithLocalizedRelations, LocalizedCategory } from "@shared/schema";
+import { useTranslation } from "react-i18next";
 
 interface SearchOverlayProps {
   open: boolean;
@@ -25,6 +26,7 @@ export function SearchOverlay({
   categories = [],
   isLoading,
 }: SearchOverlayProps) {
+  const { t } = useTranslation();
   const [query, setQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<
     string | undefined
@@ -49,7 +51,7 @@ export function SearchOverlay({
         className="max-w-5xl max-h-[90vh] overflow-y-auto p-0 bg-background"
         data-testid="modal-search"
       >
-        <DialogTitle className="sr-only">Search</DialogTitle>
+        <DialogTitle className="sr-only">{t("common.search", "Search")}</DialogTitle>
         <div className="sticky top-0 bg-background border-b border-border z-10">
           <div className="p-6 space-y-4">
             <div className="flex items-center gap-4">
@@ -57,7 +59,7 @@ export function SearchOverlay({
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                 <Input
                   type="search"
-                  placeholder="Search videos..."
+                  placeholder={t("search.placeholder", "Search videos...")}
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   className="pl-10 pr-4 h-12 text-base"
@@ -83,7 +85,7 @@ export function SearchOverlay({
                   onClick={() => setSelectedCategory(undefined)}
                   data-testid="badge-category-all"
                 >
-                  All
+                  {t("common.all", "All")}
                 </Badge>
                 {categories.map((category) => (
                   <Badge
@@ -128,8 +130,8 @@ export function SearchOverlay({
                 data-testid="text-no-results"
               >
                 {query || selectedCategory
-                  ? "No videos found"
-                  : "Start typing to search videos"}
+                  ? t("search.noResults", "No videos found")
+                  : t("search.startTyping", "Start typing to search videos")}
               </p>
             </div>
           )}

@@ -1,15 +1,9 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { AdminSidebar } from "@/components/AdminSidebar";
+import { useTranslation } from "react-i18next";
+import { useToast } from "@/hooks/use-toast";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -21,136 +15,53 @@ import {
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FolderTree, Plus, Pencil, Trash2 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { Category, CategoryTranslation } from "@shared/schema";
-
-type AdminCategory = Category & { translations: CategoryTranslation[] };
-
-const LANGUAGES = [
-  { code: "en", label: "English" },
-  { code: "sr-Latn", label: "Serbian" },
-];
+import { 
+  Loader2, 
+  Plus, 
+  Pencil, 
+  Trash2, 
+  Globe, 
+  RefreshCw,
+  FolderOpen
+} from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import type { LocalizedCategory } from "@shared/schema";
 
 export default function AdminCategories() {
+  const { t } = useTranslation();
   const { toast } = useToast();
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [editingCategory, setEditingCategory] = useState<AdminCategory | null>(null);
-  const [deletingCategory, setDeletingCategory] = useState<AdminCategory | null>(
-    null,
-  );
-  
-  // State for form data per language
-  const [formData, setFormData] = useState<Record<string, { name: string; description: string }>>({
-    en: { name: "", description: "" },
-    "sr-Latn": { name: "", description: "" },
-  });
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<LocalizedCategory | null>(null);
+  const [formData, setFormData] = useState({ name: "", description: "" });
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  const { data: categories = [], isLoading } = useQuery<AdminCategory[]>({
-    queryKey: ["/api/admin/categories"],
+  const { data: categories = [], isLoading } = useQuery<LocalizedCategory[]>({
+    queryKey: ["/api/categories"],
   });
 
   const regenerateMutation = useMutation({
     mutationFn: async () => {
-      return await apiRequest("POST", "/api/admin/regenerate?type=categories&mode=missing&limit=50");
+      return apiRequest("POST", "/api/categories/regenerate", {});
     },
-    onSuccess: (data: any) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/categories"] });
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
       toast({
-        title: "Regeneration Started",
-        description: `Processed ${data.processed} videos. Generated ${data.categoriesGenerated} categories.`,
+        title: t("admin.categoriesRegenerated", "Categories regenerated"),
+        description: t("admin.categoriesRegeneratedDesc", "AI has analyzed content and generated categories."),
       });
     },
     onError: () => {
       toast({
-        title: "Error",
-        description: "Failed to regenerate categories",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const createMutation = useMutation({
-    mutationFn: async (data: any) => {
-      return await apiRequest("POST", "/api/categories", data);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/categories"] });
-      setIsCreateDialogOpen(false);
-      resetForm();
-      toast({
-        title: "Category Created",
-        description: "New category has been added successfully",
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to create category",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: async ({
-      id,
-      data,
-    }: {
-      id: string;
-      data: any;
-    }) => {
-      // We need to send separate updates for each changed language
-      // Or we could have a bulk update endpoint, but currently PUT /api/categories/:id updates one lang
-      // We'll just update the current active language or all changed ones?
-      // For simplicity, let's iterate and update.
-      // But Promise.all might fail partially.
-      // Ideally backend supports bulk update.
-      // Let's assume we update each language sequentially for now.
-      
-      const promises = Object.entries(data).map(([lang, content]: [string, any]) => {
-          if (!content.name) return Promise.resolve(); // Skip empty?
-          return apiRequest("PUT", `/api/categories/${id}`, {
-              languageCode: lang,
-              name: content.name,
-              description: content.description
-          });
-      });
-      return Promise.all(promises);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/categories"] });
-      setEditingCategory(null);
-      resetForm();
-      toast({
-        title: "Category Updated",
-        description: "Category has been updated successfully",
-      });
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to update category",
+        title: t("common.error", "Error"),
+        description: t("admin.failedToRegenerateCategories", "Failed to regenerate categories"),
         variant: "destructive",
       });
     },
@@ -158,376 +69,291 @@ export default function AdminCategories() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      return await apiRequest("DELETE", `/api/categories/${id}`);
+      return apiRequest("DELETE", `/api/categories/${id}`, {});
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/categories"] });
-      setDeletingCategory(null);
+      queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
+      setDeleteId(null);
       toast({
-        title: "Category Deleted",
-        description: "Category has been removed successfully",
+        title: t("admin.categoryDeleted", "Category deleted"),
+        description: t("admin.categoryDeletedDesc", "Category has been removed"),
       });
     },
     onError: () => {
       toast({
-        title: "Error",
-        description: "Failed to delete category",
+        title: t("common.error", "Error"),
+        description: t("admin.failedToDeleteCategory", "Failed to delete category"),
         variant: "destructive",
       });
     },
   });
 
-  const resetForm = () => {
-      setFormData({
-        en: { name: "", description: "" },
-        "sr-Latn": { name: "", description: "" },
+  const createMutation = useMutation({
+    mutationFn: async (data: { name: string; description: string }) => {
+      return apiRequest("POST", "/api/categories", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
+      setIsCreateOpen(false);
+      setFormData({ name: "", description: "" });
+      toast({
+        title: t("admin.categoryCreated", "Category created"),
+        description: t("admin.categoryCreatedDesc", "Category has been created successfully"),
       });
-  };
-
-  const handleCreate = () => {
-    // Construct translations array
-    const translations = Object.entries(formData)
-        .filter(([_, data]) => data.name.trim() !== "")
-        .map(([lang, data]) => ({
-            languageCode: lang,
-            name: data.name,
-            slug: data.name.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
-            description: data.description || null
-        }));
-
-    if (translations.length === 0) {
-        toast({ title: "Error", description: "At least one language must have a name", variant: "destructive" });
-        return;
-    }
-
-    createMutation.mutate({ translations });
-  };
-
-  const handleUpdate = () => {
-    if (editingCategory) {
-      updateMutation.mutate({
-        id: editingCategory.id,
-        data: formData,
+    },
+    onError: () => {
+      toast({
+        title: t("common.error", "Error"),
+        description: t("admin.failedToCreateCategory", "Failed to create category"),
+        variant: "destructive",
       });
-    }
-  };
+    },
+  });
 
-  const handleDelete = () => {
-    if (deletingCategory) {
-      deleteMutation.mutate(deletingCategory.id);
-    }
-  };
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: { name: string; description: string } }) => {
+      return apiRequest("PATCH", `/api/categories/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
+      setEditingCategory(null);
+      setFormData({ name: "", description: "" });
+      toast({
+        title: t("admin.categoryUpdated", "Category updated"),
+        description: t("admin.categoryUpdatedDesc", "Category has been updated successfully"),
+      });
+    },
+    onError: () => {
+      toast({
+        title: t("common.error", "Error"),
+        description: t("admin.failedToUpdateCategory", "Failed to update category"),
+        variant: "destructive",
+      });
+    },
+  });
 
-  const openEditDialog = (category: AdminCategory) => {
+  const handleEdit = (category: LocalizedCategory) => {
     setEditingCategory(category);
-    
-    const newFormData = {
-        en: { name: "", description: "" },
-        "sr-Latn": { name: "", description: "" },
-    };
-    
-    category.translations.forEach(t => {
-        if (newFormData[t.languageCode as keyof typeof newFormData]) {
-            newFormData[t.languageCode as keyof typeof newFormData] = {
-                name: t.name,
-                description: t.description || ""
-            };
-        }
+    setFormData({
+      name: category.name,
+      description: category.description || "",
     });
-
-    setFormData(newFormData);
   };
 
-  const openCreateDialog = () => {
-    resetForm();
-    setIsCreateDialogOpen(true);
-  };
-  
-  const updateFormData = (lang: string, field: 'name' | 'description', value: string) => {
-      setFormData(prev => ({
-          ...prev,
-          [lang]: {
-              ...prev[lang as keyof typeof prev],
-              [field]: value
-          }
-      }));
-  };
-
-  // Helper to get English name or first available
-  const getDisplayName = (category: AdminCategory) => {
-      const en = category.translations.find(t => t.languageCode === 'en');
-      if (en) return en.name;
-      return category.translations[0]?.name || 'Unnamed';
-  };
-  
-  const getDisplayDescription = (category: AdminCategory) => {
-      const en = category.translations.find(t => t.languageCode === 'en');
-      if (en) return en.description;
-      return category.translations[0]?.description || '';
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingCategory) {
+      updateMutation.mutate({ id: editingCategory.id, data: formData });
+    } else {
+      createMutation.mutate(formData);
+    }
   };
 
   return (
-    <>
-      <div className="max-w-6xl mx-auto space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold" data-testid="text-page-title">
-              Categories Management
-            </h1>
-            <p className="text-muted-foreground mt-1">
-              Manage AI-generated and custom categories (Multilingual)
-            </p>
-          </div>
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold" data-testid="text-page-title">
+            {t("admin.categoriesManagement", "Categories Management")}
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            {t("admin.categoriesManagementDesc", "Manage AI-generated and custom categories (Multilingual)")}
+          </p>
+        </div>
+        <div className="flex gap-2">
           <Button
-            onClick={openCreateDialog}
-            className="gap-2"
-            data-testid="button-create-category"
-          >
-            <Plus className="h-4 w-4" />
-            Create Category
-          </Button>
-          <Button 
-            onClick={() => regenerateMutation.mutate()} 
+            variant="outline"
+            onClick={() => regenerateMutation.mutate()}
             disabled={regenerateMutation.isPending}
-            variant="secondary"
-            className="gap-2"
           >
             {regenerateMutation.isPending ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Regenerating...
-              </>
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
             ) : (
-              <>
-                <Sparkles className="mr-2 h-4 w-4" />
-                Regenerate Missing
-              </>
+              <RefreshCw className="h-4 w-4 mr-2" />
             )}
+            {regenerateMutation.isPending ? t("admin.regenerating", "Regenerating...") : t("admin.regenerateMissing", "Regenerate Missing")}
+          </Button>
+          <Button onClick={() => setIsCreateOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            {t("admin.createCategory", "Create Category")}
           </Button>
         </div>
+      </div>
 
-        {isLoading ? (
-          <Card>
-            <CardContent className="py-12 text-center">
-              <p className="text-muted-foreground">Loading categories...</p>
-            </CardContent>
-          </Card>
-        ) : categories.length === 0 ? (
-          <Card>
-            <CardContent className="py-12 text-center">
-              <FolderTree className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3
-                className="text-lg font-semibold mb-2"
-                data-testid="text-empty-state"
-              >
-                No categories yet
-              </h3>
-              <p className="text-muted-foreground mb-4">
-                Create categories manually or let AI generate them from video
-                content
-              </p>
-              <Button onClick={openCreateDialog} variant="outline">
-                Create First Category
-              </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <Card>
-            <CardHeader>
-              <CardTitle>All Categories</CardTitle>
-              <CardDescription>
-                {categories.length} total categories
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name (EN)</TableHead>
-                      <TableHead className="hidden md:table-cell">Description (EN)</TableHead>
-                      <TableHead className="text-center hidden lg:table-cell">Translations</TableHead>
-                      <TableHead className="text-center">Videos</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {categories.map((category) => (
-                      <TableRow
-                        key={category.id}
-                        data-testid={`row-category-${category.id}`}
-                      >
-                        <TableCell
-                          className="font-medium"
-                          data-testid="text-category-name"
+      <div className="border border-border rounded-lg overflow-hidden bg-card">
+        <div className="p-4 border-b border-border bg-muted/30 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <FolderOpen className="h-5 w-5 text-muted-foreground" />
+            <h2 className="font-semibold">{t("admin.allCategories", "All Categories")}</h2>
+            <Badge variant="secondary" className="ml-2">
+              {categories.length}
+            </Badge>
+          </div>
+        </div>
+        
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[200px]">{t("admin.nameEN", "Name (EN)")}</TableHead>
+                <TableHead className="min-w-[300px]">{t("admin.descriptionEN", "Description (EN)")}</TableHead>
+                <TableHead>{t("admin.translations", "Translations")}</TableHead>
+                <TableHead className="text-right">{t("common.videos", "Videos")}</TableHead>
+                <TableHead className="text-right">{t("common.actions", "Actions")}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">
+                    <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
+                    {t("admin.loadingCategories", "Loading categories...")}
+                  </TableCell>
+                </TableRow>
+              ) : categories.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="py-16 text-center text-muted-foreground">
+                    <FolderOpen className="h-12 w-12 mx-auto mb-4 opacity-20" />
+                    <p className="text-lg font-medium">{t("admin.noCategories", "No categories yet")}</p>
+                    <p className="text-sm mb-4">{t("admin.noCategoriesDesc", "Create categories manually or let AI generate them from video content")}</p>
+                    <Button variant="outline" onClick={() => setIsCreateOpen(true)}>
+                      {t("admin.createFirstCategory", "Create First Category")}
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                categories.map((category) => (
+                  <TableRow key={category.id}>
+                    <TableCell className="font-medium">
+                      {category.name}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-sm">
+                      {category.description || <span className="italic opacity-50">{t("common.noDescription", "No description")}</span>}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {category.translations && category.translations.length > 0 ? (
+                          category.translations.map((trans) => (
+                            <Badge key={trans.language} variant="outline" className="text-xs px-1.5 py-0 h-5">
+                              {trans.language}
+                            </Badge>
+                          ))
+                        ) : (
+                          <span className="text-xs text-muted-foreground italic">None</span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {category.videoCount || 0}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => handleEdit(category)}
                         >
-                          {getDisplayName(category)}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground max-w-md hidden md:table-cell">
-                          {getDisplayDescription(category) || (
-                            <span className="italic">No description</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-center hidden lg:table-cell">
-                            <div className="flex gap-1 justify-center">
-                                {category.translations.map(t => (
-                                    <Badge key={t.languageCode} variant="outline" className="text-xs">
-                                        {t.languageCode}
-                                    </Badge>
-                                ))}
-                            </div>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Badge
-                            variant="secondary"
-                            data-testid="badge-video-count"
-                          >
-                            {category.videoCount}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex gap-2 justify-end">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => openEditDialog(category)}
-                              data-testid={`button-edit-${category.id}`}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => setDeletingCategory(category)}
-                              data-testid={`button-delete-${category.id}`}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => setDeleteId(category.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </div>
 
       {/* Create/Edit Dialog */}
-      <Dialog
-        open={isCreateDialogOpen || !!editingCategory}
+      <Dialog 
+        open={isCreateOpen || !!editingCategory} 
         onOpenChange={(open) => {
           if (!open) {
-            setIsCreateDialogOpen(false);
+            setIsCreateOpen(false);
             setEditingCategory(null);
-            resetForm();
+            setFormData({ name: "", description: "" });
           }
         }}
       >
-        <DialogContent data-testid="dialog-category-form" className="max-w-2xl">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {editingCategory ? "Edit Category" : "Create Category"}
+              {editingCategory ? t("admin.editCategory", "Edit Category") : t("admin.createCategory", "Create Category")}
             </DialogTitle>
             <DialogDescription>
-              {editingCategory
-                ? "Update the category name and description for each language"
-                : "Add a new category with multilingual support"}
+              {editingCategory 
+                ? t("admin.editCategoryDesc", "Update the category name and description.") 
+                : t("admin.createCategoryDesc", "Add a new category to organize videos.")}
             </DialogDescription>
           </DialogHeader>
-          
-          <Tabs defaultValue="en" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-                {LANGUAGES.map(lang => (
-                    <TabsTrigger key={lang.code} value={lang.code}>
-                        {lang.label}
-                    </TabsTrigger>
-                ))}
-            </TabsList>
-            
-            {LANGUAGES.map(lang => (
-                <TabsContent key={lang.code} value={lang.code} className="space-y-4 py-4">
-                    <div className="space-y-2">
-                      <Label htmlFor={`name-${lang.code}`}>Category Name ({lang.label})</Label>
-                      <Input
-                        id={`name-${lang.code}`}
-                        value={formData[lang.code]?.name || ''}
-                        onChange={(e) => updateFormData(lang.code, 'name', e.target.value)}
-                        placeholder={`e.g. ${lang.code === 'en' ? 'Technology' : 'Tehnologija'}`}
-                        data-testid={`input-category-name-${lang.code}`}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor={`description-${lang.code}`}>Description ({lang.label})</Label>
-                      <Textarea
-                        id={`description-${lang.code}`}
-                        value={formData[lang.code]?.description || ''}
-                        onChange={(e) => updateFormData(lang.code, 'description', e.target.value)}
-                        placeholder={`Description in ${lang.label}...`}
-                        rows={3}
-                        data-testid={`input-category-description-${lang.code}`}
-                      />
-                    </div>
-                </TabsContent>
-            ))}
-          </Tabs>
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setIsCreateDialogOpen(false);
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">{t("admin.categoryName", "Name")}</Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="e.g. Technology"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="description">{t("admin.categoryDescription", "Description")}</Label>
+              <Textarea
+                id="description"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="Category description..."
+                rows={3}
+              />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => {
+                setIsCreateOpen(false);
                 setEditingCategory(null);
-                resetForm();
-              }}
-              data-testid="button-cancel"
-            >
-              Cancel
+              }}>
+                {t("common.cancel", "Cancel")}
+              </Button>
+              <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
+                {editingCategory ? t("common.update", "Update") : t("common.create", "Create")}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation */}
+      <Dialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("admin.deleteCategory", "Delete Category")}</DialogTitle>
+            <DialogDescription>
+              {t("admin.deleteCategoryConfirmation", "Are you sure you want to delete this category? This action cannot be undone.")}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteId(null)}>
+              {t("common.cancel", "Cancel")}
             </Button>
-            <Button
-              onClick={editingCategory ? handleUpdate : handleCreate}
-              disabled={
-                createMutation.isPending ||
-                updateMutation.isPending
-              }
-              data-testid="button-save"
+            <Button 
+              variant="destructive" 
+              onClick={() => deleteId && deleteMutation.mutate(deleteId)}
+              disabled={deleteMutation.isPending}
             >
-              {editingCategory ? "Update" : "Create"}
+              {deleteMutation.isPending ? t("common.deleting", "Deleting...") : t("common.delete", "Delete")}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog
-        open={!!deletingCategory}
-        onOpenChange={(open) => !open && setDeletingCategory(null)}
-      >
-        <AlertDialogContent data-testid="dialog-delete-confirmation">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Category</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete "{deletingCategory && getDisplayName(deletingCategory)}"? This
-              action cannot be undone. Videos in this category will not be
-              deleted, but the category association will be removed.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel data-testid="button-cancel-delete">
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              data-testid="button-confirm-delete"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
+    </div>
   );
 }

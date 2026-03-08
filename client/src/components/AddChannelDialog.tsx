@@ -8,6 +8,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useTranslation } from "react-i18next";
 
 interface AddChannelDialogProps {
   open: boolean;
@@ -20,6 +21,7 @@ export function AddChannelDialog({
   onClose,
   onAdd,
 }: AddChannelDialogProps) {
+  const { t } = useTranslation();
   const [url, setUrl] = useState("");
   const [name, setName] = useState("");
 
@@ -37,16 +39,16 @@ export function AddChannelDialog({
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent data-testid="modal-add-channel">
         <DialogHeader>
-          <DialogTitle>Add YouTube Channel</DialogTitle>
+          <DialogTitle>{t("channels.addChannel", "Add YouTube Channel")}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="channel-name">Channel Name</Label>
+            <Label htmlFor="channel-name">{t("channels.channelName", "Channel Name")}</Label>
             <Input
               id="channel-name"
               type="text"
-              placeholder="Enter channel name"
+              placeholder={t("channels.enterChannelName", "Enter channel name")}
               value={name}
               onChange={(e) => setName(e.target.value)}
               data-testid="input-channel-name"
@@ -55,7 +57,7 @@ export function AddChannelDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="channel-url">Channel URL</Label>
+            <Label htmlFor="channel-url">{t("channels.channelUrl", "Channel URL")}</Label>
             <Input
               id="channel-url"
               type="url"
@@ -66,7 +68,7 @@ export function AddChannelDialog({
               required
             />
             <p className="text-xs text-muted-foreground">
-              Enter the full YouTube channel URL
+              {t("channels.enterFullUrl", "Enter the full YouTube channel URL")}
             </p>
           </div>
 
@@ -77,14 +79,14 @@ export function AddChannelDialog({
               onClick={onClose}
               data-testid="button-cancel"
             >
-              Cancel
+              {t("common.cancel", "Cancel")}
             </Button>
             <Button
               type="submit"
               disabled={!url.trim() || !name.trim()}
               data-testid="button-submit"
             >
-              Add Channel
+              {t("common.add", "Add Channel")}
             </Button>
           </div>
         </form>

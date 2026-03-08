@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Card,
   CardContent,
@@ -18,6 +19,7 @@ import { Download, Database, FileJson, FileSpreadsheet } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function AdminDataExport() {
+  const { t } = useTranslation();
   const [exportType, setExportType] = useState<string>("videos");
   const [format, setFormat] = useState<string>("json");
   const [isExporting, setIsExporting] = useState(false);
@@ -45,14 +47,14 @@ export default function AdminDataExport() {
       document.body.removeChild(a);
 
       toast({
-        title: "Export Successful",
-        description: `${exportType} data exported as ${format.toUpperCase()}`,
+        title: t("admin.exportSuccessful", "Export Successful"),
+        description: t("admin.exportDesc", { type: exportType, format: format.toUpperCase(), defaultValue: "{{type}} data exported as {{format}}" }),
       });
     } catch (error) {
       console.error("Export error:", error);
       toast({
-        title: "Export Failed",
-        description: "Failed to export data. Please try again.",
+        title: t("admin.exportFailed", "Export Failed"),
+        description: t("admin.exportFailedDesc", "Failed to export data. Please try again."),
         variant: "destructive",
       });
     } finally {
@@ -63,9 +65,9 @@ export default function AdminDataExport() {
   return (
     <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Data Export</h1>
+          <h1 className="text-3xl font-bold text-foreground">{t("admin.dataExport", "Data Export")}</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Export application data for backup or analysis
+            {t("admin.dataExportDesc", "Export application data for backup or analysis")}
           </p>
         </div>
 
@@ -74,10 +76,10 @@ export default function AdminDataExport() {
             <CardHeader>
               <div className="flex items-center gap-2">
                 <Database className="h-5 w-5 text-primary" />
-                <CardTitle className="text-lg">Videos</CardTitle>
+                <CardTitle className="text-lg">{t("common.videos", "Videos")}</CardTitle>
               </div>
               <CardDescription>
-                Export all video metadata, views, likes, and categories
+                {t("admin.exportVideosDesc", "Export all video metadata, views, likes, and categories")}
               </CardDescription>
             </CardHeader>
           </Card>
@@ -86,10 +88,10 @@ export default function AdminDataExport() {
             <CardHeader>
               <div className="flex items-center gap-2">
                 <Database className="h-5 w-5 text-primary" />
-                <CardTitle className="text-lg">Channels</CardTitle>
+                <CardTitle className="text-lg">{t("admin.channels", "Channels")}</CardTitle>
               </div>
               <CardDescription>
-                Export all channel information and statistics
+                {t("admin.exportChannelsDesc", "Export all channel information and statistics")}
               </CardDescription>
             </CardHeader>
           </Card>
@@ -98,10 +100,10 @@ export default function AdminDataExport() {
             <CardHeader>
               <div className="flex items-center gap-2">
                 <Database className="h-5 w-5 text-primary" />
-                <CardTitle className="text-lg">Analytics</CardTitle>
+                <CardTitle className="text-lg">{t("admin.analytics", "Analytics")}</CardTitle>
               </div>
               <CardDescription>
-                Export comprehensive analytics and engagement data
+                {t("admin.exportAnalyticsDesc", "Export comprehensive analytics and engagement data")}
               </CardDescription>
             </CardHeader>
           </Card>
@@ -109,34 +111,34 @@ export default function AdminDataExport() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Configure Export</CardTitle>
+            <CardTitle>{t("admin.configureExport", "Configure Export")}</CardTitle>
             <CardDescription>
-              Select the data type and format for export
+              {t("admin.configureExportDesc", "Select the data type and format for export")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">
-                  Data Type
+                  {t("admin.dataType", "Data Type")}
                 </label>
                 <Select value={exportType} onValueChange={setExportType}>
                   <SelectTrigger data-testid="select-export-type">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="videos">Videos</SelectItem>
-                    <SelectItem value="channels">Channels</SelectItem>
-                    <SelectItem value="analytics">Analytics</SelectItem>
-                    <SelectItem value="categories">Categories</SelectItem>
-                    <SelectItem value="tags">Tags</SelectItem>
+                    <SelectItem value="videos">{t("common.videos", "Videos")}</SelectItem>
+                    <SelectItem value="channels">{t("admin.channels", "Channels")}</SelectItem>
+                    <SelectItem value="analytics">{t("admin.analytics", "Analytics")}</SelectItem>
+                    <SelectItem value="categories">{t("admin.categories", "Categories")}</SelectItem>
+                    <SelectItem value="tags">{t("admin.tags", "Tags")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">
-                  Format
+                  {t("admin.format", "Format")}
                 </label>
                 <Select value={format} onValueChange={setFormat}>
                   <SelectTrigger data-testid="select-format">
@@ -168,10 +170,10 @@ export default function AdminDataExport() {
                 data-testid="button-export"
               >
                 <Download className="h-4 w-4" />
-                {isExporting ? "Exporting..." : "Export Data"}
+                {isExporting ? t("admin.exporting", "Exporting...") : t("admin.exportData", "Export Data")}
               </Button>
               <p className="text-sm text-muted-foreground">
-                Download will start automatically
+                {t("admin.downloadStartAuto", "Download will start automatically")}
               </p>
             </div>
           </CardContent>
@@ -179,26 +181,24 @@ export default function AdminDataExport() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Export Information</CardTitle>
+            <CardTitle>{t("admin.exportInfo", "Export Information")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm text-muted-foreground">
             <div className="flex gap-2">
               <FileJson className="h-5 w-5 text-primary flex-shrink-0" />
               <div>
-                <p className="font-medium text-foreground">JSON Format</p>
+                <p className="font-medium text-foreground">{t("admin.jsonFormat", "JSON Format")}</p>
                 <p>
-                  Structured data format, ideal for programmatic access and data
-                  processing
+                  {t("admin.jsonDesc", "Structured data format, ideal for programmatic access and data processing")}
                 </p>
               </div>
             </div>
             <div className="flex gap-2">
               <FileSpreadsheet className="h-5 w-5 text-primary flex-shrink-0" />
               <div>
-                <p className="font-medium text-foreground">CSV Format</p>
+                <p className="font-medium text-foreground">{t("admin.csvFormat", "CSV Format")}</p>
                 <p>
-                  Spreadsheet-compatible format, easy to open in Excel or Google
-                  Sheets
+                  {t("admin.csvDesc", "Spreadsheet-compatible format, easy to open in Excel or Google Sheets")}
                 </p>
               </div>
             </div>

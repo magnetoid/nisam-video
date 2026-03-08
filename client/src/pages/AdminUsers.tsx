@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import {
   Card,
   CardContent,
@@ -37,6 +38,7 @@ interface User {
 }
 
 export default function AdminUsers() {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -50,10 +52,10 @@ export default function AdminUsers() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
-      toast({ title: "User role updated" });
+      toast({ title: t("admin.userRoleUpdated", "User role updated") });
     },
     onError: () => {
-      toast({ title: "Failed to update role", variant: "destructive" });
+      toast({ title: t("admin.failedToUpdateRole", "Failed to update role"), variant: "destructive" });
     },
   });
 
@@ -63,12 +65,12 @@ export default function AdminUsers() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
-      toast({ title: "User deleted" });
+      toast({ title: t("admin.userDeleted", "User deleted") });
     },
     onError: (error: any) => {
       toast({ 
-        title: "Failed to delete user", 
-        description: error.message || "Something went wrong",
+        title: t("admin.failedToDeleteUser", "Failed to delete user"), 
+        description: error.message || t("common.error", "Something went wrong"),
         variant: "destructive" 
       });
     },
@@ -79,32 +81,32 @@ export default function AdminUsers() {
       <div>
         <h1 className="text-3xl font-bold flex items-center gap-2">
           <Users className="h-8 w-8" />
-          User Management
+          {t("admin.userManagement", "User Management")}
         </h1>
         <p className="text-muted-foreground mt-1">
-          Manage registered users and their roles
+          {t("admin.userManagementDesc", "Manage registered users and their roles")}
         </p>
       </div>
 
             <Card>
               <CardHeader>
-                <CardTitle>Users</CardTitle>
+                <CardTitle>{t("admin.users", "Users")}</CardTitle>
                 <CardDescription>
-                  List of all registered users
+                  {t("admin.usersListDesc", "List of all registered users")}
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 {isLoading ? (
-                  <div className="text-center py-8">Loading users...</div>
+                  <div className="text-center py-8">{t("admin.loadingUsers", "Loading users...")}</div>
                 ) : (
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Username</TableHead>
-                        <TableHead>Email</TableHead>
-                        <TableHead>Role</TableHead>
-                        <TableHead>Joined</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
+                        <TableHead>{t("auth.username", "Username")}</TableHead>
+                        <TableHead>{t("auth.email", "Email")}</TableHead>
+                        <TableHead>{t("admin.role", "Role")}</TableHead>
+                        <TableHead>{t("admin.joined", "Joined")}</TableHead>
+                        <TableHead className="text-right">{t("common.actions", "Actions")}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -132,8 +134,8 @@ export default function AdminUsers() {
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="user">User</SelectItem>
-                                <SelectItem value="admin">Admin</SelectItem>
+                                <SelectItem value="user">{t("admin.user", "User")}</SelectItem>
+                                <SelectItem value="admin">{t("admin.admin", "Admin")}</SelectItem>
                               </SelectContent>
                             </Select>
                           </TableCell>
@@ -146,7 +148,7 @@ export default function AdminUsers() {
                               size="icon"
                               className="text-destructive hover:text-destructive hover:bg-destructive/10"
                               onClick={() => {
-                                if (confirm(`Are you sure you want to delete user ${user.username}?`)) {
+                                if (confirm(t("admin.deleteUserConfirmation", { username: user.username, defaultValue: "Are you sure you want to delete user {{username}}?" }))) {
                                   deleteUserMutation.mutate(user.id);
                                 }
                               }}
@@ -159,7 +161,7 @@ export default function AdminUsers() {
                       {users?.length === 0 && (
                         <TableRow>
                           <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                            No users found
+                            {t("admin.noUsersFound", "No users found")}
                           </TableCell>
                         </TableRow>
                       )}

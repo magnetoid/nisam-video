@@ -36,23 +36,23 @@ export default function Shorts() {
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
-    name: "Shorts",
-    description: "Watch the latest YouTube Shorts and TikTok videos",
+    name: t("shorts.title", "Shorts"),
+    description: t("shorts.description", "Watch the latest YouTube Shorts and TikTok videos"),
     url: currentUrl,
     numberOfItems: shorts.length,
   };
 
   const filterButtons = [
-    { key: "all" as FilterType, label: "All Shorts", icon: Film },
-    { key: "youtube_short" as FilterType, label: "YouTube", icon: SiYoutube },
-    { key: "tiktok" as FilterType, label: "TikTok", icon: SiTiktok },
+    { key: "all" as FilterType, label: t("shorts.filterAll", "All Shorts"), icon: Film },
+    { key: "youtube_short" as FilterType, label: t("platforms.youtube", "YouTube"), icon: SiYoutube },
+    { key: "tiktok" as FilterType, label: t("platforms.tiktok", "TikTok"), icon: SiTiktok },
   ];
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <SEO
-        title="Shorts | YouTube Shorts & TikTok Videos"
-        description="Watch the latest YouTube Shorts and TikTok videos. Discover quick, engaging content in vertical format."
+        title={t("shorts.metaTitle", "Shorts | YouTube Shorts & TikTok Videos")}
+        description={t("shorts.metaDescription", "Watch the latest YouTube Shorts and TikTok videos. Discover quick, engaging content in vertical format.")}
         path="/shorts"
         canonical={currentUrl}
         hreflang={hreflangLinks}
@@ -66,12 +66,12 @@ export default function Shorts() {
         <div className="flex items-center gap-3 mb-6">
           <Smartphone className="h-8 w-8 text-primary" />
           <h1 className="text-3xl md:text-4xl font-bold" data-testid="text-shorts-title">
-            Shorts
+            {t("shorts.title", "Shorts")}
           </h1>
         </div>
 
         <p className="text-muted-foreground mb-8 text-lg">
-          Quick, engaging vertical videos from YouTube Shorts and TikTok
+          {t("shorts.subtitle", "Quick, engaging vertical videos from YouTube Shorts and TikTok")}
         </p>
 
         <div className="flex flex-wrap gap-3 mb-10">
@@ -104,7 +104,7 @@ export default function Shorts() {
           <div className="text-center py-16 space-y-4">
             <Smartphone className="h-16 w-16 mx-auto text-muted-foreground" />
             <p className="text-muted-foreground text-lg">
-              No shorts available yet. Short videos will appear here when channels are scraped.
+              {t("shorts.emptyState", "No shorts available yet. Short videos will appear here when channels are scraped.")}
             </p>
           </div>
         )}

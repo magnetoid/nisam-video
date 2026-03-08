@@ -41,6 +41,15 @@ export const VideoCard = memo(function VideoCard({ video, onClick, variant = "ca
     }, 50);
   };
 
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const content = (
     <div
       className={`group relative ${widthClass} cursor-pointer transition-shadow duration-200 ease-out`}
@@ -128,15 +137,6 @@ export const VideoCard = memo(function VideoCard({ video, onClick, variant = "ca
   if (onClick) {
     return content;
   }
-
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (hoverTimeoutRef.current) {
-        clearTimeout(hoverTimeoutRef.current);
-      }
-    };
-  }, []);
 
   return <Link href={`/video/${video.slug || video.id}`} className="block">{content}</Link>;
 });

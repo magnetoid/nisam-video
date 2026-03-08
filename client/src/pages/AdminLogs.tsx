@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Card,
@@ -87,6 +88,7 @@ interface ErrorEvent {
 }
 
 export default function AdminLogs() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("activity");
 
@@ -184,10 +186,10 @@ export default function AdminLogs() {
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2">
             <Activity className="h-8 w-8" />
-            System Logs & Health
+            {t("admin.systemLogsHealth", "System Logs & Health")}
           </h1>
           <p className="text-muted-foreground mt-1">
-            Monitor activity, system health, and errors
+            {t("admin.systemLogsDesc", "Monitor activity, system health, and errors")}
           </p>
         </div>
         <Button
@@ -199,7 +201,7 @@ export default function AdminLogs() {
           }}
         >
           <RefreshCw className="mr-2 h-4 w-4" />
-          Refresh
+          {t("common.refresh", "Refresh")}
         </Button>
       </div>
 
@@ -207,15 +209,15 @@ export default function AdminLogs() {
               <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="activity" className="flex items-center gap-2">
                   <Activity className="h-4 w-4" />
-                  Activity Logs
+                  {t("admin.activityLogs", "Activity Logs")}
                 </TabsTrigger>
                 <TabsTrigger value="health" className="flex items-center gap-2">
                   <Bug className="h-4 w-4" />
-                  System Health
+                  {t("admin.systemHealth", "System Health")}
                 </TabsTrigger>
                 <TabsTrigger value="client" className="flex items-center gap-2">
                   <Terminal className="h-4 w-4" />
-                  Client Errors
+                  {t("admin.clientErrors", "Client Errors")}
                 </TabsTrigger>
               </TabsList>
 
@@ -224,7 +226,7 @@ export default function AdminLogs() {
                 <div className="grid gap-4 md:grid-cols-3 mb-4">
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Total Actions</CardTitle>
+                            <CardTitle className="text-sm font-medium">{t("admin.totalActions", "Total Actions")}</CardTitle>
                             <Activity className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
@@ -233,7 +235,7 @@ export default function AdminLogs() {
                     </Card>
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Action Types</CardTitle>
+                            <CardTitle className="text-sm font-medium">{t("admin.actionTypes", "Action Types")}</CardTitle>
                             <Filter className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
@@ -242,7 +244,7 @@ export default function AdminLogs() {
                     </Card>
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Entity Types</CardTitle>
+                            <CardTitle className="text-sm font-medium">{t("admin.entityTypes", "Entity Types")}</CardTitle>
                             <Filter className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
@@ -253,13 +255,13 @@ export default function AdminLogs() {
 
                 <Card>
                   <CardHeader>
-                    <CardTitle>Activity History</CardTitle>
-                    <CardDescription>Administrative actions performed on the platform</CardDescription>
+                    <CardTitle>{t("admin.activityHistory", "Activity History")}</CardTitle>
+                    <CardDescription>{t("admin.activityHistoryDesc", "Administrative actions performed on the platform")}</CardDescription>
                     <div className="flex gap-4 mt-4">
                       <div className="relative flex-1">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
-                          placeholder="Search logs..."
+                          placeholder={t("admin.searchLogs", "Search logs...")}
                           value={activitySearch}
                           onChange={(e) => setActivitySearch(e.target.value)}
                           className="pl-10"
@@ -267,10 +269,10 @@ export default function AdminLogs() {
                       </div>
                       <Select value={actionFilter} onValueChange={setActionFilter}>
                         <SelectTrigger className="w-[180px]">
-                          <SelectValue placeholder="Filter by action" />
+                          <SelectValue placeholder={t("admin.filterByAction", "Filter by action")} />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="all">All Actions</SelectItem>
+                          <SelectItem value="all">{t("common.allActions", "All Actions")}</SelectItem>
                           {uniqueActions.map((action) => (
                             <SelectItem key={action} value={action}>{action}</SelectItem>
                           ))}
@@ -278,10 +280,10 @@ export default function AdminLogs() {
                       </Select>
                       <Select value={entityTypeFilter} onValueChange={setEntityTypeFilter}>
                         <SelectTrigger className="w-[180px]">
-                          <SelectValue placeholder="Filter by type" />
+                          <SelectValue placeholder={t("admin.filterByType", "Filter by type")} />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="all">All Types</SelectItem>
+                          <SelectItem value="all">{t("common.allTypes", "All Types")}</SelectItem>
                           {uniqueEntityTypes.map((type) => (
                             <SelectItem key={type} value={type}>{type}</SelectItem>
                           ))}
@@ -291,17 +293,17 @@ export default function AdminLogs() {
                   </CardHeader>
                   <CardContent>
                     {logsLoading ? (
-                      <div className="text-center py-8 text-muted-foreground">Loading...</div>
+                      <div className="text-center py-8 text-muted-foreground">{t("common.loading", "Loading...")}</div>
                     ) : filteredLogs.length > 0 ? (
                       <div className="rounded-md border">
                           <Table>
                             <TableHeader>
                               <TableRow>
-                                <TableHead>Timestamp</TableHead>
-                                <TableHead>Action</TableHead>
-                                <TableHead>Entity</TableHead>
-                                <TableHead>User</TableHead>
-                                <TableHead>Details</TableHead>
+                                <TableHead>{t("common.timestamp", "Timestamp")}</TableHead>
+                                <TableHead>{t("common.action", "Action")}</TableHead>
+                                <TableHead>{t("common.entity", "Entity")}</TableHead>
+                                <TableHead>{t("common.user", "User")}</TableHead>
+                                <TableHead>{t("common.details", "Details")}</TableHead>
                               </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -326,7 +328,7 @@ export default function AdminLogs() {
                           </Table>
                       </div>
                     ) : (
-                      <div className="text-center py-8 text-muted-foreground">No logs found</div>
+                      <div className="text-center py-8 text-muted-foreground">{t("admin.noLogsFound", "No logs found")}</div>
                     )}
                   </CardContent>
                 </Card>
@@ -337,22 +339,22 @@ export default function AdminLogs() {
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Database Status</CardTitle>
+                        <CardTitle className="text-sm font-medium">{t("admin.dbStatus", "Database Status")}</CardTitle>
                         <Database className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
                         <div className="text-2xl font-bold flex items-center gap-2">
                             {health?.database === "connected" ? (
-                            <span className="text-green-500 flex items-center gap-1"><CheckCircle className="h-5 w-5"/> Online</span>
+                            <span className="text-green-500 flex items-center gap-1"><CheckCircle className="h-5 w-5"/> {t("common.online", "Online")}</span>
                             ) : (
-                            <span className="text-red-500 flex items-center gap-1"><XCircle className="h-5 w-5"/> Offline</span>
+                            <span className="text-red-500 flex items-center gap-1"><XCircle className="h-5 w-5"/> {t("common.offline", "Offline")}</span>
                             )}
                         </div>
                         </CardContent>
                     </Card>
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Critical Errors (1h)</CardTitle>
+                        <CardTitle className="text-sm font-medium">{t("admin.criticalErrors1h", "Critical Errors (1h)")}</CardTitle>
                         <AlertTriangle className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
@@ -361,17 +363,17 @@ export default function AdminLogs() {
                     </Card>
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Memory Usage</CardTitle>
+                        <CardTitle className="text-sm font-medium">{t("admin.memoryUsage", "Memory Usage")}</CardTitle>
                         <Cpu className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
                         <div className="text-2xl font-bold">{health?.memory.rss || "0MB"}</div>
-                        <p className="text-xs text-muted-foreground">Heap: {health?.memory.heapUsed || "0MB"}</p>
+                        <p className="text-xs text-muted-foreground">{t("admin.heap", "Heap")}: {health?.memory.heapUsed || "0MB"}</p>
                         </CardContent>
                     </Card>
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Uptime</CardTitle>
+                        <CardTitle className="text-sm font-medium">{t("admin.uptime", "Uptime")}</CardTitle>
                         <Activity className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
@@ -383,15 +385,15 @@ export default function AdminLogs() {
                 <div className="grid gap-6 md:grid-cols-2">
                     <Card className="col-span-1 h-[600px] flex flex-col">
                         <CardHeader>
-                        <CardTitle>Live Server Error Feed</CardTitle>
-                        <CardDescription>Real-time stream of application exceptions</CardDescription>
+                        <CardTitle>{t("admin.liveErrorFeed", "Live Server Error Feed")}</CardTitle>
+                        <CardDescription>{t("admin.liveErrorFeedDesc", "Real-time stream of application exceptions")}</CardDescription>
                         </CardHeader>
                         <CardContent className="flex-1 overflow-hidden p-0">
                         <ScrollArea className="h-full px-6 pb-6">
                             <div className="space-y-4">
                             {errors.length === 0 ? (
                                 <div className="text-center text-muted-foreground py-10">
-                                No errors detected recently. System is healthy! 🚀
+                                {t("admin.noErrors", "No errors detected recently. System is healthy! 🚀")}
                                 </div>
                             ) : (
                                 errors.map((error) => (
@@ -429,13 +431,13 @@ export default function AdminLogs() {
                     <div className="space-y-6">
                         <Card>
                         <CardHeader>
-                            <CardTitle>Cache Performance</CardTitle>
-                            <CardDescription>In-memory cache efficiency</CardDescription>
+                            <CardTitle>{t("admin.cachePerformance", "Cache Performance")}</CardTitle>
+                            <CardDescription>{t("admin.cacheEfficiency", "In-memory cache efficiency")}</CardDescription>
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-4">
                                 <div className="flex justify-between items-center">
-                                    <span className="text-sm">Hit Rate</span>
+                                    <span className="text-sm">{t("admin.hitRate", "Hit Rate")}</span>
                                     <span className="font-bold">
                                         {health?.cache.hits && (health.cache.hits + health.cache.misses) > 0 
                                             ? Math.round((health.cache.hits / (health.cache.hits + health.cache.misses)) * 100) 
@@ -454,15 +456,15 @@ export default function AdminLogs() {
                                 </div>
                                 <div className="grid grid-cols-3 gap-4 text-center text-sm pt-4">
                                     <div>
-                                        <div className="text-muted-foreground">Keys</div>
+                                        <div className="text-muted-foreground">{t("admin.keys", "Keys")}</div>
                                         <div className="font-bold">{health?.cache.keys}</div>
                                     </div>
                                     <div>
-                                        <div className="text-muted-foreground">Hits</div>
+                                        <div className="text-muted-foreground">{t("admin.hits", "Hits")}</div>
                                         <div className="font-bold text-green-500">{health?.cache.hits}</div>
                                     </div>
                                     <div>
-                                        <div className="text-muted-foreground">Misses</div>
+                                        <div className="text-muted-foreground">{t("admin.misses", "Misses")}</div>
                                         <div className="font-bold text-red-500">{health?.cache.misses}</div>
                                     </div>
                                 </div>
@@ -477,13 +479,13 @@ export default function AdminLogs() {
               <TabsContent value="client">
                 <Card>
                   <CardHeader>
-                    <CardTitle>Client Error History</CardTitle>
-                    <CardDescription>Errors captured from user sessions</CardDescription>
+                    <CardTitle>{t("admin.clientErrorHistory", "Client Error History")}</CardTitle>
+                    <CardDescription>{t("admin.clientErrorDesc", "Errors captured from user sessions")}</CardDescription>
                     <div className="flex gap-4 mt-4">
                       <div className="relative flex-1">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
-                          placeholder="Search logs..."
+                          placeholder={t("admin.searchLogs", "Search logs...")}
                           value={clientSearchQuery}
                           onChange={(e) => setClientSearchQuery(e.target.value)}
                           className="pl-10"
@@ -493,14 +495,14 @@ export default function AdminLogs() {
                   </CardHeader>
                   <CardContent>
                     {logsLoading ? (
-                      <div className="text-center py-8 text-muted-foreground">Loading...</div>
+                      <div className="text-center py-8 text-muted-foreground">{t("common.loading", "Loading...")}</div>
                     ) : filteredClientLogs.length > 0 ? (
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead>Timestamp</TableHead>
-                            <TableHead>User / IP</TableHead>
-                            <TableHead>Error Details</TableHead>
+                            <TableHead>{t("common.timestamp", "Timestamp")}</TableHead>
+                            <TableHead>{t("admin.userIp", "User / IP")}</TableHead>
+                            <TableHead>{t("admin.errorDetails", "Error Details")}</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -543,7 +545,7 @@ export default function AdminLogs() {
                         </TableBody>
                       </Table>
                     ) : (
-                      <div className="text-center py-8 text-muted-foreground">No client errors found</div>
+                      <div className="text-center py-8 text-muted-foreground">{t("admin.noClientErrors", "No client errors found")}</div>
                     )}
                   </CardContent>
                 </Card>
@@ -557,10 +559,10 @@ export default function AdminLogs() {
                 <Badge variant={selectedError?.level === "error" ? "destructive" : "secondary"}>
                   {selectedError?.level.toUpperCase()}
                 </Badge>
-                Error Details
+                {t("admin.errorDetails", "Error Details")}
               </DialogTitle>
               <DialogDescription>
-                First seen: {selectedError && new Date(selectedError.lastSeenAt).toLocaleString()}
+                {t("admin.firstSeen", "First seen")}: {selectedError && new Date(selectedError.lastSeenAt).toLocaleString()}
               </DialogDescription>
             </DialogHeader>
 
@@ -572,7 +574,7 @@ export default function AdminLogs() {
 
                 {selectedError.stack && (
                   <div>
-                    <h3 className="text-sm font-semibold mb-2">Stack Trace</h3>
+                    <h3 className="text-sm font-semibold mb-2">{t("admin.stackTrace", "Stack Trace")}</h3>
                     <div className="p-4 bg-muted rounded-lg font-mono text-xs whitespace-pre overflow-x-auto">
                       {selectedError.stack}
                     </div>
@@ -580,10 +582,10 @@ export default function AdminLogs() {
                 )}
 
                 <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div><span className="text-muted-foreground">Module:</span> {selectedError.module}</div>
-                    <div><span className="text-muted-foreground">URL:</span> {selectedError.url}</div>
-                    <div><span className="text-muted-foreground">Type:</span> {selectedError.type}</div>
-                    <div><span className="text-muted-foreground">Count:</span> {selectedError.count}</div>
+                    <div><span className="text-muted-foreground">{t("admin.module", "Module")}:</span> {selectedError.module}</div>
+                    <div><span className="text-muted-foreground">{t("common.url", "URL")}:</span> {selectedError.url}</div>
+                    <div><span className="text-muted-foreground">{t("common.type", "Type")}:</span> {selectedError.type}</div>
+                    <div><span className="text-muted-foreground">{t("admin.count", "Count")}:</span> {selectedError.count}</div>
                 </div>
 
                 <div className="pt-4 border-t">
@@ -593,9 +595,9 @@ export default function AdminLogs() {
                         className="w-full"
                     >
                         {isAnalyzing ? (
-                            <><RefreshCw className="mr-2 h-4 w-4 animate-spin" /> Analyzing...</>
+                            <><RefreshCw className="mr-2 h-4 w-4 animate-spin" /> {t("admin.analyzing", "Analyzing...")}</>
                         ) : (
-                            <><BrainCircuit className="mr-2 h-4 w-4" /> Analyze with AI</>
+                            <><BrainCircuit className="mr-2 h-4 w-4" /> {t("admin.analyzeAi", "Analyze with AI")}</>
                         )}
                     </Button>
                     
@@ -603,7 +605,7 @@ export default function AdminLogs() {
                         <div className="mt-4 p-4 bg-primary/10 rounded-lg border border-primary/20">
                             <h4 className="font-semibold mb-2 flex items-center gap-2">
                                 <BrainCircuit className="h-4 w-4 text-primary" />
-                                AI Insight
+                                {t("admin.aiInsight", "AI Insight")}
                             </h4>
                             <div className="text-sm whitespace-pre-wrap">{aiAnalysis}</div>
                         </div>

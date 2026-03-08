@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import { AdminSidebar } from '@/components/AdminSidebar';
@@ -35,6 +36,7 @@ interface HeroImageSlot extends InsertHeroImage {
 type HeroTab = 'videos' | 'images' | 'settings';
 
 export default function AdminHeroManagement() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<HeroTab>('videos');
   const [searchTerm, setSearchTerm] = useState('');
@@ -466,7 +468,7 @@ export default function AdminHeroManagement() {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Slider Configuration</CardTitle>
+          <CardTitle>{t("admin.sliderConfig", "Slider Configuration")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="space-y-4 border p-4 rounded-md">
@@ -665,8 +667,8 @@ export default function AdminHeroManagement() {
     <div className="max-w-7xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Hero Management</h1>
-          <p className="text-muted-foreground">Configure videos, images, and slider settings</p>
+          <h1 className="text-3xl font-bold">{t("admin.heroManagement", "Hero Management")}</h1>
+          <p className="text-muted-foreground">{t("admin.heroManagementDesc", "Configure videos, images, and slider settings")}</p>
         </div>
       </div>
 
@@ -674,15 +676,15 @@ export default function AdminHeroManagement() {
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="videos">
                 <Play className="h-4 w-4 mr-2" />
-                Videos
+                {t("common.videos", "Videos")}
               </TabsTrigger>
               <TabsTrigger value="images">
                 <Image className="h-4 w-4 mr-2" />
-                Images
+                {t("common.images", "Images")}
               </TabsTrigger>
               <TabsTrigger value="settings">
                 <Settings className="h-4 w-4 mr-2" />
-                Settings
+                {t("common.settings", "Settings")}
               </TabsTrigger>
             </TabsList>
 
@@ -690,8 +692,8 @@ export default function AdminHeroManagement() {
             <TabsContent value="videos" className="space-y-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-2xl font-semibold">Video Slider</h2>
-                  <p className="text-muted-foreground">Manage featured video slides</p>
+                  <h2 className="text-2xl font-semibold">{t("admin.videoSlider", "Video Slider")}</h2>
+                  <p className="text-muted-foreground">{t("admin.videoSliderDesc", "Manage featured video slides")}</p>
                 </div>
                 <div className="flex gap-2">
                   <Button onClick={() => setIsDialogOpen(true)} className="gap-2">
@@ -901,8 +903,8 @@ export default function AdminHeroManagement() {
             <TabsContent value="images" className="space-y-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-2xl font-semibold">Image Collection</h2>
-                  <p className="text-muted-foreground">Manage hero images for the slider</p>
+                  <h2 className="text-2xl font-semibold">{t("admin.imageCollection", "Image Collection")}</h2>
+                  <p className="text-muted-foreground">{t("admin.imageCollectionDesc", "Manage hero images for the slider")}</p>
                 </div>
                 <div className="flex gap-2">
                   <Button onClick={() => setIsImageDialogOpen(true)} className="gap-2">

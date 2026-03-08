@@ -15,6 +15,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { VideoWithLocalizedRelations, LocalizedCategory } from "@shared/schema";
+import { useTranslation } from "react-i18next";
 
 interface EditVideoDialogProps {
   video: VideoWithLocalizedRelations | null;
@@ -38,6 +39,7 @@ export function EditVideoDialog({
   onSave,
   isSaving = false,
 }: EditVideoDialogProps) {
+  const { t } = useTranslation();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -80,9 +82,9 @@ export function EditVideoDialog({
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl" data-testid="dialog-edit-video">
         <DialogHeader>
-          <DialogTitle>Edit Video</DialogTitle>
+          <DialogTitle>{t("video.editVideo", "Edit Video")}</DialogTitle>
           <DialogDescription>
-            Update video title, description, categories, and tags
+            {t("video.editVideoDesc", "Update video title, description, categories, and tags")}
           </DialogDescription>
         </DialogHeader>
 
@@ -101,30 +103,30 @@ export function EditVideoDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="title">Title</Label>
+            <Label htmlFor="title">{t("video.title", "Title")}</Label>
             <Input
               id="title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Enter video title..."
+              placeholder={t("video.enterTitle", "Enter video title...")}
               data-testid="input-video-title"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
+            <Label htmlFor="description">{t("video.description", "Description")}</Label>
             <Textarea
               id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Enter video description..."
+              placeholder={t("video.enterDescription", "Enter video description...")}
               rows={4}
               data-testid="input-video-description"
             />
           </div>
 
           <div className="space-y-3">
-            <Label>Categories</Label>
+            <Label>{t("video.categories", "Categories")}</Label>
             <ScrollArea className="h-40 border border-border rounded-md p-3">
               <div className="space-y-2">
                 {categories.map((category) => (
@@ -148,7 +150,7 @@ export function EditVideoDialog({
                 ))}
                 {categories.length === 0 && (
                   <p className="text-sm text-muted-foreground text-center py-4">
-                    No categories available
+                    {t("video.noCategories", "No categories available")}
                   </p>
                 )}
               </div>
@@ -167,16 +169,16 @@ export function EditVideoDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="tags">Tags (comma-separated)</Label>
+            <Label htmlFor="tags">{t("video.tags", "Tags")} (comma-separated)</Label>
             <Input
               id="tags"
               value={tagsInput}
               onChange={(e) => setTagsInput(e.target.value)}
-              placeholder="e.g., technology, science, education"
+              placeholder={t("video.enterTags", "e.g., technology, science, education")}
               data-testid="input-video-tags"
             />
             <p className="text-xs text-muted-foreground">
-              Separate multiple tags with commas
+              {t("video.separateTags", "Separate multiple tags with commas")}
             </p>
           </div>
         </div>
@@ -188,14 +190,14 @@ export function EditVideoDialog({
             disabled={isSaving}
             data-testid="button-cancel-edit"
           >
-            Cancel
+            {t("common.cancel", "Cancel")}
           </Button>
           <Button
             onClick={handleSave}
             disabled={isSaving}
             data-testid="button-save-video"
           >
-            {isSaving ? "Saving..." : "Save Changes"}
+            {isSaving ? t("common.saving", "Saving...") : t("common.saveChanges", "Save Changes")}
           </Button>
         </DialogFooter>
       </DialogContent>

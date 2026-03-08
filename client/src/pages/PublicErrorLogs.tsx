@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -42,6 +43,7 @@ function saveToken(value: string): void {
 }
 
 export default function PublicErrorLogs() {
+  const { t } = useTranslation();
   const [token, setToken] = useState(loadSavedToken);
   const [levels, setLevels] = useState("error,warn");
   const [q, setQ] = useState("");
@@ -78,12 +80,12 @@ export default function PublicErrorLogs() {
       <div className="max-w-5xl mx-auto space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle>Public Error Logs</CardTitle>
+            <CardTitle>{t("publicLogs.title", "Public Error Logs")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-3 md:grid-cols-3">
               <div className="space-y-1">
-                <div className="text-sm text-muted-foreground">Access token</div>
+                <div className="text-sm text-muted-foreground">{t("publicLogs.accessToken", "Access token")}</div>
                 <Input
                   value={token}
                   onChange={(e) => {
@@ -91,14 +93,14 @@ export default function PublicErrorLogs() {
                     setToken(value);
                     saveToken(value);
                   }}
-                  placeholder="Enter token"
+                  placeholder={t("publicLogs.enterToken", "Enter token")}
                   autoComplete="off"
                   spellCheck={false}
                 />
               </div>
 
               <div className="space-y-1">
-                <div className="text-sm text-muted-foreground">Levels</div>
+                <div className="text-sm text-muted-foreground">{t("publicLogs.levels", "Levels")}</div>
                 <Input
                   value={levels}
                   onChange={(e) => setLevels(e.target.value)}
@@ -109,7 +111,7 @@ export default function PublicErrorLogs() {
               </div>
 
               <div className="space-y-1">
-                <div className="text-sm text-muted-foreground">Search</div>
+                <div className="text-sm text-muted-foreground">{t("common.search", "Search")}</div>
                 <Input
                   value={q}
                   onChange={(e) => setQ(e.target.value)}
@@ -126,10 +128,10 @@ export default function PublicErrorLogs() {
                 onClick={() => refetch()}
                 disabled={!token.trim() || isFetching}
               >
-                {isFetching ? "Refreshing..." : "Refresh"}
+                {isFetching ? t("common.refreshing", "Refreshing...") : t("common.refresh", "Refresh")}
               </Button>
               <div className="text-sm text-muted-foreground">
-                {data?.items ? `${data.items.length} events` : ""}
+                {data?.items ? t("publicLogs.eventsCount", { count: data.items.length, defaultValue: "{{count}} events" }) : ""}
               </div>
             </div>
 

@@ -1721,23 +1721,33 @@ export class DatabaseStorage implements IStorage {
 
   async getLocalizedCategoryBySlug(slug: string, lang: string): Promise<LocalizedCategory | undefined> {
     try {
-      // Find translation by slug/lang
-      const trans = await db.select().from(categoryTranslations)
+      // 1. Try to find ID from slug in requested lang
+      let categoryId = await db.select({ id: categoryTranslations.categoryId })
+        .from(categoryTranslations)
         .where(and(eq(categoryTranslations.slug, slug), eq(categoryTranslations.languageCode, lang)))
-        .leftJoin(categories, eq(categories.id, categoryTranslations.categoryId))
-        .then(r => r[0]);
-      
-      if (!trans) {
-        // Fallback to 'en'
-        const fallbackTrans = await db.select().from(categoryTranslations)
-          .where(and(eq(categoryTranslations.slug, slug), eq(categoryTranslations.languageCode, 'en')))
-          .leftJoin(categories, eq(categories.id, categoryTranslations.categoryId))
-          .then(r => r[0]);
-        if (!fallbackTrans) return undefined;
-        return { ...fallbackTrans.categories, translations: [fallbackTrans.category_translations], name: fallbackTrans.category_translations.name, slug: fallbackTrans.category_translations.slug, description: fallbackTrans.category_translations.description };
+        .then(r => r[0]?.id);
+
+      // 2. If not found, try 'en'
+      if (!categoryId) {
+        categoryId = await db.select({ id: categoryTranslations.categoryId })
+            .from(categoryTranslations)
+            .where(and(eq(categoryTranslations.slug, slug), eq(categoryTranslations.languageCode, 'en')))
+            .then(r => r[0]?.id);
       }
 
-      return { ...trans.categories, translations: [trans.category_translations], name: trans.category_translations.name, slug: trans.category_translations.slug, description: trans.category_translations.description };
+      // 3. If still not found, try any language (catch-all)
+      if (!categoryId) {
+         categoryId = await db.select({ id: categoryTranslations.categoryId })
+            .from(categoryTranslations)
+            .where(eq(categoryTranslations.slug, slug))
+            .limit(1)
+            .then(r => r[0]?.id);
+      }
+
+      if (!categoryId) return undefined;
+
+      // 4. Return localized category using the found ID and requested lang
+      return this.getLocalizedCategory(categoryId, lang);
     } catch (error) {
       console.error(`[storage] getLocalizedCategoryBySlug failed for slug ${slug}, lang ${lang}:`, error);
       return undefined;

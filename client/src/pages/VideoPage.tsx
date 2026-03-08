@@ -20,6 +20,12 @@ export default function VideoPage() {
   const [, params] = useRoute("/video/:slug");
   const videoSlug = params?.slug;
 
+  // Fetch supported languages for hreflang - Moved up to avoid hook order violation
+  const { data: languages = [] } = useQuery<SupportedLanguage[]>({
+    queryKey: ["/api/languages"],
+    staleTime: Infinity,
+  });
+
   const {
     data: video,
     isLoading: videoLoading,
@@ -181,12 +187,6 @@ export default function VideoPage() {
     "@context": "https://schema.org",
     "@graph": [videoStructuredData, breadcrumbStructuredData],
   };
-
-  // Fetch supported languages for hreflang
-  const { data: languages = [] } = useQuery<SupportedLanguage[]>({
-    queryKey: ["/api/languages"],
-    staleTime: Infinity,
-  });
 
   // Current URL for canonical and hreflang - use slug for SEO
   const videoSlugOrId = video.slug || video.id;

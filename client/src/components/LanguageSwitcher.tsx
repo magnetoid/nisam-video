@@ -13,6 +13,7 @@ import { Globe } from "lucide-react";
 interface SupportedLanguage {
   code: string;
   name: string;
+  rootUri: string | null;
   isActive: boolean;
   isDefault: boolean;
 }
@@ -23,70 +24,78 @@ export function LanguageSwitcher() {
 
   const { data: languages = [] } = useQuery<SupportedLanguage[]>({
     queryKey: ["/api/languages"],
+    staleTime: Infinity, // Ensure languages don't re-fetch unnecessarily
   });
 
-  const activeLanguages = languages.filter(l => l.isActive);
-
-  // If no languages loaded yet, fallback to static list or just show current
-  const displayLanguages = activeLanguages.length > 0 ? activeLanguages : [
-    { code: "en", name: "English", isActive: true, isDefault: false },
-    { code: "sr-Latn", name: "Srpski", isActive: true, isDefault: true }
+  // Filter active languages
+  const activeLanguages = languages.length > 0 ? languages.filter(l => l.isActive) : [
+    { code: "en", name: "English", rootUri: "/en", isActive: true, isDefault: false },
+    { code: "sr-Latn", name: "Srpski", rootUri: "/", isActive: true, isDefault: true }
   ];
+
+  const getRootUri = (lang: SupportedLanguage) => {
+    if (lang.rootUri) return lang.rootUri === '/' ? '' : lang.rootUri;
+    return lang.isDefault ? '' : `/${lang.code}`;
+  };
 
   const changeLanguage = (lng: string) => {
     i18n.changeLanguage(lng);
     localStorage.setItem("language", lng);
-
-    const currentPath = window.location.pathname;
-    const targetLang = displayLanguages.find(l => l.code === lng);
-    const isDefault = targetLang?.isDefault;
-
-    // Remove any existing language prefix
-    // Assuming prefix is always /code/ or /code at start
-    // We need to know which codes are prefixes. 
-    // Simplest is to check against all known secondary codes.
     
-    let newPath = currentPath;
+    // Refresh page to apply language prefix routing correctly
+    // Ideally we should use wouter history replacement but full reload ensures 
+    // SEO paths are clean and backend state (SSR/hydration if any) matches.
+    // For SPA, we can just navigate.
     
-    // Check if path currently starts with any known secondary language code
-    const secondaryLangs = displayLanguages.filter(l => !l.isDefault).map(l => l.code);
-    for (const code of secondaryLangs) {
-      if (newPath.startsWith(`/${code}/`)) {
-        newPath = newPath.replace(`/${code}/`, "/");
-        break;
-      } else if (newPath === `/${code}`) {
-        newPath = "/";
+    const targetLang = activeLanguages.find(l => l.code === lng);
+    if (!targetLang) return;
+
+    const targetRootUri = getRootUri(targetLang);
+    
+    // Get current path without any language prefix
+    let cleanPath = window.location.pathname;
+    
+    // Identify if current path has a language prefix from any active language
+    // Sort by length desc to match longest prefixes first
+    const sortedLangs = [...activeLanguages].sort((a, b) => {
+      const uriA = getRootUri(a);
+      const uriB = getRootUri(b);
+      return uriB.length - uriA.length;
+    });
+
+    for (const l of sortedLangs) {
+      const uri = getRootUri(l);
+      if (!uri) continue; // Skip empty root uri (default usually)
+
+      if (cleanPath.startsWith(`${uri}/`) || cleanPath === uri) {
+        cleanPath = cleanPath.substring(uri.length) || "/";
         break;
       }
     }
-
-    // Now newPath is "clean" (root based)
     
-    if (isDefault) {
-      // Default language -> Root path
-      window.location.href = newPath;
-    } else {
-      // Secondary language -> Prefix path
-      // Ensure we don't double slash
-      const prefix = `/${lng}`;
-      const finalPath = newPath === "/" ? prefix : `${prefix}${newPath}`;
-      window.location.href = finalPath;
-    }
+    // Construct new path
+    // If targetRootUri is empty, it means root path
+    const newPath = targetRootUri 
+      ? (cleanPath === "/" ? targetRootUri : `${targetRootUri}${cleanPath}`) 
+      : cleanPath;
+      
+    window.location.href = newPath;
   };
 
-  const currentLangName = displayLanguages.find(l => l.code === i18n.language)?.name || i18n.language;
+  const currentLangCode = i18n.language;
+  const currentLang = activeLanguages.find(l => l.code === currentLangCode);
+  // Fallback for display label if language not yet loaded
+  const displayLabel = currentLang ? currentLang.name : (currentLangCode === 'en' ? 'English' : 'Srpski');
 
   return (
     <div className="flex items-center gap-2" data-testid="language-switcher">
       <Globe className="w-4 h-4 text-muted-foreground" />
-      <Select value={i18n.language} onValueChange={changeLanguage}>
+      <Select value={currentLangCode} onValueChange={changeLanguage}>
         <SelectTrigger className="w-[140px] h-8" data-testid="select-language">
-          <SelectValue placeholder={currentLangName}>
-             {currentLangName}
-          </SelectValue>
+           <span className="truncate">{displayLabel}</span>
         </SelectTrigger>
         <SelectContent>
-          {displayLanguages.map((lang) => (
+          {activeLanguages.map((lang) => (
             <SelectItem key={lang.code} value={lang.code}>
               {lang.name}
             </SelectItem>

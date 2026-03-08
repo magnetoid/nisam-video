@@ -1,7 +1,37 @@
-import { Sparkles, Trash2, Eye, ListVideo, Pencil } from "lucide-react";
+import {
+  MoreVertical,
+  Play,
+  Trash2,
+  FolderPlus,
+  Tag as TagIcon,
+  Filter,
+  Check,
+  Search,
+  Loader2,
+  ListVideo,
+  Eye,
+  Edit,
+  BrainCircuit,
+  Calendar,
+  Layers,
+  Sparkles,
+  RefreshCw,
+  Pencil,
+} from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { formatDistanceToNow } from "date-fns";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+  DropdownMenuCheckboxItem,
+} from "@/components/ui/dropdown-menu";
 import {
   Select,
   SelectContent,
@@ -10,12 +40,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
   Table,
   TableBody,
   TableCell,
@@ -23,6 +47,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Pagination } from "@/components/ui/pagination";
 import type {
   VideoWithRelations,
   Channel,
@@ -95,6 +122,7 @@ export function VideoManagement({
   isBulkProcessing = false,
   isCategorizeMissingProcessing = false,
 }: VideoManagementProps) {
+  const { t } = useTranslation();
   const allSelected =
     videos.length > 0 && selectedVideoIds.length === videos.length;
   const someSelected =
@@ -105,10 +133,10 @@ export function VideoManagement({
       <div className="flex flex-col md:flex-row items-start justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold" data-testid="text-page-title">
-            Video Management
+            {t("admin.videoManagement", "Video Management")}
           </h1>
           <p className="text-muted-foreground mt-1">
-            Manage and categorize aggregated videos
+            {t("admin.manageVideosDesc", "Manage and categorize aggregated videos")}
           </p>
         </div>
 
@@ -123,14 +151,14 @@ export function VideoManagement({
             className="gap-2"
           >
             <Sparkles className="h-4 w-4" />
-            {isCategorizeMissingProcessing ? "Processing..." : "AI Categorize Missing"}
+            {isCategorizeMissingProcessing ? t("common.processing", "Processing...") : t("admin.categorizeMissing", "AI Categorize Missing")}
           </Button>
         )}
 
         {selectedVideoIds.length > 0 && (
           <div className="flex items-center gap-3">
             <Badge variant="secondary" className="px-3 py-1.5">
-              {selectedVideoIds.length} selected
+              {selectedVideoIds.length} {t("common.selected", "selected")}
             </Badge>
             <Button
               size="sm"
@@ -140,13 +168,13 @@ export function VideoManagement({
               data-testid="button-bulk-categorize"
             >
               <Sparkles className="h-4 w-4 mr-2" />
-              Bulk AI Categorize
+              {t("admin.bulkCategorize", "Bulk AI Categorize")}
             </Button>
             <Button
               size="sm"
               variant="outline"
               onClick={() => {
-                const tags = prompt("Enter tags separated by commas:");
+                const tags = prompt(t("admin.enterTagsPrompt", "Enter tags separated by commas:"));
                 if (tags && tags.trim()) {
                   const tagArray = tags
                     .split(",")
@@ -160,7 +188,7 @@ export function VideoManagement({
               disabled={isBulkProcessing}
               data-testid="button-bulk-tag"
             >
-              Bulk Add Tags
+              {t("admin.bulkAddTags", "Bulk Add Tags")}
             </Button>
             <Button
               size="sm"
@@ -170,7 +198,7 @@ export function VideoManagement({
               data-testid="button-bulk-delete"
             >
               <Trash2 className="h-4 w-4 mr-2" />
-              Bulk Delete
+              {t("admin.bulkDelete", "Bulk Delete")}
             </Button>
             <Button
               size="sm"
@@ -178,7 +206,7 @@ export function VideoManagement({
               onClick={onDeselectAll}
               data-testid="button-deselect-all"
             >
-              Clear Selection
+              {t("common.clearSelection", "Clear Selection")}
             </Button>
           </div>
         )}
@@ -196,10 +224,10 @@ export function VideoManagement({
             className="w-[200px]"
             data-testid="select-channel-filter"
           >
-            <SelectValue placeholder="All Channels" />
+            <SelectValue placeholder={t("admin.allChannels", "All Channels")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Channels</SelectItem>
+            <SelectItem value="all">{t("admin.allChannels", "All Channels")}</SelectItem>
             {channels.map((channel) => (
               <SelectItem key={channel.id} value={channel.id}>
                 {channel.name}
@@ -218,10 +246,10 @@ export function VideoManagement({
             className="w-[200px]"
             data-testid="select-category-filter"
           >
-            <SelectValue placeholder="All Categories" />
+            <SelectValue placeholder={t("admin.allCategories", "All Categories")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Categories</SelectItem>
+            <SelectItem value="all">{t("admin.allCategories", "All Categories")}</SelectItem>
             {categories.map((category) => (
               <SelectItem key={category.id} value={category.id}>
                 {category.name}
@@ -240,15 +268,15 @@ export function VideoManagement({
             }}
             data-testid="button-clear-filters"
           >
-            Clear Filters
+            {t("common.clearFilters", "Clear Filters")}
           </Button>
         )}
       </div>
 
       {isLoading && videos.length === 0 ? (
         <div className="border border-dashed border-border rounded-lg p-12 text-center">
-          <h3 className="text-lg font-semibold mb-2">Loading…</h3>
-          <p className="text-muted-foreground">Fetching videos</p>
+          <h3 className="text-lg font-semibold mb-2">{t("common.loading", "Loading...")}</h3>
+          <p className="text-muted-foreground">{t("admin.fetchingVideos", "Fetching videos")}</p>
         </div>
       ) : videos.length === 0 ? (
         <div className="border border-dashed border-border rounded-lg p-12 text-center">
@@ -257,10 +285,10 @@ export function VideoManagement({
             className="text-lg font-semibold mb-2"
             data-testid="text-empty-state"
           >
-            No videos found
+            {t("admin.noVideosFound", "No videos found")}
           </h3>
           <p className="text-muted-foreground">
-            Add channels and scrape them to aggregate videos
+            {t("admin.addChannelsTip", "Add channels and scrape them to aggregate videos")}
           </p>
         </div>
       ) : (
@@ -276,14 +304,14 @@ export function VideoManagement({
                       allSelected ? onDeselectAll?.() : onSelectAll?.()
                     }
                     data-testid="checkbox-select-all"
-                    aria-label="Select all videos"
+                    aria-label={t("admin.selectAllVideos", "Select all videos")}
                   />
                 </TableHead>
-                <TableHead className="min-w-[200px]">Video</TableHead>
-                <TableHead className="hidden md:table-cell">Channel</TableHead>
-                <TableHead className="hidden lg:table-cell">Categories</TableHead>
-                <TableHead className="hidden xl:table-cell">Tags</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead className="min-w-[200px]">{t("admin.video", "Video")}</TableHead>
+                <TableHead className="hidden md:table-cell">{t("admin.channel", "Channel")}</TableHead>
+                <TableHead className="hidden lg:table-cell">{t("admin.categories", "Categories")}</TableHead>
+                <TableHead className="hidden xl:table-cell">{t("admin.tags", "Tags")}</TableHead>
+                <TableHead className="text-right">{t("common.actions", "Actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -294,7 +322,7 @@ export function VideoManagement({
                       checked={selectedVideoIds.includes(video.id)}
                       onCheckedChange={() => onToggleSelect?.(video.id)}
                       data-testid={`checkbox-select-${video.id}`}
-                      aria-label={`Select ${video.title}`}
+                      aria-label={`${t("common.select", "Select")} ${video.title}`}
                     />
                   </TableCell>
                   <TableCell>
@@ -339,7 +367,7 @@ export function VideoManagement({
                       </div>
                     ) : (
                       <span className="text-xs text-muted-foreground">
-                        No categories
+                        {t("admin.noCategories", "No categories")}
                       </span>
                     )}
                   </TableCell>
@@ -363,7 +391,7 @@ export function VideoManagement({
                       </div>
                     ) : (
                       <span className="text-xs text-muted-foreground">
-                        No tags
+                        {t("admin.noTags", "No tags")}
                       </span>
                     )}
                   </TableCell>
@@ -395,7 +423,7 @@ export function VideoManagement({
                       >
                         <Sparkles className="h-4 w-4" />
                         {processingVideoIds.has(video.id)
-                          ? "Processing..."
+                          ? t("common.processing", "Processing...")
                           : "AI"}
                       </Button>
                       {onAddToPlaylist && playlists && playlists.length > 0 && (
@@ -443,10 +471,10 @@ export function VideoManagement({
 
           <div className="flex flex-col md:flex-row items-center justify-between gap-4 border-t border-border px-4 py-3">
             <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Page</span>
+              <span className="text-sm text-muted-foreground">{t("common.page", "Page")}</span>
               <span className="text-sm font-medium">{page}</span>
               {isLoading && (
-                <span className="text-sm text-muted-foreground">Loading…</span>
+                <span className="text-sm text-muted-foreground">{t("common.loading", "Loading...")}</span>
               )}
             </div>
 
@@ -459,9 +487,9 @@ export function VideoManagement({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="25">25 / page</SelectItem>
-                  <SelectItem value="50">50 / page</SelectItem>
-                  <SelectItem value="100">100 / page</SelectItem>
+                  <SelectItem value="25">25 / {t("common.page", "page")}</SelectItem>
+                  <SelectItem value="50">50 / {t("common.page", "page")}</SelectItem>
+                  <SelectItem value="100">100 / {t("common.page", "page")}</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -471,7 +499,7 @@ export function VideoManagement({
                 onClick={() => onPageChange?.(Math.max(1, page - 1))}
                 disabled={isLoading || page <= 1}
               >
-                Previous
+                {t("common.previous", "Previous")}
               </Button>
               <Button
                 size="sm"
@@ -479,7 +507,7 @@ export function VideoManagement({
                 onClick={() => onPageChange?.(page + 1)}
                 disabled={isLoading || !hasNextPage}
               >
-                Next
+                {t("common.next", "Next")}
               </Button>
             </div>
           </div>

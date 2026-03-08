@@ -142,6 +142,7 @@ function AppRoutes() {
 interface SupportedLanguage {
   code: string;
   isDefault: boolean;
+  rootUri: string | null;
 }
 
 export function AppRouter() {
@@ -159,18 +160,33 @@ export function AppRouter() {
 
   const defaultLang = languages.find(l => l.isDefault)?.code || "sr-Latn";
   
-  // Check if current path starts with any secondary language code
-  // e.g. /en/..., /de/..., /fr/...
-  // We need to match exactly /code or /code/
-  const pathSegments = location.split('/').filter(Boolean);
-  const firstSegment = pathSegments[0];
-  
-  const matchedLang = languages.find(l => l.code === firstSegment && !l.isDefault);
+  // Helper to get effective root URI
+  const getRootUri = (lang: SupportedLanguage) => {
+    if (lang.rootUri) return lang.rootUri === '/' ? '' : lang.rootUri;
+    return lang.isDefault ? '' : `/${lang.code}`;
+  };
+
+  // Sort languages by root URI length (desc) to match most specific first
+  const sortedLangs = [...languages]
+    .filter(l => getRootUri(l)) // Only consider languages with non-empty root URI for prefix matching
+    .sort((a, b) => getRootUri(b).length - getRootUri(a).length);
+
+  let matchedLang: SupportedLanguage | undefined;
+  let base = "";
+
+  for (const l of sortedLangs) {
+    const uri = getRootUri(l);
+    if (location.startsWith(`${uri}/`) || location === uri) {
+      matchedLang = l;
+      base = uri;
+      break;
+    }
+  }
 
   if (matchedLang) {
     const langCode = matchedLang.code;
     return (
-      <WouterRouter base={`/${langCode}`}>
+      <WouterRouter base={base}>
         <LanguageWrapper lang={langCode}>
           <AppRoutes />
         </LanguageWrapper>

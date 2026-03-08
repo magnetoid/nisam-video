@@ -16,6 +16,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Star } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 type ErrorLogRow = {
   id: string;
@@ -41,6 +42,7 @@ type ErrorLogRow = {
 };
 
 export default function PublicLog() {
+  const { t } = useTranslation();
   const [q, setQ] = useState("");
   const [level, setLevel] = useState("");
   const [type, setType] = useState("");
@@ -157,26 +159,26 @@ export default function PublicLog() {
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between gap-3">
-                <CardTitle>Public Error Log</CardTitle>
+                <CardTitle>{t("publicLogs.title", "Public Error Log")}</CardTitle>
                 <Button variant="outline" asChild>
-                  <a href={exportUrl}>Export</a>
+                  <a href={exportUrl}>{t("common.export", "Export")}</a>
                 </Button>
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
-                <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search" />
-                <Input value={level} onChange={(e) => setLevel(e.target.value)} placeholder="Level" />
-                <Input value={type} onChange={(e) => setType(e.target.value)} placeholder="Type" />
-                <Input value={module} onChange={(e) => setModule(e.target.value)} placeholder="Module" />
-                <Input value={userId} onChange={(e) => setUserId(e.target.value)} placeholder="User ID" />
+                <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("common.search", "Search")} />
+                <Input value={level} onChange={(e) => setLevel(e.target.value)} placeholder={t("publicLogs.level", "Level")} />
+                <Input value={type} onChange={(e) => setType(e.target.value)} placeholder={t("publicLogs.type", "Type")} />
+                <Input value={module} onChange={(e) => setModule(e.target.value)} placeholder={t("publicLogs.module", "Module")} />
+                <Input value={userId} onChange={(e) => setUserId(e.target.value)} placeholder={t("publicLogs.userId", "User ID")} />
                 <Button onClick={applyFilters} disabled={isLoading}>
-                  Apply
+                  {t("common.apply", "Apply")}
                 </Button>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
-                <Input value={from} onChange={(e) => setFrom(e.target.value)} placeholder="From (ISO)" />
-                <Input value={to} onChange={(e) => setTo(e.target.value)} placeholder="To (ISO)" />
+                <Input value={from} onChange={(e) => setFrom(e.target.value)} placeholder={t("publicLogs.fromISO", "From (ISO)")} />
+                <Input value={to} onChange={(e) => setTo(e.target.value)} placeholder={t("publicLogs.toISO", "To (ISO)")} />
                 <Button
                   variant={bookmarkedOnly ? "default" : "outline"}
                   onClick={() => {
@@ -185,12 +187,12 @@ export default function PublicLog() {
                     setExpanded(null);
                   }}
                 >
-                  Bookmarked
+                  {t("publicLogs.bookmarked", "Bookmarked")}
                 </Button>
               </div>
               {error instanceof Error && error.message === "401" && (
                 <div className="text-sm text-muted-foreground">
-                  Login required to view logs. Go to <a className="underline" href="/login">/login</a>.
+                  {t("publicLogs.loginRequired", "Login required to view logs. Go to")} <a className="underline" href="/login">/login</a>.
                 </div>
               )}
             </CardContent>
@@ -201,13 +203,13 @@ export default function PublicLog() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Last Seen</TableHead>
-                    <TableHead>Level</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Module</TableHead>
-                    <TableHead>Message</TableHead>
-                    <TableHead>Count</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead>{t("publicLogs.lastSeen", "Last Seen")}</TableHead>
+                    <TableHead>{t("publicLogs.level", "Level")}</TableHead>
+                    <TableHead>{t("publicLogs.type", "Type")}</TableHead>
+                    <TableHead>{t("publicLogs.module", "Module")}</TableHead>
+                    <TableHead>{t("publicLogs.message", "Message")}</TableHead>
+                    <TableHead>{t("publicLogs.count", "Count")}</TableHead>
+                    <TableHead className="text-right">{t("common.actions", "Actions")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -248,11 +250,11 @@ export default function PublicLog() {
                             <div className="space-y-2 text-sm">
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                                 <div>
-                                  <div className="text-muted-foreground">Fingerprint</div>
+                                  <div className="text-muted-foreground">{t("publicLogs.fingerprint", "Fingerprint")}</div>
                                   <div className="font-mono break-all">{row.fingerprint}</div>
                                 </div>
                                 <div>
-                                  <div className="text-muted-foreground">URL</div>
+                                  <div className="text-muted-foreground">{t("publicLogs.url", "URL")}</div>
                                   <div className="break-all">{row.url || "-"}</div>
                                 </div>
                               </div>
@@ -275,7 +277,7 @@ export default function PublicLog() {
                   {!isLoading && items.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={7} className="text-center text-muted-foreground">
-                        No logs found
+                        {t("publicLogs.noLogsFound", "No logs found")}
                       </TableCell>
                     </TableRow>
                   )}
@@ -290,7 +292,7 @@ export default function PublicLog() {
                   }}
                   disabled={!cursor}
                 >
-                  First Page
+                  {t("publicLogs.firstPage", "First Page")}
                 </Button>
                 <Button
                   onClick={() => {
@@ -301,7 +303,7 @@ export default function PublicLog() {
                   }}
                   disabled={!nextCursor}
                 >
-                  Next Page
+                  {t("publicLogs.nextPage", "Next Page")}
                 </Button>
               </div>
             </CardContent>

@@ -7,12 +7,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { useTranslation } from "react-i18next";
 
 export function RecommendChannelDialog({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [url, setUrl] = useState("");
@@ -28,8 +30,8 @@ export function RecommendChannelDialog({
     },
     onSuccess: () => {
       toast({
-        title: "Thanks!",
-        description: "Your YouTube channel recommendation was submitted for review.",
+        title: t("recommend.thanksTitle", "Thanks!"),
+        description: t("recommend.thanksDesc", "Your YouTube channel recommendation was submitted for review."),
       });
       setUrl("");
       setDescription("");
@@ -37,10 +39,10 @@ export function RecommendChannelDialog({
     },
     onError: (err: any) => {
       toast({
-        title: "Could not submit",
+        title: t("recommend.errorTitle", "Could not submit"),
         description:
           err?.message ||
-          "Please check the channel URL (YouTube channels only) and try again.",
+          t("recommend.errorDesc", "Please check the channel URL (YouTube channels only) and try again."),
         variant: "destructive",
       });
     },
@@ -53,24 +55,24 @@ export function RecommendChannelDialog({
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Recommend a YouTube channel</DialogTitle>
+          <DialogTitle>{t("recommend.title", "Recommend a YouTube channel")}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="recommend-channel-url">Channel URL</Label>
+            <Label htmlFor="recommend-channel-url">{t("recommend.channelUrl", "Channel URL")}</Label>
             <Input
               id="recommend-channel-url"
-              placeholder="https://www.youtube.com/@channel"
+              placeholder={t("recommend.placeholderUrl", "https://www.youtube.com/@channel")}
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               data-testid="input-recommend-channel-url"
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="recommend-channel-description">Description (optional)</Label>
+            <Label htmlFor="recommend-channel-description">{t("recommend.description", "Description (optional)")}</Label>
             <Textarea
               id="recommend-channel-description"
-              placeholder="What kind of content does this channel publish?"
+              placeholder={t("recommend.placeholderDesc", "What kind of content does this channel publish?")}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={4}
@@ -84,7 +86,7 @@ export function RecommendChannelDialog({
               onClick={() => setOpen(false)}
               data-testid="button-recommend-channel-cancel"
             >
-              Cancel
+              {t("common.cancel", "Cancel")}
             </Button>
             <Button
               type="button"
@@ -92,7 +94,7 @@ export function RecommendChannelDialog({
               disabled={disabled}
               data-testid="button-recommend-channel-submit"
             >
-              {submitMutation.isPending ? "Submitting..." : "Submit"}
+              {submitMutation.isPending ? t("common.submitting", "Submitting...") : t("common.submit", "Submit")}
             </Button>
           </div>
         </div>

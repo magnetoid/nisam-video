@@ -81,13 +81,13 @@ export function AdminSidebar({ open = false, onClose, className }: AdminSidebarP
         setLocation("/login");
         toast({
           title: t("common.success"),
-          description: "Logged out successfully",
+          description: t("auth.logoutSuccess", "Logged out successfully"),
         });
       }
     } catch (error) {
       toast({
         title: t("common.error"),
-        description: "Failed to logout",
+        description: t("auth.logoutFailed", "Failed to logout"),
         variant: "destructive",
       });
     }
@@ -95,119 +95,119 @@ export function AdminSidebar({ open = false, onClose, className }: AdminSidebarP
 
   const menuGroups = [
     {
-      title: "Overview",
+      title: t("admin.overview", "Overview"),
       items: [
-        { icon: Home, label: "Browse Site", path: "/", testId: "link-browse" },
+        { icon: Home, label: t("admin.browseSite", "Browse Site"), path: "/", testId: "link-browse" },
         {
           icon: LayoutDashboard,
-          label: "Dashboard",
+          label: t("admin.dashboard", "Dashboard"),
           path: "/admin/dashboard",
           testId: "link-dashboard",
         },
         {
           icon: Star,
-          label: "Hero Management",
+          label: t("admin.heroManagement", "Hero Management"),
           path: "/admin/hero",
           testId: "link-hero",
         },
       ],
     },
     {
-      title: "Content",
+      title: t("admin.content", "Content"),
       items: [
         {
           icon: Youtube,
-          label: t("admin.channels"),
+          label: t("admin.channels", "Channels"),
           path: "/admin/channels",
           testId: "link-channels",
         },
         {
           icon: SiTiktok,
-          label: "TikTok",
+          label: t("admin.tiktok", "TikTok"),
           path: "/admin/tiktok",
           testId: "link-tiktok",
         },
         {
           icon: Video,
-          label: t("admin.videos"),
+          label: t("admin.videos", "Videos"),
           path: "/admin/videos",
           testId: "link-videos",
         },
         {
           icon: FolderTree,
-          label: t("admin.categories"),
+          label: t("admin.categories", "Categories"),
           path: "/admin/categories",
           testId: "link-categories",
         },
-        { icon: Tag, label: "Tags", path: "/admin/tags", testId: "link-tags" },
+        { icon: Tag, label: t("admin.tags", "Tags"), path: "/admin/tags", testId: "link-tags" },
         {
           icon: ListVideo,
-          label: t("admin.playlists"),
+          label: t("admin.playlists", "Playlists"),
           path: "/admin/playlists",
           testId: "link-playlists",
         },
       ],
     },
     {
-      title: "System",
+      title: t("admin.system", "System"),
       items: [
         {
           icon: Activity,
-          label: "Automation",
+          label: t("admin.automation", "Automation"),
           path: "/admin/automation",
           testId: "link-automation",
         },
         {
           icon: Bot,
-          label: "AI Settings",
+          label: t("admin.aiSettings", "AI Settings"),
           path: "/admin/ai-settings",
           testId: "link-ai-settings",
         },
         {
           icon: BarChart3,
-          label: t("admin.analytics"),
+          label: t("admin.analytics", "Analytics"),
           path: "/admin/analytics",
           testId: "link-analytics",
         },
         {
           icon: Download,
-          label: "Data Export",
+          label: t("admin.dataExport", "Data Export"),
           path: "/admin/export",
           testId: "link-export",
         },
         {
           icon: Database,
-          label: "Cache Settings",
+          label: t("admin.cacheSettings", "Cache Settings"),
           path: "/admin/cache",
           testId: "link-cache",
         },
         {
           icon: FileText,
-          label: "About Page",
+          label: t("admin.aboutPage", "About Page"),
           path: "/admin/about",
           testId: "link-about-admin",
         },
         {
           icon: Settings,
-          label: t("admin.seo"),
+          label: t("admin.seo", "SEO"),
           path: "/admin/seo",
           testId: "link-seo",
         },
         {
           icon: Globe,
-          label: "Languages",
+          label: t("admin.languages", "Languages"),
           path: "/admin/languages",
           testId: "link-languages",
         },
         {
           icon: Sliders,
-          label: "System Settings",
+          label: t("admin.systemSettings", "System Settings"),
           path: "/admin/settings",
           testId: "link-settings",
         },
         {
           icon: Bug,
-          label: "System Logs",
+          label: t("admin.systemLogs", "System Logs"),
           path: "/admin/logs",
           testId: "link-logs",
         },
@@ -273,7 +273,7 @@ export function AdminSidebar({ open = false, onClose, className }: AdminSidebarP
             data-testid="button-logout"
           >
             <LogOut className="h-4 w-4 flex-shrink-0" />
-            <span>Logout</span>
+            <span>{t("auth.logout", "Logout")}</span>
           </Button>
         </div>
       </aside>

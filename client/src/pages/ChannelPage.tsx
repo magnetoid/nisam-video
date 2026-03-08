@@ -94,8 +94,8 @@ export default function ChannelPage() {
     if (typeof channel.videoCount === "number" && channel.videoCount > 0) {
       return t("channelsDirectory.videosCount", { count: channel.videoCount });
     }
-    if (channel.platform === "tiktok") return "TikTok";
-    return "YouTube";
+    if (channel.platform === "tiktok") return t("platforms.tiktok", "TikTok");
+    return t("platforms.youtube", "YouTube");
   }, [channel, t]);
 
   const description = useMemo(() => {
@@ -142,7 +142,7 @@ export default function ChannelPage() {
                 {channel?.platform && (
                   <div className="flex items-center gap-2">
                     <Badge variant="secondary">
-                      {channel.platform === "tiktok" ? "TikTok" : "YouTube"}
+                      {channel.platform === "tiktok" ? t("platforms.tiktok", "TikTok") : t("platforms.youtube", "YouTube")}
                     </Badge>
                     {heroSubtitle && <span className="text-sm text-muted-foreground">{heroSubtitle}</span>}
                   </div>

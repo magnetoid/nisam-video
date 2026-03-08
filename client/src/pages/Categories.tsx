@@ -91,8 +91,8 @@ export default function Categories() {
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
-    name: "Browse Video Categories",
-    description: "Explore videos organized by AI-powered categories",
+    name: t("categories.browseByCategory", "Browse Video Categories"),
+    description: t("categories.description", "Explore videos organized by AI-powered categories"),
     url: currentUrl,
     numberOfItems: categories.length,
   };
@@ -100,8 +100,8 @@ export default function Categories() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <SEO
-        title="Browse Categories"
-        description="Explore videos organized by AI-powered categories. Discover content across topics like technology, entertainment, education, and more."
+        title={t("categories.browseCategories", "Browse Categories")}
+        description={t("categories.metaDescription", "Explore videos organized by AI-powered categories. Discover content across topics like technology, entertainment, education, and more.")}
         path="/categories"
         canonical={currentUrl}
         hreflang={hreflangLinks}
@@ -130,7 +130,7 @@ export default function Categories() {
             <div className="max-w-2xl space-y-4">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-semibold uppercase tracking-wider text-primary">
-                  Featured Category
+                  {t("categories.featuredCategory", "Featured Category")}
                 </span>
                 <span className="text-muted-foreground">•</span>
                 <span className="text-sm text-muted-foreground">
@@ -160,7 +160,7 @@ export default function Categories() {
                 className="px-8 py-3 bg-white text-black font-semibold rounded hover-elevate active-elevate-2 transition-transform"
                 data-testid="button-play-hero"
               >
-                ▶ Play
+                ▶ {t("actions.play", "Play")}
               </button>
             </div>
           </div>
@@ -169,7 +169,7 @@ export default function Categories() {
 
       {/* Categories Grid/Filter */}
       <div className="px-4 sm:px-8 md:px-16 py-8">
-        <h2 className="text-2xl font-bold mb-6">Browse by Category</h2>
+        <h2 className="text-2xl font-bold mb-6">{t("categories.browseByCategory", "Browse by Category")}</h2>
         <div className="flex flex-wrap gap-2 sm:gap-3 mb-8">
           <button
             onClick={() => setSelectedCategory(null)}
@@ -180,7 +180,7 @@ export default function Categories() {
             }`}
             data-testid="button-filter-all"
           >
-            Latest Videos ({totalVideosCount})
+            {t("categories.latestVideos", "Latest Videos")} ({totalVideosCount})
           </button>
           {top20Categories.map(({ category, count }) => (
             <button
@@ -206,7 +206,7 @@ export default function Categories() {
               }`}
               data-testid="button-filter-others"
             >
-              Others ({othersCount})
+              {t("categories.others", "Others")} ({othersCount})
             </button>
           )}
         </div>
@@ -216,7 +216,7 @@ export default function Categories() {
       <div className="px-4 sm:px-8 md:px-16 space-y-12 pb-16">
         {selectedCategory === "others" ? (
           <div className="text-muted-foreground">
-            Select a category to view videos. “Others” groups long-tail categories for browsing.
+            {t("categories.othersDescription", "Select a category to view videos. “Others” groups long-tail categories for browsing.")}
           </div>
         ) : (
           <VideoGrid
@@ -224,8 +224,8 @@ export default function Categories() {
             title={
               selectedCategory
                 ? (top20Categories.find((g) => g.category.id === selectedCategory)?.category.translations?.[0]?.name ||
-                    "Category Videos")
-                : "Latest Videos"
+                    t("categories.categoryVideos", "Category Videos"))
+                : t("categories.latestVideos", "Latest Videos")
             }
             isLoading={gridVideosLoading}
             isFetching={gridVideosFetching}

@@ -170,14 +170,14 @@ export default function AdminAutomation() {
       queryClient.invalidateQueries({ queryKey: ["/api/automation/jobs/active"] });
       invalidateContentQueries();
       toast({
-        title: "Incremental batch started",
-        description: "The scraping job has been queued.",
+        title: t("automation.incrementalBatchStarted", "Incremental batch started"),
+        description: t("automation.incrementalBatchStartedDesc", "The scraping job has been queued."),
       });
     },
     onError: (error) => {
       toast({
-        title: "Action Failed",
-        description: `Failed to start job: ${error instanceof Error ? error.message : "Unknown error"}`,
+        title: t("common.actionFailed", "Action Failed"),
+        description: t("automation.failedToStartJob", { error: error instanceof Error ? error.message : "Unknown error", defaultValue: "Failed to start job: {{error}}" }),
         variant: "destructive",
       });
     }
@@ -190,15 +190,15 @@ export default function AdminAutomation() {
     },
     onSuccess: (data) => {
       toast({
-        title: "Regeneration Complete",
-        description: `Regenerated metadata for ${data.processed} videos`,
+        title: t("automation.regenerationComplete", "Regeneration Complete"),
+        description: t("automation.regenerationCompleteDesc", { count: data.processed, defaultValue: "Regenerated metadata for {{count}} videos" }),
       });
       invalidateContentQueries();
     },
     onError: (error) => {
       toast({
-        title: "Regeneration Failed",
-        description: `Failed to regenerate: ${error instanceof Error ? error.message : "Unknown error"}`,
+        title: t("automation.regenerationFailed", "Regeneration Failed"),
+        description: t("automation.regenerationFailedDesc", { error: error instanceof Error ? error.message : "Unknown error", defaultValue: "Failed to regenerate: {{error}}" }),
         variant: "destructive",
       });
     }
@@ -265,8 +265,8 @@ export default function AdminAutomation() {
         try {
           const { status } = JSON.parse(ev.data);
           toast({
-            title: "Job Completed",
-            description: `Job finished with status: ${status}`,
+            title: t("automation.jobCompleted", "Job Completed"),
+            description: t("automation.jobFinishedStatus", { status, defaultValue: "Job finished with status: {{status}}" }),
           });
           queryClient.invalidateQueries({ queryKey: ['/api/automation/jobs'] });
           queryClient.invalidateQueries({ queryKey: ['/api/automation/jobs/active'] });
@@ -283,8 +283,8 @@ export default function AdminAutomation() {
         source.close();
         streamRef.current = null;
         toast({
-          title: "Connection Lost",
-          description: "Reconnecting to event stream...",
+          title: t("common.connectionLost", "Connection Lost"),
+          description: t("common.reconnecting", "Reconnecting to event stream..."),
           variant: "destructive",
         });
 
@@ -294,8 +294,8 @@ export default function AdminAutomation() {
           setTimeout(createStream, delay);
         } else {
           toast({
-            title: "Connection Failed",
-            description: "Failed to reconnect. Falling back to polling.",
+            title: t("common.connectionFailed", "Connection Failed"),
+            description: t("common.connectionFailedDesc", "Failed to reconnect. Falling back to polling."),
             variant: "destructive",
           });
           // Trigger query refetch as fallback
@@ -370,19 +370,19 @@ export default function AdminAutomation() {
 
   const chartConfig: ChartConfig = {
     videosAdded: {
-      label: "Videos Added",
+      label: t("automation.videosAdded", "Videos Added"),
       color: "hsl(var(--primary))",
     },
     errors: {
-      label: "Errors",
+      label: t("automation.errors", "Errors"),
       color: "hsl(var(--destructive))",
     },
     completed: {
-      label: "Completed Jobs",
+      label: t("automation.completedJobs", "Completed Jobs"),
       color: "hsl(var(--chart-green-500))",
     },
     failed: {
-      label: "Failed Jobs",
+      label: t("automation.failedJobs", "Failed Jobs"),
       color: "hsl(var(--chart-red-500))",
     },
   } satisfies ChartConfig;
@@ -393,52 +393,52 @@ export default function AdminAutomation() {
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="monitor" className="space-x-2">
                 <Activity className="h-4 w-4" />
-                <span>Monitor</span>
+                <span>{t("automation.monitor", "Monitor")}</span>
               </TabsTrigger>
               <TabsTrigger value="analytics" className="space-x-2">
                 <BarChart3 className="h-4 w-4" />
-                <span>Analytics</span>
+                <span>{t("admin.analytics", "Analytics")}</span>
               </TabsTrigger>
             </TabsList>
 
             <TabsContent value="monitor" className="space-y-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <h1 className="text-3xl font-bold tracking-tight">Automation</h1>
-                  <p className="text-muted-foreground mt-1">Monitor incremental scraping progress and history.</p>
+                  <h1 className="text-3xl font-bold tracking-tight">{t("automation.title", "Automation")}</h1>
+                  <p className="text-muted-foreground mt-1">{t("automation.description", "Monitor incremental scraping progress and history.")}</p>
                 </div>
                 <Button
                   onClick={() => runNowMutation.mutate()}
                   disabled={runNowMutation.isPending || running || scheduler?.isRunning}
                 >
                   <RefreshCw className={`mr-2 h-4 w-4 ${runNowMutation.isPending ? "animate-spin" : ""}`} />
-                  {running || scheduler?.isRunning ? "Batch Running" : "Run Incremental Batch"}
+                  {running || scheduler?.isRunning ? t("automation.batchRunning", "Batch Running") : t("automation.runIncrementalBatch", "Run Incremental Batch")}
                 </Button>
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
                 <Card>
                   <CardHeader>
-                    <CardTitle>Scheduler</CardTitle>
-                    <CardDescription>Interval and current state</CardDescription>
+                    <CardTitle>{t("automation.scheduler", "Scheduler")}</CardTitle>
+                    <CardDescription>{t("automation.schedulerDesc", "Interval and current state")}</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-2">
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Enabled</span>
-                      <Badge variant="secondary">{scheduler?.isActive ? "yes" : "no"}</Badge>
+                      <span className="text-muted-foreground">{t("common.enabled", "Enabled")}</span>
+                      <Badge variant="secondary">{scheduler?.isActive ? t("common.yes", "yes") : t("common.no", "no")}</Badge>
                     </div>
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Running</span>
+                      <span className="text-muted-foreground">{t("common.running", "Running")}</span>
                       <Badge variant={scheduler?.isRunning ? "default" : "secondary"}>
-                        {scheduler?.isRunning ? "yes" : "no"}
+                        {scheduler?.isRunning ? t("common.yes", "yes") : t("common.no", "no")}
                       </Badge>
                     </div>
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Interval</span>
+                      <span className="text-muted-foreground">{t("automation.interval", "Interval")}</span>
                       <span>{scheduler?.intervalHours ?? 6}h</span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Next run</span>
+                      <span className="text-muted-foreground">{t("automation.nextRun", "Next run")}</span>
                       <span>{scheduler?.nextRun ? new Date(scheduler.nextRun).toLocaleString() : "-"}</span>
                     </div>
                   </CardContent>
@@ -446,63 +446,63 @@ export default function AdminAutomation() {
 
                 <Card>
                   <CardHeader>
-                    <CardTitle>Current Batch</CardTitle>
-                    <CardDescription>Live incremental job progress</CardDescription>
+                    <CardTitle>{t("automation.currentBatch", "Current Batch")}</CardTitle>
+                    <CardDescription>{t("automation.currentBatchDesc", "Live incremental job progress")}</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
                     {displayedJob ? (
                       <>
                         <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">Status</span>
+                          <span className="text-muted-foreground">{t("common.status", "Status")}</span>
                           <Badge variant={running ? "default" : "secondary"}>{displayedJob.status}</Badge>
                         </div>
                         <div className="space-y-1">
                           <div className="flex items-center justify-between text-sm">
                             <span className="text-muted-foreground">
-                              {processedItems} / {totalItems} items
+                              {processedItems} / {totalItems} {t("common.items", "items")}
                             </span>
                             <span className="font-medium">{progressPct}%</span>
                           </div>
                           <Progress value={progressPct} className="h-2" />
                         </div>
                         <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">Current channel</span>
+                          <span className="text-muted-foreground">{t("automation.currentChannel", "Current channel")}</span>
                           <span className="truncate max-w-[260px]">{displayedJob.currentChannelName || "-"}</span>
                         </div>
                         <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">Videos added</span>
+                          <span className="text-muted-foreground">{t("automation.videosAdded", "Videos added")}</span>
                           <span>{displayedJob.videosAdded}</span>
                         </div>
                         <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">Succeeded / Failed</span>
+                          <span className="text-muted-foreground">{t("automation.succeededFailed", "Succeeded / Failed")}</span>
                           <span>
                             {succeededItems} / {failedItems}
                           </span>
                         </div>
                         <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">Speed</span>
+                          <span className="text-muted-foreground">{t("automation.speed", "Speed")}</span>
                           <span>
-                            {speed.channelsPerMin.toFixed(2)} items/min · {speed.videosPerMin.toFixed(2)} videos/min
+                            {speed.channelsPerMin.toFixed(2)} {t("automation.itemsPerMin", "items/min")} · {speed.videosPerMin.toFixed(2)} {t("automation.videosPerMin", "videos/min")}
                           </span>
                         </div>
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-muted-foreground flex items-center gap-2">
                             <Clock className="h-4 w-4" />
-                            ETA
+                            {t("automation.eta", "ETA")}
                           </span>
                           <span>{formatDurationSeconds(etaSeconds)}</span>
                         </div>
                       </>
                     ) : (
-                      <div className="text-sm text-muted-foreground">No active scrape job.</div>
+                      <div className="text-sm text-muted-foreground">{t("automation.noActiveJob", "No active scrape job.")}</div>
                     )}
                   </CardContent>
                 </Card>
 
                 <Card>
                   <CardHeader>
-                    <CardTitle>Metadata Regeneration</CardTitle>
-                    <CardDescription>Re-run AI categorization for existing videos</CardDescription>
+                    <CardTitle>{t("automation.metadataRegeneration", "Metadata Regeneration")}</CardTitle>
+                    <CardDescription>{t("automation.metadataRegenerationDesc", "Re-run AI categorization for existing videos")}</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="flex flex-col gap-2">
@@ -513,11 +513,10 @@ export default function AdminAutomation() {
                         className="w-full justify-start"
                       >
                         <RefreshCw className={`mr-2 h-4 w-4 ${regenerateMutation.isPending ? "animate-spin" : ""}`} />
-                        Regenerate Missing Only (Batch 50)
+                        {t("automation.regenerateMissingOnly", "Regenerate Missing Only (Batch 50)")}
                       </Button>
                       <p className="text-xs text-muted-foreground mt-2">
-                        Runs in batches of 50 videos. Check logs for progress.
-                        Using AI services may incur costs.
+                        {t("automation.regenerateDesc", "Runs in batches of 50 videos. Check logs for progress. Using AI services may incur costs.")}
                       </p>
                     </div>
                   </CardContent>
@@ -526,13 +525,13 @@ export default function AdminAutomation() {
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Live Logs</CardTitle>
-                  <CardDescription>Most recent scraping activity</CardDescription>
+                  <CardTitle>{t("automation.liveLogs", "Live Logs")}</CardTitle>
+                  <CardDescription>{t("automation.liveLogsDesc", "Most recent scraping activity")}</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="rounded-md border h-[320px] overflow-auto p-3 text-sm">
                     {liveLogs.length === 0 ? (
-                      <div className="text-muted-foreground">No logs yet.</div>
+                      <div className="text-muted-foreground">{t("automation.noLogsYet", "No logs yet.")}</div>
                     ) : (
                       <div className="space-y-1">
                         {liveLogs.map((l, idx) => (
@@ -818,13 +817,13 @@ export default function AdminAutomation() {
             <TabsContent value="analytics" className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Scraping Analytics (30 days)</CardTitle>
-                  <CardDescription>Trends in job performance and outcomes</CardDescription>
+                  <CardTitle>{t("automation.scrapingAnalytics", "Scraping Analytics (30 days)")}</CardTitle>
+                  <CardDescription>{t("automation.scrapingAnalyticsDesc", "Trends in job performance and outcomes")}</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="grid gap-6 md:grid-cols-2 h-[400px]">
                     <div className="space-y-4">
-                      <h3 className="font-semibold">Videos Added Over Time</h3>
+                      <h3 className="font-semibold">{t("automation.videosAddedOverTime", "Videos Added Over Time")}</h3>
                       <ResponsiveContainer width="100%" height={300}>
                         <LineChart data={analyticsData?.data || []}>
                           <XAxis dataKey="date" />
@@ -835,15 +834,15 @@ export default function AdminAutomation() {
                       </ResponsiveContainer>
                     </div>
                     <div className="space-y-4">
-                      <h3 className="font-semibold">Job Status Distribution</h3>
+                      <h3 className="font-semibold">{t("automation.jobStatusDistribution", "Job Status Distribution")}</h3>
                       <ResponsiveContainer width="100%" height={300}>
                         <BarChart data={analyticsData?.data || []}>
                           <XAxis dataKey="date" />
                           <YAxis />
                           <ChartTooltip content={<ChartTooltipContent />} />
                           <Legend />
-                          <Bar dataKey="completedJobs" fill={chartConfig.completed.color as string} name="Completed" />
-                          <Bar dataKey="failedJobs" fill={chartConfig.failed.color as string} name="Failed" />
+                          <Bar dataKey="completedJobs" fill={chartConfig.completed.color as string} name={t("automation.completed", "Completed")} />
+                          <Bar dataKey="failedJobs" fill={chartConfig.failed.color as string} name={t("automation.failed", "Failed")} />
                         </BarChart>
                       </ResponsiveContainer>
                     </div>

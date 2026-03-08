@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -26,6 +27,7 @@ import { SiTiktok } from "react-icons/si";
 import type { Channel } from "@shared/schema";
 
 export default function AdminTikTok() {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [url, setUrl] = useState("");
@@ -45,14 +47,14 @@ export default function AdminTikTok() {
       setUrl("");
       setName("");
       toast({
-        title: "Profile added",
-        description: "TikTok profile has been added successfully",
+        title: t("admin.profileAdded", "Profile added"),
+        description: t("admin.profileAddedDesc", "TikTok profile has been added successfully"),
       });
     },
     onError: () => {
       toast({
-        title: "Error",
-        description: "Failed to add TikTok profile",
+        title: t("common.error", "Error"),
+        description: t("admin.profileAddFailed", "Failed to add TikTok profile"),
         variant: "destructive",
       });
     },
@@ -66,14 +68,14 @@ export default function AdminTikTok() {
       queryClient.invalidateQueries({ queryKey: ["/api/tiktok-profiles"] });
       queryClient.invalidateQueries({ queryKey: ["/api/videos"] });
       toast({
-        title: "Scraping started",
-        description: "TikTok profile is being scraped for videos",
+        title: t("admin.scrapingStarted", "Scraping started"),
+        description: t("admin.scrapingDesc", "TikTok profile is being scraped for videos"),
       });
     },
     onError: () => {
       toast({
-        title: "Error",
-        description: "Failed to scrape TikTok profile",
+        title: t("common.error", "Error"),
+        description: t("admin.scrapingFailed", "Failed to scrape TikTok profile"),
         variant: "destructive",
       });
     },
@@ -87,14 +89,14 @@ export default function AdminTikTok() {
       queryClient.invalidateQueries({ queryKey: ["/api/tiktok-profiles"] });
       queryClient.invalidateQueries({ queryKey: ["/api/videos"] });
       toast({
-        title: "Profile deleted",
-        description: "TikTok profile and its videos have been removed",
+        title: t("admin.profileDeleted", "Profile deleted"),
+        description: t("admin.profileDeletedDesc", "TikTok profile and its videos have been removed"),
       });
     },
     onError: () => {
       toast({
-        title: "Error",
-        description: "Failed to delete TikTok profile",
+        title: t("common.error", "Error"),
+        description: t("admin.profileDeleteFailed", "Failed to delete TikTok profile"),
         variant: "destructive",
       });
     },
@@ -112,10 +114,10 @@ export default function AdminTikTok() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold" data-testid="text-page-title">
-                TikTok Profiles
+                {t("admin.tiktokProfiles", "TikTok Profiles")}
               </h1>
               <p className="text-muted-foreground mt-1">
-                Add and manage TikTok profiles for video aggregation
+                {t("admin.tiktokProfilesDesc", "Add and manage TikTok profiles for video aggregation")}
               </p>
             </div>
             <Button
@@ -124,7 +126,7 @@ export default function AdminTikTok() {
               className="gap-2"
             >
               <Plus className="h-5 w-5" />
-              Add Profile
+              {t("admin.addProfile", "Add Profile")}
             </Button>
           </div>
 
@@ -139,17 +141,17 @@ export default function AdminTikTok() {
                 className="text-lg font-semibold mb-2"
                 data-testid="text-empty-state"
               >
-                No TikTok profiles added yet
+                {t("admin.noTiktokProfiles", "No TikTok profiles added yet")}
               </h3>
               <p className="text-muted-foreground mb-4">
-                Add your first TikTok profile to start aggregating videos
+                {t("admin.noTiktokProfilesDesc", "Add your first TikTok profile to start aggregating videos")}
               </p>
               <Button
                 onClick={() => setDialogOpen(true)}
                 data-testid="button-add-first-profile"
               >
                 <Plus className="h-5 w-5 mr-2" />
-                Add Profile
+                {t("admin.addProfile", "Add Profile")}
               </Button>
             </div>
           ) : (
@@ -157,10 +159,10 @@ export default function AdminTikTok() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Profile</TableHead>
-                    <TableHead>Videos</TableHead>
-                    <TableHead>Last Scraped</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead>{t("common.profile", "Profile")}</TableHead>
+                    <TableHead>{t("common.videos", "Videos")}</TableHead>
+                    <TableHead>{t("admin.lastScraped", "Last Scraped")}</TableHead>
+                    <TableHead className="text-right">{t("common.actions", "Actions")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -196,7 +198,7 @@ export default function AdminTikTok() {
                               className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1"
                               data-testid="link-profile-url"
                             >
-                              View on TikTok
+                              {t("admin.viewOnTiktok", "View on TikTok")}
                               <ExternalLink className="h-3 w-3" />
                             </a>
                           </div>
@@ -214,7 +216,7 @@ export default function AdminTikTok() {
                         >
                           {profile.lastScraped
                             ? new Date(profile.lastScraped).toLocaleDateString()
-                            : "Never"}
+                            : t("common.never", "Never")}
                         </span>
                       </TableCell>
                       <TableCell className="text-right">
@@ -230,7 +232,7 @@ export default function AdminTikTok() {
                             <RefreshCw
                               className={`h-4 w-4 ${scrapeProfileMutation.isPending ? "animate-spin" : ""}`}
                             />
-                            Scrape
+                            {t("common.scrape", "Scrape")}
                           </Button>
                           <Button
                             size="sm"
@@ -253,11 +255,11 @@ export default function AdminTikTok() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add TikTok Profile</DialogTitle>
+            <DialogTitle>{t("admin.addTiktokProfile", "Add TikTok Profile")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Profile Name</Label>
+              <Label htmlFor="name">{t("common.profileName", "Profile Name")}</Label>
               <Input
                 id="name"
                 placeholder="e.g., My TikTok"
@@ -267,7 +269,7 @@ export default function AdminTikTok() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="url">Profile URL</Label>
+              <Label htmlFor="url">{t("common.profileUrl", "Profile URL")}</Label>
               <Input
                 id="url"
                 placeholder="https://www.tiktok.com/@username"
@@ -283,7 +285,7 @@ export default function AdminTikTok() {
               onClick={() => setDialogOpen(false)}
               data-testid="button-cancel"
             >
-              Cancel
+              {t("common.cancel", "Cancel")}
             </Button>
             <Button
               onClick={handleAdd}
@@ -293,7 +295,7 @@ export default function AdminTikTok() {
               {addProfileMutation.isPending ? (
                 <RefreshCw className="h-4 w-4 animate-spin mr-2" />
               ) : null}
-              Add Profile
+              {t("admin.addProfile", "Add Profile")}
             </Button>
           </DialogFooter>
         </DialogContent>

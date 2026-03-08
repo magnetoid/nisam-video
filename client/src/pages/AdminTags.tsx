@@ -1,7 +1,6 @@
 import { useState, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Header } from "@/components/Header";
-import { AdminSidebar } from "@/components/AdminSidebar";
+import { useTranslation } from "react-i18next";
 import {
   Card,
   CardContent,
@@ -51,12 +50,8 @@ interface TagWithCount {
   videoIds: string[];
 }
 
-const LANGUAGES = [
-  { code: "en", label: "English" },
-  { code: "sr-Latn", label: "Serbian" },
-];
-
 export default function AdminTags() {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [deletingTag, setDeletingTag] = useState<string | null>(null);
@@ -86,14 +81,14 @@ export default function AdminTags() {
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/tags/stats"] });
       toast({
-        title: "Regeneration Started",
-        description: `Processed ${data.processed} videos. generated ${data.tagsGenerated} tags.`,
+        title: t("admin.regenerationStarted", "Regeneration Started"),
+        description: t("admin.tagsRegeneratedDesc", { processed: data.processed, generated: data.tagsGenerated, defaultValue: "Processed {{processed}} videos. Generated {{generated}} tags." }),
       });
     },
     onError: () => {
       toast({
-        title: "Error",
-        description: "Failed to regenerate tags",
+        title: t("common.error", "Error"),
+        description: t("admin.failedToRegenerateTags", "Failed to regenerate tags"),
         variant: "destructive",
       });
     },
@@ -117,14 +112,14 @@ export default function AdminTags() {
       queryClient.invalidateQueries({ queryKey: ["/api/videos"] });
       setDeletingTag(null);
       toast({
-        title: "Tag Deleted",
-        description: "Tag has been removed from all videos",
+        title: t("admin.tagDeleted", "Tag Deleted"),
+        description: t("admin.tagDeletedDesc", "Tag has been removed from all videos"),
       });
     },
     onError: () => {
       toast({
-        title: "Error",
-        description: "Failed to delete tag",
+        title: t("common.error", "Error"),
+        description: t("admin.failedToDeleteTag", "Failed to delete tag"),
         variant: "destructive",
       });
     },
@@ -140,14 +135,14 @@ export default function AdminTags() {
       },
       onSuccess: () => {
           toast({
-              title: "Tag Translated",
-              description: "Translation updated successfully"
+              title: t("admin.tagTranslated", "Tag Translated"),
+              description: t("admin.translationUpdated", "Translation updated successfully")
           });
       },
       onError: () => {
           toast({
-              title: "Error",
-              description: "Failed to update translation",
+              title: t("common.error", "Error"),
+              description: t("admin.failedToUpdateTranslation", "Failed to update translation"),
               variant: "destructive"
           });
       }
@@ -189,15 +184,15 @@ export default function AdminTags() {
       queryClient.invalidateQueries({ queryKey: ["/api/tag-images"] });
       setGeneratingImage(null);
       toast({
-        title: "Image Generated",
-        description: "AI-generated image has been created for this tag",
+        title: t("admin.imageGenerated", "Image Generated"),
+        description: t("admin.imageGeneratedDesc", "AI-generated image has been created for this tag"),
       });
     },
     onError: () => {
       setGeneratingImage(null);
       toast({
-        title: "Error",
-        description: "Failed to generate image. Please try again.",
+        title: t("common.error", "Error"),
+        description: t("admin.failedToGenerateImage", "Failed to generate image. Please try again."),
         variant: "destructive",
       });
     },
@@ -215,15 +210,15 @@ export default function AdminTags() {
       queryClient.invalidateQueries({ queryKey: ["/api/tag-images"] });
       setUploadingImage(null);
       toast({
-        title: "Image Uploaded",
-        description: "Custom image has been set for this tag",
+        title: t("admin.imageUploaded", "Image Uploaded"),
+        description: t("admin.imageUploadedDesc", "Custom image has been set for this tag"),
       });
     },
     onError: () => {
       setUploadingImage(null);
       toast({
-        title: "Error",
-        description: "Failed to upload image",
+        title: t("common.error", "Error"),
+        description: t("admin.failedToUploadImage", "Failed to upload image"),
         variant: "destructive",
       });
     },
@@ -240,14 +235,14 @@ export default function AdminTags() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/tag-images"] });
       toast({
-        title: "Image Removed",
-        description: "Tag image has been removed",
+        title: t("admin.imageRemoved", "Image Removed"),
+        description: t("admin.imageRemovedDesc", "Tag image has been removed"),
       });
     },
     onError: () => {
       toast({
-        title: "Error",
-        description: "Failed to remove image",
+        title: t("common.error", "Error"),
+        description: t("admin.failedToRemoveImage", "Failed to remove image"),
         variant: "destructive",
       });
     },
@@ -293,7 +288,7 @@ export default function AdminTags() {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to get upload URL");
+        throw new Error(t("admin.failedToGetUploadUrl", "Failed to get upload URL"));
       }
 
       const { uploadURL } = await response.json();
@@ -305,15 +300,15 @@ export default function AdminTags() {
       });
 
       if (!uploadResponse.ok) {
-        throw new Error("Failed to upload file");
+        throw new Error(t("admin.failedToUploadFile", "Failed to upload file"));
       }
 
       uploadImageMutation.mutate({ tagName, imageUrl: uploadURL });
     } catch (error) {
       setUploadingImage(null);
       toast({
-        title: "Error",
-        description: "Failed to upload image",
+        title: t("common.error", "Error"),
+        description: t("admin.failedToUploadImage", "Failed to upload image"),
         variant: "destructive",
       });
     }
@@ -334,10 +329,10 @@ export default function AdminTags() {
             data-testid="text-page-title"
           >
             <TagIcon className="h-8 w-8" />
-            Tags Management
+            {t("admin.tagsManagement", "Tags Management")}
           </h1>
           <p className="text-muted-foreground mt-1">
-            View and manage video tags and their images
+            {t("admin.tagsManagementDesc", "View and manage video tags and their images")}
           </p>
         </div>
         <Button 
@@ -347,12 +342,12 @@ export default function AdminTags() {
           {regenerateMutation.isPending ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Regenerating...
+              {t("admin.regenerating", "Regenerating...")}
             </>
           ) : (
             <>
               <Sparkles className="mr-2 h-4 w-4" />
-              Regenerate Missing Tags
+              {t("admin.regenerateMissingTags", "Regenerate Missing Tags")}
             </>
           )}
         </Button>
@@ -363,7 +358,7 @@ export default function AdminTags() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
-                  Total Tags
+                  {t("admin.totalTags", "Total Tags")}
                 </CardTitle>
                 <TagIcon className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
@@ -380,7 +375,7 @@ export default function AdminTags() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
-                  Tagged Videos
+                  {t("admin.taggedVideos", "Tagged Videos")}
                 </CardTitle>
                 <TrendingUp className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
@@ -397,7 +392,7 @@ export default function AdminTags() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
-                  Avg Tags/Video
+                  {t("admin.avgTagsPerVideo", "Avg Tags/Video")}
                 </CardTitle>
                 <TagIcon className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
@@ -416,7 +411,7 @@ export default function AdminTags() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
-                  Tags with Images
+                  {t("admin.tagsWithImages", "Tags with Images")}
                 </CardTitle>
                 <ImageIcon className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
@@ -431,14 +426,14 @@ export default function AdminTags() {
           {/* Tags Table */}
           <Card>
             <CardHeader>
-              <CardTitle>All Tags</CardTitle>
+              <CardTitle>{t("admin.allTags", "All Tags")}</CardTitle>
               <CardDescription>
-                Browse and manage all video tags. Generate AI images or upload custom images for tags.
+                {t("admin.tagsTableDesc", "Browse and manage all video tags. Generate AI images or upload custom images for tags.")}
               </CardDescription>
               <div className="relative mt-4">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search tags..."
+                  placeholder={t("admin.searchTags", "Search tags...")}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10"
@@ -449,18 +444,18 @@ export default function AdminTags() {
             <CardContent>
               {isLoading ? (
                 <div className="text-center py-8 text-muted-foreground">
-                  Loading tags...
+                  {t("admin.loadingTags", "Loading tags...")}
                 </div>
               ) : sortedTags.length > 0 ? (
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="w-16">Image</TableHead>
-                        <TableHead>Tag Name</TableHead>
-                        <TableHead className="text-center">Video Count</TableHead>
-                        <TableHead className="text-center hidden md:table-cell">Popularity</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
+                        <TableHead className="w-16">{t("admin.image", "Image")}</TableHead>
+                        <TableHead>{t("admin.tagName", "Tag Name")}</TableHead>
+                        <TableHead className="text-center">{t("common.videos", "Videos")}</TableHead>
+                        <TableHead className="text-center hidden md:table-cell">{t("admin.popularity", "Popularity")}</TableHead>
+                        <TableHead className="text-right">{t("common.actions", "Actions")}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -521,7 +516,7 @@ export default function AdminTags() {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => openTranslateDialog(tag.tagName)}
-                                title="Translate Tag"
+                                title={t("admin.translateTag", "Translate Tag")}
                                 data-testid={`button-translate-${tag.tagName}`}
                               >
                                 <Globe className="h-4 w-4 text-blue-500" />
@@ -531,7 +526,7 @@ export default function AdminTags() {
                                 size="sm"
                                 onClick={() => generateImageMutation.mutate(tag.tagName)}
                                 disabled={isGenerating || isUploading}
-                                title="Generate AI Image"
+                                title={t("admin.generateAiImage", "Generate AI Image")}
                                 data-testid={`button-generate-image-${tag.tagName}`}
                               >
                                 {isGenerating ? (
@@ -556,7 +551,7 @@ export default function AdminTags() {
                                   input.click();
                                 }}
                                 disabled={isGenerating || isUploading}
-                                title="Upload Custom Image"
+                                title={t("admin.uploadCustomImage", "Upload Custom Image")}
                                 data-testid={`button-upload-image-${tag.tagName}`}
                               >
                                 {isUploading ? (
@@ -570,7 +565,7 @@ export default function AdminTags() {
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => deleteImageMutation.mutate(tag.tagName)}
-                                  title="Remove Image"
+                                  title={t("admin.removeImage", "Remove Image")}
                                   data-testid={`button-remove-image-${tag.tagName}`}
                                 >
                                   <X className="h-4 w-4 text-orange-500" />
@@ -581,6 +576,7 @@ export default function AdminTags() {
                                 size="sm"
                                 onClick={() => setDeletingTag(tag.tagName)}
                                 data-testid={`button-delete-${tag.tagName}`}
+                                title={t("common.delete", "Delete")}
                               >
                                 <Trash2 className="h-4 w-4 text-destructive" />
                               </Button>
@@ -595,8 +591,8 @@ export default function AdminTags() {
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
                   {searchQuery
-                    ? "No tags match your search"
-                    : "No tags available"}
+                    ? t("admin.noTagsMatch", "No tags match your search")
+                    : t("admin.noTagsAvailable", "No tags available")}
                 </div>
               )}
             </CardContent>
@@ -615,26 +611,26 @@ export default function AdminTags() {
       >
         <DialogContent>
             <DialogHeader>
-                <DialogTitle>Translate Tag</DialogTitle>
+                <DialogTitle>{t("admin.translateTag", "Translate Tag")}</DialogTitle>
                 <DialogDescription>
-                    Add translations for "{editingTag}".
+                    {t("admin.translateTagDesc", { tag: editingTag, defaultValue: "Add translations for \"{{tag}}\"." })}
                 </DialogDescription>
             </DialogHeader>
             <Tabs defaultValue="sr-Latn" className="w-full">
                 <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="en">English (Original)</TabsTrigger>
-                    <TabsTrigger value="sr-Latn">Serbian</TabsTrigger>
+                    <TabsTrigger value="en">{t("admin.englishOriginal", "English (Original)")}</TabsTrigger>
+                    <TabsTrigger value="sr-Latn">{t("admin.serbian", "Serbian")}</TabsTrigger>
                 </TabsList>
                 <TabsContent value="en" className="space-y-4 py-4">
                     <div className="space-y-2">
-                        <Label>Tag Name (English)</Label>
+                        <Label>{t("admin.tagNameEnglish", "Tag Name (English)")}</Label>
                         <Input value={editingTag || ''} disabled />
-                        <p className="text-xs text-muted-foreground">Original tag name is read-only here.</p>
+                        <p className="text-xs text-muted-foreground">{t("admin.originalTagNameReadOnly", "Original tag name is read-only here.")}</p>
                     </div>
                 </TabsContent>
                 <TabsContent value="sr-Latn" className="space-y-4 py-4">
                     <div className="space-y-2">
-                        <Label>Tag Name (Serbian)</Label>
+                        <Label>{t("admin.tagNameSerbian", "Tag Name (Serbian)")}</Label>
                         <Input 
                             value={translationData["sr-Latn"]} 
                             onChange={(e) => setTranslationData({ ...translationData, "sr-Latn": e.target.value })}
@@ -644,8 +640,8 @@ export default function AdminTags() {
                 </TabsContent>
             </Tabs>
             <DialogFooter>
-                <Button variant="outline" onClick={() => setEditingTag(null)}>Cancel</Button>
-                <Button onClick={handleTranslate}>Save Translation</Button>
+                <Button variant="outline" onClick={() => setEditingTag(null)}>{t("common.cancel", "Cancel")}</Button>
+                <Button onClick={handleTranslate}>{t("admin.saveTranslation", "Save Translation")}</Button>
             </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -657,22 +653,21 @@ export default function AdminTags() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Tag?</AlertDialogTitle>
+            <AlertDialogTitle>{t("admin.deleteTag", "Delete Tag?")}</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete the tag "{deletingTag}"? This will
-              remove it from all videos. This action cannot be undone.
+              {t("admin.deleteTagConfirmationWithName", { tag: deletingTag, defaultValue: "Are you sure you want to delete the tag \"{{tag}}\"? This will remove it from all videos. This action cannot be undone." })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel data-testid="button-cancel-delete">
-              Cancel
+              {t("common.cancel", "Cancel")}
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               data-testid="button-confirm-delete"
             >
-              Delete
+              {t("common.delete", "Delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

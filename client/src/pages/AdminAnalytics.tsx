@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import {
   Card,
   CardContent,
@@ -62,6 +63,7 @@ const COLORS = [
 ];
 
 export default function AdminAnalytics() {
+  const { t } = useTranslation();
   const [dateRange, setDateRange] = useState<string>("all");
 
   const { data: analytics, isLoading } = useQuery<AnalyticsData>({
@@ -83,29 +85,29 @@ export default function AdminAnalytics() {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold" data-testid="text-page-title">
-            Analytics Dashboard
+            {t("admin.analyticsDashboard", "Analytics Dashboard")}
           </h1>
           <p className="text-muted-foreground mt-1">
-            Comprehensive statistics and insights
+            {t("admin.analyticsDashboardDesc", "Comprehensive statistics and insights")}
           </p>
         </div>
 
         <Select value={dateRange} onValueChange={setDateRange}>
           <SelectTrigger className="w-[180px]" data-testid="select-date-range">
-            <SelectValue placeholder="Select range" />
+            <SelectValue placeholder={t("admin.selectRange", "Select range")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Time</SelectItem>
-            <SelectItem value="7">Last 7 Days</SelectItem>
-            <SelectItem value="30">Last 30 Days</SelectItem>
-            <SelectItem value="90">Last 90 Days</SelectItem>
+            <SelectItem value="all">{t("admin.allTime", "All Time")}</SelectItem>
+            <SelectItem value="7">{t("admin.last7Days", "Last 7 Days")}</SelectItem>
+            <SelectItem value="30">{t("admin.last30Days", "Last 30 Days")}</SelectItem>
+            <SelectItem value="90">{t("admin.last90Days", "Last 90 Days")}</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
           {isLoading ? (
             <div className="flex items-center justify-center h-64">
-              <div className="text-muted-foreground">Loading analytics...</div>
+              <div className="text-muted-foreground">{t("admin.loadingAnalytics", "Loading analytics...")}</div>
             </div>
           ) : analytics ? (
             <>
@@ -114,7 +116,7 @@ export default function AdminAnalytics() {
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">
-                      Total Channels
+                      {t("admin.totalChannels", "Total Channels")}
                     </CardTitle>
                     <TvIcon className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
@@ -131,7 +133,7 @@ export default function AdminAnalytics() {
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">
-                      Total Videos
+                      {t("admin.totalVideos", "Total Videos")}
                     </CardTitle>
                     <VideoIcon className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
@@ -144,7 +146,7 @@ export default function AdminAnalytics() {
                     </div>
                     {dateRange !== "all" && (
                       <p className="text-xs text-muted-foreground mt-1">
-                        of {analytics.totals.allTimeVideos} all-time
+                        {t("admin.ofAllTime", { count: analytics.totals.allTimeVideos, defaultValue: "of {{count}} all-time" })}
                       </p>
                     )}
                   </CardContent>
@@ -153,7 +155,7 @@ export default function AdminAnalytics() {
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">
-                      Categories
+                      {t("admin.categories", "Categories")}
                     </CardTitle>
                     <FolderIcon className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
@@ -170,7 +172,7 @@ export default function AdminAnalytics() {
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">
-                      Total Tags
+                      {t("admin.totalTags", "Total Tags")}
                     </CardTitle>
                     <TagIcon className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
@@ -192,9 +194,9 @@ export default function AdminAnalytics() {
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <BarChart3 className="h-5 w-5" />
-                      Top 5 Categories
+                      {t("admin.topCategories", "Top 5 Categories")}
                     </CardTitle>
-                    <CardDescription>Videos by category</CardDescription>
+                    <CardDescription>{t("admin.videosByCategory", "Videos by category")}</CardDescription>
                   </CardHeader>
                   <CardContent>
                     {analytics.topCategories.length > 0 ? (
@@ -221,7 +223,7 @@ export default function AdminAnalytics() {
                       </ResponsiveContainer>
                     ) : (
                       <div className="h-[300px] flex items-center justify-center text-muted-foreground">
-                        No category data available
+                        {t("admin.noCategoryData", "No category data available")}
                       </div>
                     )}
                   </CardContent>
@@ -230,9 +232,9 @@ export default function AdminAnalytics() {
                 {/* Category Distribution Pie Chart */}
                 <Card>
                   <CardHeader>
-                    <CardTitle>Category Distribution</CardTitle>
+                    <CardTitle>{t("admin.categoryDistribution", "Category Distribution")}</CardTitle>
                     <CardDescription>
-                      Video distribution across categories
+                      {t("admin.videoDistribution", "Video distribution across categories")}
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -271,7 +273,7 @@ export default function AdminAnalytics() {
                       </ResponsiveContainer>
                     ) : (
                       <div className="h-[300px] flex items-center justify-center text-muted-foreground">
-                        No distribution data available
+                        {t("admin.noDistributionData", "No distribution data available")}
                       </div>
                     )}
                   </CardContent>
@@ -282,9 +284,9 @@ export default function AdminAnalytics() {
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <TrendingUp className="h-5 w-5" />
-                      Channel Performance
+                      {t("admin.channelPerformance", "Channel Performance")}
                     </CardTitle>
-                    <CardDescription>Videos per channel</CardDescription>
+                    <CardDescription>{t("admin.videosPerChannel", "Videos per channel")}</CardDescription>
                   </CardHeader>
                   <CardContent>
                     {analytics.channelPerformance.length > 0 ? (
@@ -316,7 +318,7 @@ export default function AdminAnalytics() {
                       </ResponsiveContainer>
                     ) : (
                       <div className="h-[300px] flex items-center justify-center text-muted-foreground">
-                        No channel data available
+                        {t("admin.noChannelData", "No channel data available")}
                       </div>
                     )}
                   </CardContent>
@@ -327,9 +329,9 @@ export default function AdminAnalytics() {
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <TagIcon className="h-5 w-5" />
-                      Trending Tags
+                      {t("admin.trendingTags", "Trending Tags")}
                     </CardTitle>
-                    <CardDescription>Top 20 most used tags</CardDescription>
+                    <CardDescription>{t("admin.topTagsDesc", "Top 20 most used tags")}</CardDescription>
                   </CardHeader>
                   <CardContent>
                     {analytics.topTags.length > 0 ? (
@@ -351,7 +353,7 @@ export default function AdminAnalytics() {
                       </div>
                     ) : (
                       <div className="h-[300px] flex items-center justify-center text-muted-foreground">
-                        No tags available
+                        {t("admin.noTagsAvailable", "No tags available")}
                       </div>
                     )}
                   </CardContent>
@@ -361,7 +363,7 @@ export default function AdminAnalytics() {
           ) : (
             <div className="flex items-center justify-center h-64">
               <div className="text-muted-foreground">
-                No analytics data available
+                {t("admin.noAnalyticsData", "No analytics data available")}
               </div>
             </div>
           )}

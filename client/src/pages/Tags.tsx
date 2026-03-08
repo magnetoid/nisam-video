@@ -118,8 +118,8 @@ export default function Tags() {
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
-    name: "Explore by Tags",
-    description: "Discover videos through AI-generated tags",
+    name: t("tags.exploreByTags", "Explore by Tags"),
+    description: t("tags.description", "Discover videos through AI-generated tags"),
     url: currentUrl,
     numberOfItems: localizedTags.length,
   };
@@ -127,8 +127,8 @@ export default function Tags() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <SEO
-        title="Explore by Tags"
-        description="Discover videos through AI-generated tags. Find content by specific topics, keywords, and themes."
+        title={t("tags.exploreByTags", "Explore by Tags")}
+        description={t("tags.description", "Discover videos through AI-generated tags. Find content by specific topics, keywords, and themes.")}
         path="/tags"
         canonical={currentUrl}
         hreflang={hreflangLinks}
@@ -161,18 +161,18 @@ export default function Tags() {
             className="text-5xl md:text-7xl font-bold mb-4 text-foreground"
             data-testid="text-page-title"
           >
-            {selectedTagName || "Explore by Tags"}
+            {selectedTagName || t("tags.exploreByTags", "Explore by Tags")}
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground max-w-2xl">
             {selectedTagName
-              ? `Showing ${videos.length} videos for this tag`
-              : "Discover videos through AI-generated tags. Click any tag to see related content."}
+              ? t("tags.showingVideosCount", { count: videos.length, defaultValue: "Showing {{count}} videos for this tag" })
+              : t("tags.heroDescription", "Discover videos through AI-generated tags. Click any tag to see related content.")}
           </p>
         </div>
       </div>
 
       <div className="px-4 sm:px-8 md:px-16 py-8">
-        <h2 className="text-2xl font-bold mb-6">Browse by Tag</h2>
+        <h2 className="text-2xl font-bold mb-6">{t("tags.browseByTag", "Browse by Tag")}</h2>
         <div className="flex flex-wrap gap-2 sm:gap-3 mb-8">
           <button
             onClick={() => setSelectedTag(null)}
@@ -183,7 +183,7 @@ export default function Tags() {
             }`}
             data-testid="button-filter-all"
           >
-            All Tags ({localizedTags.length})
+            {t("tags.allTags", "All Tags")} ({localizedTags.length})
           </button>
           {top20Tags.map((tag) => {
             const hasImage = !!(tag.tagName && tagImageMap[tag.tagName]);
@@ -205,7 +205,7 @@ export default function Tags() {
                 <span className={hasImage && selectedTag !== tag.id ? "ml-3" : ""}>
                   {tag.tagName}
                 </span>
-                {count > 0 && <span className="ml-2 text-xs opacity-70">{count} videos</span>}
+                {count > 0 && <span className="ml-2 text-xs opacity-70">{t("common.videosCount", { count, defaultValue: "{{count}} videos" })}</span>}
               </button>
             );
           })}
@@ -219,7 +219,7 @@ export default function Tags() {
               }`}
               data-testid="button-filter-others"
             >
-              Others ({otherTags.length})
+              {t("tags.others", "Others")} ({otherTags.length})
             </button>
           )}
         </div>
@@ -228,12 +228,12 @@ export default function Tags() {
       <div className="px-4 sm:px-8 md:px-16 space-y-12 pb-16">
         {selectedTag === "others" ? (
           <div className="text-muted-foreground">
-            Select a tag from the list. “Others” contains the remaining {otherTags.length} tags.
+            {t("tags.othersDescription", { count: otherTags.length, defaultValue: "Select a tag from the list. “Others” contains the remaining {{count}} tags." })}
           </div>
         ) : (
           <VideoGrid
             videos={videos}
-            title={selectedTagName ? `Videos tagged "${selectedTagName}"` : "Latest Videos"}
+            title={selectedTagName ? t("tags.videosTagged", { tag: selectedTagName, defaultValue: "Videos tagged \"{{tag}}\"" }) : t("tags.latestVideos", "Latest Videos")}
             isLoading={videosLoading}
             isFetching={videosFetching}
           />
@@ -242,7 +242,7 @@ export default function Tags() {
         {!tagsLoading && !tagsFetching && localizedTags.length === 0 && (
           <div className="text-center py-16">
             <p className="text-muted-foreground text-lg">
-              No tags found. AI categorization will generate tags automatically.
+              {t("tags.noTagsFound", "No tags found. AI categorization will generate tags automatically.")}
             </p>
           </div>
         )}

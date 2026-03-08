@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "react-i18next";
 import {
   Card,
   CardContent,
@@ -24,6 +25,7 @@ import { Plus, ListVideo, Trash2, Edit2 } from "lucide-react";
 import type { Playlist } from "@shared/schema";
 
 export default function AdminPlaylists() {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -45,14 +47,14 @@ export default function AdminPlaylists() {
       setCreateOpen(false);
       setFormData({ name: "", description: "" });
       toast({
-        title: "Success",
-        description: "Playlist created successfully",
+        title: t("common.success", "Success"),
+        description: t("admin.playlistCreated", "Playlist created successfully"),
       });
     },
     onError: () => {
       toast({
-        title: "Error",
-        description: "Failed to create playlist",
+        title: t("common.error", "Error"),
+        description: t("admin.failedToCreatePlaylist", "Failed to create playlist"),
         variant: "destructive",
       });
     },
@@ -74,14 +76,14 @@ export default function AdminPlaylists() {
       setSelectedPlaylist(null);
       setFormData({ name: "", description: "" });
       toast({
-        title: "Success",
-        description: "Playlist updated successfully",
+        title: t("common.success", "Success"),
+        description: t("admin.playlistUpdated", "Playlist updated successfully"),
       });
     },
     onError: () => {
       toast({
-        title: "Error",
-        description: "Failed to update playlist",
+        title: t("common.error", "Error"),
+        description: t("admin.failedToUpdatePlaylist", "Failed to update playlist"),
         variant: "destructive",
       });
     },
@@ -94,14 +96,14 @@ export default function AdminPlaylists() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/playlists"] });
       toast({
-        title: "Success",
-        description: "Playlist deleted successfully",
+        title: t("common.success", "Success"),
+        description: t("admin.playlistDeleted", "Playlist deleted successfully"),
       });
     },
     onError: () => {
       toast({
-        title: "Error",
-        description: "Failed to delete playlist",
+        title: t("common.error", "Error"),
+        description: t("admin.failedToDeletePlaylist", "Failed to delete playlist"),
         variant: "destructive",
       });
     },
@@ -110,8 +112,8 @@ export default function AdminPlaylists() {
   const handleCreate = () => {
     if (!formData.name.trim()) {
       toast({
-        title: "Error",
-        description: "Playlist name is required",
+        title: t("common.error", "Error"),
+        description: t("admin.playlistNameRequired", "Playlist name is required"),
         variant: "destructive",
       });
       return;
@@ -139,7 +141,7 @@ export default function AdminPlaylists() {
   const handleDelete = (id: string, name: string) => {
     if (
       confirm(
-        `Are you sure you want to delete playlist "${name}"? This action cannot be undone.`,
+        t("admin.confirmDeletePlaylist", { name, defaultValue: "Are you sure you want to delete playlist \"{{name}}\"? This action cannot be undone." })
       )
     ) {
       deleteMutation.mutate(id);
@@ -152,10 +154,10 @@ export default function AdminPlaylists() {
           <div className="flex items-start justify-between gap-4">
             <div>
               <h1 className="text-3xl font-bold" data-testid="text-page-title">
-                Playlist Management
+                {t("admin.playlistManagement", "Playlist Management")}
               </h1>
               <p className="text-muted-foreground mt-1">
-                Create and manage video playlists
+                {t("admin.playlistManagementDesc", "Create and manage video playlists")}
               </p>
             </div>
 
@@ -163,24 +165,24 @@ export default function AdminPlaylists() {
               <DialogTrigger asChild>
                 <Button data-testid="button-create-playlist">
                   <Plus className="h-4 w-4 mr-2" />
-                  Create Playlist
+                  {t("admin.createPlaylist", "Create Playlist")}
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Create New Playlist</DialogTitle>
+                  <DialogTitle>{t("admin.createNewPlaylist", "Create New Playlist")}</DialogTitle>
                   <DialogDescription>
-                    Add a new playlist to organize your videos
+                    {t("admin.createPlaylistDesc", "Add a new playlist to organize your videos")}
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
                   <div>
                     <label className="text-sm font-medium" htmlFor="name">
-                      Name *
+                      {t("common.name", "Name")} *
                     </label>
                     <Input
                       id="name"
-                      placeholder="Enter playlist name"
+                      placeholder={t("admin.enterPlaylistName", "Enter playlist name")}
                       value={formData.name}
                       onChange={(e) =>
                         setFormData({ ...formData, name: e.target.value })
@@ -193,11 +195,11 @@ export default function AdminPlaylists() {
                       className="text-sm font-medium"
                       htmlFor="description"
                     >
-                      Description
+                      {t("common.description", "Description")}
                     </label>
                     <Textarea
                       id="description"
-                      placeholder="Enter playlist description"
+                      placeholder={t("admin.enterPlaylistDescription", "Enter playlist description")}
                       value={formData.description}
                       onChange={(e) =>
                         setFormData({
@@ -215,8 +217,8 @@ export default function AdminPlaylists() {
                     data-testid="button-submit-create"
                   >
                     {createMutation.isPending
-                      ? "Creating..."
-                      : "Create Playlist"}
+                      ? t("common.creating", "Creating...")
+                      : t("admin.createPlaylist", "Create Playlist")}
                   </Button>
                 </div>
               </DialogContent>
@@ -225,19 +227,19 @@ export default function AdminPlaylists() {
 
           {isLoading ? (
             <div className="flex items-center justify-center h-64">
-              <div className="text-muted-foreground">Loading playlists...</div>
+              <div className="text-muted-foreground">{t("admin.loadingPlaylists", "Loading playlists...")}</div>
             </div>
           ) : playlists.length === 0 ? (
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-12">
                 <ListVideo className="h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No Playlists</h3>
+                <h3 className="text-lg font-semibold mb-2">{t("admin.noPlaylists", "No Playlists")}</h3>
                 <p className="text-muted-foreground text-center mb-4">
-                  Create your first playlist to start organizing videos
+                  {t("admin.noPlaylistsDesc", "Create your first playlist to start organizing videos")}
                 </p>
                 <Button onClick={() => setCreateOpen(true)}>
                   <Plus className="h-4 w-4 mr-2" />
-                  Create Playlist
+                  {t("admin.createPlaylist", "Create Playlist")}
                 </Button>
               </CardContent>
             </Card>
@@ -256,7 +258,7 @@ export default function AdminPlaylists() {
                         </CardTitle>
                         <CardDescription className="text-xs mt-1">
                           {playlist.videoCount}{" "}
-                          {playlist.videoCount === 1 ? "video" : "videos"}
+                          {playlist.videoCount === 1 ? t("common.video", "video") : t("common.videos", "videos")}
                         </CardDescription>
                       </div>
                       <div className="flex items-center gap-1">
@@ -297,17 +299,17 @@ export default function AdminPlaylists() {
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit Playlist</DialogTitle>
-            <DialogDescription>Update playlist information</DialogDescription>
+            <DialogTitle>{t("admin.editPlaylist", "Edit Playlist")}</DialogTitle>
+            <DialogDescription>{t("admin.editPlaylistDesc", "Update playlist information")}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
               <label className="text-sm font-medium" htmlFor="edit-name">
-                Name *
+                {t("common.name", "Name")} *
               </label>
               <Input
                 id="edit-name"
-                placeholder="Enter playlist name"
+                placeholder={t("admin.enterPlaylistName", "Enter playlist name")}
                 value={formData.name}
                 onChange={(e) =>
                   setFormData({ ...formData, name: e.target.value })
@@ -317,11 +319,11 @@ export default function AdminPlaylists() {
             </div>
             <div>
               <label className="text-sm font-medium" htmlFor="edit-description">
-                Description
+                {t("common.description", "Description")}
               </label>
               <Textarea
                 id="edit-description"
-                placeholder="Enter playlist description"
+                placeholder={t("admin.enterPlaylistDescription", "Enter playlist description")}
                 value={formData.description}
                 onChange={(e) =>
                   setFormData({ ...formData, description: e.target.value })
@@ -335,7 +337,7 @@ export default function AdminPlaylists() {
               className="w-full"
               data-testid="button-submit-update"
             >
-              {updateMutation.isPending ? "Updating..." : "Update Playlist"}
+              {updateMutation.isPending ? t("common.updating", "Updating...") : t("admin.updatePlaylist", "Update Playlist")}
             </Button>
           </div>
         </DialogContent>
