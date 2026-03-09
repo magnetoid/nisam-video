@@ -417,7 +417,7 @@ export default function VideoPage() {
               <h2 className="text-2xl font-bold">{t("video.similarVideos")}</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-6">
                 {similarVideos.map((similarVideo) => (
-                  <VideoCard key={similarVideo.id} video={similarVideo} />
+                  <VideoCard key={similarVideo.id} video={similarVideo} variant="grid" />
                 ))}
               </div>
             </div>
