@@ -195,7 +195,7 @@ export function AdminSidebar({ open = false, onClose, className }: AdminSidebarP
         },
         {
           icon: Globe,
-          label: t("admin.languages", "Languages"),
+          label: t("admin.languages.title", "Languages"),
           path: "/admin/languages",
           testId: "link-languages",
         },

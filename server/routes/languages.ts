@@ -119,7 +119,9 @@ router.post("/translate", requireAuth, requireAdmin, async (req, res) => {
 
   } catch (error: any) {
     console.error("Auto-translation error:", error);
-    res.status(500).json({ error: error.message || "Translation failed" });
+    const raw = String(error?.message || "Translation failed");
+    const sanitized = raw.replace(/sk-[^\s"']{8,}/g, "[redacted]");
+    res.status(500).json({ error: sanitized });
   }
 });
 

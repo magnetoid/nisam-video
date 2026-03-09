@@ -137,9 +137,12 @@ export default function AdminLanguages() {
       }
     },
     onError: (error: Error) => {
+      const message = error.message || t("admin.languages.auto_translate_error", "Auto translate error");
       toast({ 
         title: t("admin.languages.translation_failed"), 
-        description: error.message || t("admin.languages.auto_translate_error"), 
+        description: message.includes("Ollama")
+          ? `${message} ${t("admin.languages.ai_hint", "Check Admin → AI Settings provider/API key and try again.")}`
+          : message,
         variant: "destructive" 
       });
     },

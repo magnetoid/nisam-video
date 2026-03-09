@@ -45,28 +45,42 @@ Rules:
       ? "openai"
       : (config?.provider || (envOpenAIKey ? "openai" : "ollama"));
 
-  if (effectiveProvider === "ollama") {
-    if (!config?.ollamaModel) throw new Error("Ollama model not selected.");
-    
-    rawResponse = await generateOllamaCompletion(
-      config?.ollamaUrl || "http://localhost:11434",
-      config!.ollamaModel,
-      systemPrompt,
-      userPrompt,
-      config?.ollamaApiKey || undefined
-    );
-  } else {
-    // OpenAI
+  const tryOpenAI = async () => {
     const apiKey = config?.openaiApiKey || envOpenAIKey;
     if (!apiKey) throw new Error("OpenAI API key not configured.");
-    
-    rawResponse = await generateOpenAICompletion(
+    return await generateOpenAICompletion(
       config?.openaiBaseUrl || envOpenAIBaseUrl || "https://api.openai.com/v1",
       apiKey,
       config?.openaiModel || envOpenAIModel || "gpt-3.5-turbo",
       systemPrompt,
-      userPrompt
+      userPrompt,
     );
+  };
+
+  if (effectiveProvider === "ollama") {
+    if (!config?.ollamaModel) throw new Error("Ollama model not selected.");
+
+    try {
+      rawResponse = await generateOllamaCompletion(
+        config?.ollamaUrl || "http://localhost:11434",
+        config.ollamaModel,
+        systemPrompt,
+        userPrompt,
+        config?.ollamaApiKey || undefined,
+      );
+    } catch (error: any) {
+      const canFallbackToOpenAI = Boolean(config?.openaiApiKey || envOpenAIKey);
+      if (!canFallbackToOpenAI) throw error;
+      try {
+        rawResponse = await tryOpenAI();
+      } catch (openAiError: any) {
+        const ollamaMsg = error?.message || String(error);
+        const openAiMsg = openAiError?.message || String(openAiError);
+        throw new Error(`Ollama failed (${ollamaMsg}). OpenAI fallback also failed (${openAiMsg}).`);
+      }
+    }
+  } else {
+    rawResponse = await tryOpenAI();
   }
 
   // 4. Parse Response
