@@ -17,7 +17,9 @@ async function clearCachesAndReload() {
   } catch {
   }
 
-  window.location.reload();
+  const url = new URL(window.location.href);
+  url.searchParams.set("_v", String(Date.now()));
+  window.location.href = url.toString();
 }
 
 export class AppErrorBoundary extends Component<

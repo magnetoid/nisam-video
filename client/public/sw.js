@@ -1,4 +1,4 @@
-const CACHE_NAME = "nisam-video-v2";
+const CACHE_NAME = "nisam-video-v3";
 const urlsToCache = ["/", "/offline.html"];
 
 self.addEventListener("install", (event) => {
@@ -25,6 +25,16 @@ self.addEventListener("fetch", (event) => {
   // Skip API requests - these should never be cached
   if (event.request.url.includes("/api/")) {
     return;
+  }
+
+  // Avoid caching admin HTML routes to reduce stale-admin issues
+  try {
+    const url = new URL(event.request.url);
+    if (event.request.mode === "navigate" && url.pathname.startsWith("/admin")) {
+      event.respondWith(fetch(event.request));
+      return;
+    }
+  } catch {
   }
 
   // Skip chrome-extension and other non-http(s) schemes
