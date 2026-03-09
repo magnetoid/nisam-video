@@ -188,11 +188,11 @@ export default function Home() {
             />
 
             {recentVideos.length > 0 && (
-              <CarouselRow title={t("home.recent")} videos={recentVideos} />
+              <CarouselRow title={t("home.recent", "Recently Added")} videos={recentVideos} />
             )}
 
             {trendingVideos.length > 0 && (
-              <CarouselRow title={t("home.trending")} videos={trendingVideos} />
+              <CarouselRow title={t("home.trending", "Trending")} videos={trendingVideos} />
             )}
 
             {popularSegments.length > 0 ? (
@@ -201,7 +201,7 @@ export default function Home() {
               ))
             ) : (
               popularVideos.length > 0 && (
-                <CarouselRow title={t("home.popular") || "Popular Videos"} videos={popularVideos} />
+                <CarouselRow title={t("home.popular", "Popular Videos")} videos={popularVideos} />
               )
             )}
 
@@ -221,10 +221,13 @@ export default function Home() {
           <div className="flex flex-col items-center justify-center min-h-[50vh] px-4">
             <div className="text-center space-y-4">
               <h2 className="text-3xl font-bold" data-testid="text-empty-state">
-                {t("home.noVideos")}
+                {t("home.noVideos", "No videos available")}
               </h2>
               <p className="text-muted-foreground max-w-md">
-                {t("home.adminPrompt")}
+                {t(
+                  "home.adminPrompt",
+                  "Visit the admin panel to add YouTube channels and start aggregating videos",
+                )}
               </p>
             </div>
           </div>
@@ -234,7 +237,7 @@ export default function Home() {
           <div className="flex flex-col items-center justify-center min-h-[50vh] px-4">
             <div className="text-center space-y-4" data-testid="loading-state">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-              <p className="text-muted-foreground">{t("home.loading")}</p>
+              <p className="text-muted-foreground">{t("home.loading", "Loading videos...")}</p>
             </div>
           </div>
         )}
