@@ -89,6 +89,7 @@ interface AiModel {
 }
 
 export default function AdminAISettings() {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const [isSyncing, setIsSyncing] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
