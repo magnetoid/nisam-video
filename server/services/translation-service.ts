@@ -14,8 +14,14 @@ export async function translateContent(
   const settings = await db.select().from(aiSettings).limit(1);
   const config = settings[0];
 
+  const envOpenAIKey = process.env.OPENAI_API_KEY;
+  const envOpenAIBaseUrl = process.env.OPENAI_BASE_URL;
+  const envOpenAIModel = process.env.OPENAI_MODEL;
+
   if (!config) {
-    throw new Error("AI not configured. Please configure AI settings in the admin panel.");
+    if (!envOpenAIKey) {
+      throw new Error("AI not configured. Please configure AI settings in the admin panel.");
+    }
   }
 
   // 2. Construct Prompt
@@ -34,24 +40,30 @@ Rules:
   let rawResponse = "";
 
   // 3. Call Provider
-  if (config.provider === "ollama") {
-    if (!config.ollamaModel) throw new Error("Ollama model not selected.");
+  const effectiveProvider =
+    config?.provider === "ollama" && !config?.ollamaModel && envOpenAIKey
+      ? "openai"
+      : (config?.provider || (envOpenAIKey ? "openai" : "ollama"));
+
+  if (effectiveProvider === "ollama") {
+    if (!config?.ollamaModel) throw new Error("Ollama model not selected.");
     
     rawResponse = await generateOllamaCompletion(
-      config.ollamaUrl || "http://localhost:11434",
-      config.ollamaModel,
+      config?.ollamaUrl || "http://localhost:11434",
+      config!.ollamaModel,
       systemPrompt,
       userPrompt,
-      config.ollamaApiKey || undefined
+      config?.ollamaApiKey || undefined
     );
   } else {
     // OpenAI
-    if (!config.openaiApiKey) throw new Error("OpenAI API key not configured.");
+    const apiKey = config?.openaiApiKey || envOpenAIKey;
+    if (!apiKey) throw new Error("OpenAI API key not configured.");
     
     rawResponse = await generateOpenAICompletion(
-      config.openaiBaseUrl || "https://api.openai.com/v1",
-      config.openaiApiKey,
-      config.openaiModel || "gpt-3.5-turbo",
+      config?.openaiBaseUrl || envOpenAIBaseUrl || "https://api.openai.com/v1",
+      apiKey,
+      config?.openaiModel || envOpenAIModel || "gpt-3.5-turbo",
       systemPrompt,
       userPrompt
     );

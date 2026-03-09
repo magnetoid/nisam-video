@@ -56,6 +56,28 @@ export async function loadFileTranslations(lng: string): Promise<Record<string, 
     const content = await fs.readFile(localePath, "utf-8");
     return JSON.parse(content);
   } catch (e) {
+    // Fallback 1: if lng is like "sr-Latn", try base "sr"
+    try {
+      if (lng.includes("-")) {
+        const base = lng.split("-")[0];
+        const basePath = path.join(LOCALES_PATH, `${base}.json`);
+        const baseContent = await fs.readFile(basePath, "utf-8");
+        return JSON.parse(baseContent);
+      }
+    } catch {
+    }
+
+    // Fallback 2: if lng is base like "sr", try a more specific locale like "sr-Latn"
+    try {
+      const files = await fs.readdir(LOCALES_PATH);
+      const match = files.find((f) => f.startsWith(`${lng}-`) && f.endsWith(".json"));
+      if (match) {
+        const content = await fs.readFile(path.join(LOCALES_PATH, match), "utf-8");
+        return JSON.parse(content);
+      }
+    } catch {
+    }
+
     return {};
   }
 }

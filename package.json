@@ -13,7 +13,9 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "db:push": "drizzle-kit push",
-    "webmcp:generate": "NODE_ENV=development tsx -r dotenv/config scripts/webmcp-generate.ts"
+    "webmcp:generate": "NODE_ENV=development tsx -r dotenv/config scripts/webmcp-generate.ts",
+    "i18n:sync": "NODE_ENV=development tsx scripts/i18n-sync.ts",
+    "i18n:translate": "NODE_ENV=development tsx -r dotenv/config scripts/i18n-translate.ts"
   },
   "dependencies": {
     "@google-cloud/storage": "^7.18.0",
