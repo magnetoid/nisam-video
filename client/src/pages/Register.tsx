@@ -31,7 +31,7 @@ export default function Register() {
     
     if (password !== confirmPassword) {
       toast({
-        title: t("common.error"),
+        title: t("common.error", "Error"),
         description: t("register.passwordMismatch", "Passwords do not match"),
         variant: "destructive",
       });
@@ -56,7 +56,7 @@ export default function Register() {
         await queryClient.resetQueries({ queryKey: ["/api/auth/session"] });
         
         toast({
-          title: t("common.success"),
+          title: t("common.success", "Success"),
           description: t("register.success", "Registration successful!"),
         });
         
@@ -66,14 +66,14 @@ export default function Register() {
       } else {
         const data = await response.json();
         toast({
-          title: t("common.error"),
+          title: t("common.error", "Error"),
           description: data.error || t("register.error", "Registration failed"),
           variant: "destructive",
         });
       }
     } catch (error) {
       toast({
-        title: t("common.error"),
+        title: t("common.error", "Error"),
         description: t("register.networkError", "Network error occurred"),
         variant: "destructive",
       });

@@ -12,7 +12,7 @@ export default function AdminSEOEnhanced() {
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-6">
-      <div className="text-sm text-muted-foreground">{t("common.redirecting")}</div>
+      <div className="text-sm text-muted-foreground">{t("common.redirecting", "Redirecting...")}</div>
     </div>
   );
 }

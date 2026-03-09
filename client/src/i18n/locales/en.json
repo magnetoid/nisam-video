@@ -16,6 +16,8 @@
     "categories": "Categories",
     "tags": "Tags",
     "popular": "Popular",
+    "shorts": "Shorts",
+    "about": "About",
     "donate": "Support",
     "admin": "Admin",
     "settings": "Settings"
@@ -243,6 +245,7 @@
     "unauthorized": "You do not have permission to access this page"
   },
   "footer": {
+    "recommendChannel": "Recommend Channel",
     "rights": "All rights reserved."
   },
   "login": {

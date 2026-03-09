@@ -80,13 +80,13 @@ export function AdminSidebar({ open = false, onClose, className }: AdminSidebarP
         queryClient.clear();
         setLocation("/login");
         toast({
-          title: t("common.success"),
+          title: t("common.success", "Success"),
           description: t("auth.logoutSuccess", "Logged out successfully"),
         });
       }
     } catch (error) {
       toast({
-        title: t("common.error"),
+        title: t("common.error", "Error"),
         description: t("auth.logoutFailed", "Failed to logout"),
         variant: "destructive",
       });

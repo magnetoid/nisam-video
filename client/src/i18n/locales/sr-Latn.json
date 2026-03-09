@@ -16,6 +16,8 @@
     "categories": "Kategorije",
     "tags": "Tagovi",
     "popular": "Popularno",
+    "shorts": "Kratki",
+    "about": "O nama",
     "donate": "Podrži",
     "admin": "Admin",
     "settings": "Podešavanja"
@@ -254,6 +256,7 @@
     "unauthorized": "Nemate dozvolu za pristup ovoj stranici"
   },
   "footer": {
+    "recommendChannel": "Predloži kanal",
     "rights": "Sva prava zadržana."
   },
   "login": {

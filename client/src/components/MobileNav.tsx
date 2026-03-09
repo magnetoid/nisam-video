@@ -20,43 +20,43 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
   const navItems = [
     {
       href: "/",
-      label: t("nav.browse"),
+      label: t("nav.browse", "Browse"),
       icon: Home,
       testId: "link-mobile-browse",
     },
     {
       href: "/channels",
-      label: t("nav.channels"),
+      label: t("nav.channels", "Channels"),
       icon: Tv,
       testId: "link-mobile-channels",
     },
     {
       href: "/categories",
-      label: t("nav.categories"),
+      label: t("nav.categories", "Categories"),
       icon: Grid3x3,
       testId: "link-mobile-categories",
     },
     {
       href: "/tags",
-      label: t("nav.tags"),
+      label: t("nav.tags", "Tags"),
       icon: Tags,
       testId: "link-mobile-tags",
     },
     {
       href: "/popular",
-      label: t("nav.popular"),
+      label: t("nav.popular", "Popular"),
       icon: TrendingUp,
       testId: "link-mobile-popular",
     },
     {
       href: "/shorts",
-      label: "Shorts",
+      label: t("nav.shorts", "Shorts"),
       icon: Smartphone,
       testId: "link-mobile-shorts",
     },
     {
       href: "/admin",
-      label: t("nav.admin"),
+      label: t("nav.admin", "Admin"),
       icon: Settings,
       testId: "link-mobile-admin",
     },
@@ -100,7 +100,7 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
           
           <div className="mt-6 px-4 pt-6 border-t">
             <p className="text-sm font-medium text-muted-foreground mb-4">
-              {t("nav.settings") || "Settings"}
+              {t("nav.settings", "Settings")}
             </p>
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium">{t("settings.language", "Language")}</span>

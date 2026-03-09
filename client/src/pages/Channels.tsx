@@ -156,7 +156,7 @@ export default function Channels() {
     }));
   }, [channels]);
 
-  const pageTitle = t("nav.channels");
+  const pageTitle = t("nav.channels", "Channels");
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">

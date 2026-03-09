@@ -30,13 +30,13 @@ export function UserMenu() {
       await apiRequest("POST", "/api/auth/logout");
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/session"] });
       toast({
-        title: t("common.success"),
+        title: t("common.success", "Success"),
         description: t("auth.logoutSuccess", "Logged out successfully"),
       });
       setLocation("/");
     } catch (error) {
       toast({
-        title: t("common.error"),
+        title: t("common.error", "Error"),
         description: t("auth.logoutError", "Failed to logout"),
         variant: "destructive",
       });

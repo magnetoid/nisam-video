@@ -45,8 +45,8 @@ export default function Login() {
         
         // Show success toast
         toast({
-          title: t("common.success"),
-          description: "Successfully logged in!",
+          title: t("common.success", "Success"),
+          description: t("login.success", "Successfully logged in!"),
         });
         
         // Small delay to ensure cookie is set and state propagates
@@ -56,15 +56,15 @@ export default function Login() {
       } else {
         const data = await response.json();
         toast({
-          title: t("common.error"),
-          description: data.error || t("login.invalidCredentials"),
+          title: t("common.error", "Error"),
+          description: data.error || t("login.invalidCredentials", "Invalid credentials"),
           variant: "destructive",
         });
       }
     } catch (error) {
       toast({
-        title: t("common.error"),
-        description: t("login.loginError"),
+        title: t("common.error", "Error"),
+        description: t("login.loginError", "Login failed"),
         variant: "destructive",
       });
     } finally {
@@ -85,7 +85,7 @@ export default function Login() {
             {t("login.title", "Admin Login")}
           </CardTitle>
           <CardDescription className="text-center">
-            {t("login.adminAccess")}
+            {t("login.adminAccess", "Admin access")}
           </CardDescription>
         </CardHeader>
         <CardContent>

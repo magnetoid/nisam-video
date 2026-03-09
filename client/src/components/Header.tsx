@@ -57,7 +57,7 @@ export function Header({ onSearchClick, onMenuClick }: HeaderProps) {
                   className="text-sm font-medium text-foreground hover:text-primary transition-colors cursor-pointer"
                   data-testid="link-channels-mobile-top"
                 >
-                  {t("nav.channels")}
+                  {t("nav.channels", "Channels")}
                 </span>
               </Link>
             </div>
@@ -68,7 +68,7 @@ export function Header({ onSearchClick, onMenuClick }: HeaderProps) {
                   className="text-sm font-medium text-foreground hover:text-primary transition-colors cursor-pointer"
                   data-testid="link-channels"
                 >
-                  {t("nav.channels")}
+                  {t("nav.channels", "Channels")}
                 </span>
               </Link>
               <Link href="/categories">
@@ -76,7 +76,7 @@ export function Header({ onSearchClick, onMenuClick }: HeaderProps) {
                   className="text-sm font-medium text-foreground hover:text-primary transition-colors cursor-pointer"
                   data-testid="link-categories"
                 >
-                  {t("nav.categories")}
+                  {t("nav.categories", "Categories")}
                 </span>
               </Link>
               <Link href="/tags">
@@ -84,7 +84,7 @@ export function Header({ onSearchClick, onMenuClick }: HeaderProps) {
                   className="text-sm font-medium text-foreground hover:text-primary transition-colors cursor-pointer"
                   data-testid="link-tags"
                 >
-                  {t("nav.tags")}
+                  {t("nav.tags", "Tags")}
                 </span>
               </Link>
               <Link href="/popular">
@@ -92,7 +92,7 @@ export function Header({ onSearchClick, onMenuClick }: HeaderProps) {
                   className="text-sm font-medium text-foreground hover:text-primary transition-colors cursor-pointer"
                   data-testid="link-popular"
                 >
-                  {t("nav.popular")}
+                  {t("nav.popular", "Popular")}
                 </span>
               </Link>
               <Link href="/shorts">

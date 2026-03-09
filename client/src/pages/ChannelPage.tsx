@@ -87,7 +87,7 @@ export default function ChannelPage() {
     staleTime: 60 * 1000,
   });
 
-  const pageTitle = channel?.name ? channel.name : t("nav.channels");
+  const pageTitle = channel?.name ? channel.name : t("nav.channels", "Channels");
 
   const heroSubtitle = useMemo(() => {
     if (!channel) return "";
@@ -134,7 +134,7 @@ export default function ChannelPage() {
               <Link href="/channels">
                 <Button variant="ghost" className="pl-0" type="button">
                   <ArrowLeft className="h-4 w-4 mr-2" />
-                  {t("channelPage.back")}
+                  {t("channelPage.back", "Back")}
                 </Button>
               </Link>
 
@@ -149,7 +149,7 @@ export default function ChannelPage() {
                 )}
 
                 <h1 className="text-4xl md:text-6xl font-bold tracking-tight break-words">
-                  {channelLoading ? t("nav.channels") : pageTitle}
+                  {channelLoading ? t("nav.channels", "Channels") : pageTitle}
                 </h1>
 
                 {description && (
@@ -163,7 +163,7 @@ export default function ChannelPage() {
                     <a href={channel.url} target="_blank" rel="noreferrer">
                       <Button className="gap-2" type="button">
                         <ExternalLink className="h-4 w-4" />
-                        {t("channelPage.openExternal")}
+                        {t("channelPage.openExternal", "Open channel")}
                       </Button>
                     </a>
                   </div>

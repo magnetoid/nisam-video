@@ -149,7 +149,7 @@ export default function AdminRegenerate() {
         description: t("admin.regenerate.failed_desc"),
         variant: "destructive",
       });
-      setCurrentStep(t("common.failed"));
+      setCurrentStep(t("common.failed", "Failed"));
     } finally {
       setIsRegenerating(false);
     }
@@ -222,7 +222,7 @@ export default function AdminRegenerate() {
         description: t("admin.regenerate.url_failed_desc"),
         variant: "destructive",
       });
-      setCurrentStep(t("common.failed"));
+      setCurrentStep(t("common.failed", "Failed"));
     } finally {
       setIsRegenerating(false);
     }

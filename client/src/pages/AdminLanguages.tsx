@@ -79,7 +79,7 @@ export default function AdminLanguages() {
       toast({ title: t("admin.languages.saved_success"), description: t("admin.languages.saved_desc") });
     },
     onError: (error) => {
-      toast({ title: t("common.error"), description: t("admin.languages.save_error"), variant: "destructive" });
+      toast({ title: t("common.error", "Error"), description: t("admin.languages.save_error"), variant: "destructive" });
     },
   });
 
@@ -89,10 +89,10 @@ export default function AdminLanguages() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/languages"] });
-      toast({ title: t("common.success"), description: t("admin.languages.deleted_success") });
+      toast({ title: t("common.success", "Success"), description: t("admin.languages.deleted_success") });
     },
     onError: () => {
-      toast({ title: t("common.error"), description: t("admin.languages.delete_error"), variant: "destructive" });
+      toast({ title: t("common.error", "Error"), description: t("admin.languages.delete_error"), variant: "destructive" });
     },
   });
 
@@ -107,7 +107,7 @@ export default function AdminLanguages() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/translations", selectedLangCode] });
-      toast({ title: t("common.saved"), description: t("admin.languages.translation_updated") });
+      toast({ title: t("common.saved", "Saved"), description: t("admin.languages.translation_updated") });
     },
   });
 
@@ -266,7 +266,7 @@ export default function AdminLanguages() {
                     </div>
                     <Button type="submit" className="w-full" disabled={upsertLangMutation.isPending}>
                       {upsertLangMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      {t("common.save")}
+                      {t("common.save", "Save")}
                     </Button>
                   </form>
                 </DialogContent>
@@ -287,7 +287,7 @@ export default function AdminLanguages() {
                 <TableBody>
                   {isLoadingLangs ? (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center py-4">{t("common.loading")}</TableCell>
+                      <TableCell colSpan={5} className="text-center py-4">{t("common.loading", "Loading...")}</TableCell>
                     </TableRow>
                   ) : languages.map((lang) => (
                     <TableRow key={lang.code}>

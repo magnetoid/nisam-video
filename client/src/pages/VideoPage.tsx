@@ -99,7 +99,7 @@ export default function VideoPage() {
               data-testid="button-back-home"
             >
               <ArrowLeft className="h-4 w-4" />
-              {t("nav.browse")}
+              {t("nav.browse", "Browse")}
             </Button>
           </Link>
         </div>
@@ -240,7 +240,7 @@ export default function VideoPage() {
               data-testid="button-back"
             >
               <ArrowLeft className="h-4 w-4" />
-              {t("nav.browse")}
+              {t("nav.browse", "Browse")}
             </Button>
           </Link>
         </div>
@@ -302,7 +302,7 @@ export default function VideoPage() {
                     className="font-medium text-foreground"
                     data-testid="text-channel-name"
                   >
-                    {video.channel?.name || "Unknown Channel"}
+                    {video.channel?.name || t("video.unknownChannel", "Unknown Channel")}
                   </span>
                   {video.viewCount && (
                     <>

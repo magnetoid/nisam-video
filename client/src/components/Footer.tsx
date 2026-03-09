@@ -30,7 +30,7 @@ export function Footer() {
                   className="text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                   data-testid="link-footer-browse"
                 >
-                  {t("nav.browse")}
+                  {t("nav.browse", "Browse")}
                 </span>
               </Link>
               <Link href="/categories">
@@ -38,7 +38,7 @@ export function Footer() {
                   className="text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                   data-testid="link-footer-categories"
                 >
-                  {t("nav.categories")}
+                  {t("nav.categories", "Categories")}
                 </span>
               </Link>
               <Link href="/tags">
@@ -46,7 +46,7 @@ export function Footer() {
                   className="text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                   data-testid="link-footer-tags"
                 >
-                  {t("nav.tags")}
+                  {t("nav.tags", "Tags")}
                 </span>
               </Link>
               <Link href="/popular">
@@ -54,7 +54,7 @@ export function Footer() {
                   className="text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                   data-testid="link-footer-popular"
                 >
-                  {t("nav.popular")}
+                  {t("nav.popular", "Popular")}
                 </span>
               </Link>
               <Link href="/donate">
@@ -62,7 +62,7 @@ export function Footer() {
                   className="text-sm text-primary hover:text-primary/80 font-medium transition-colors cursor-pointer"
                   data-testid="link-footer-donate"
                 >
-                  ❤️ {t("nav.donate")}
+                  ❤️ {t("nav.donate", "Donate")}
                 </span>
               </Link>
               <RecommendChannelDialog>
@@ -78,7 +78,7 @@ export function Footer() {
                   className="text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                   data-testid="link-footer-admin"
                 >
-                  {t("nav.admin")}
+                  {t("nav.admin", "Admin")}
                 </span>
               </Link>
             </nav>

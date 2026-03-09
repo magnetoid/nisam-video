@@ -58,7 +58,7 @@ export default function AdminScheduler() {
     },
     onError: () => {
       toast({
-        title: t("common.error"),
+        title: t("common.error", "Error"),
         description: t("admin.scheduler.start_error"),
         variant: "destructive",
       });
@@ -78,7 +78,7 @@ export default function AdminScheduler() {
     },
     onError: () => {
       toast({
-        title: t("common.error"),
+        title: t("common.error", "Error"),
         description: t("admin.scheduler.stop_error"),
         variant: "destructive",
       });
@@ -98,7 +98,7 @@ export default function AdminScheduler() {
     },
     onError: () => {
       toast({
-        title: t("common.error"),
+        title: t("common.error", "Error"),
         description: t("admin.scheduler.update_interval_error"),
         variant: "destructive",
       });
@@ -117,7 +117,7 @@ export default function AdminScheduler() {
     },
     onError: () => {
       toast({
-        title: t("common.error"),
+        title: t("common.error", "Error"),
         description: t("admin.scheduler.job_start_error"),
         variant: "destructive",
       });
@@ -125,7 +125,7 @@ export default function AdminScheduler() {
   });
 
   const formatDate = (date: string | Date | null | undefined) => {
-    if (!date) return t("common.never");
+    if (!date) return t("common.never", "Never");
     const dateObj = typeof date === "string" ? new Date(date) : date;
     return dateObj.toLocaleString();
   };
