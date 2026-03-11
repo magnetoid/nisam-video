@@ -375,6 +375,8 @@ router.post("/regenerate", requireAuth, async (req, res) => {
       return res.status(400).json({ error: "Invalid type" });
     }
 
+    const overwrite = (req.query.overwrite as string) === "1" || (req.query.overwrite as string) === "true";
+
     const offset = Math.max(0, parseInt((req.query.offset as string) || "0", 10) || 0);
     const limit = Math.min(
       100,
@@ -416,13 +418,26 @@ router.post("/regenerate", requireAuth, async (req, res) => {
       concurrencyLimit(async () => {
         try {
           const startedAt = Date.now();
+
+          const shouldUpdateCategories =
+            type === "categories" ||
+            (type === "all" && (mode !== "missing" || overwrite || video.categories.length === 0));
+          const shouldUpdateTags =
+            type === "tags" ||
+            (type === "all" && (mode !== "missing" || overwrite || video.tags.length === 0));
+
+          if (!shouldUpdateCategories && !shouldUpdateTags) {
+            processed++;
+            return;
+          }
+
           const categorizeResult = await categorizeVideo(
             video.title,
             video.description || "",
             { timeoutMs: 30000 }, // Increased timeout for AI
           );
 
-          if (type === "all" || type === "categories") {
+          if (shouldUpdateCategories) {
             const categoriesEn = categorizeResult.categories.en || [];
             const categoriesSr = categorizeResult.categories.sr || [];
             const maxCategories = Math.max(categoriesEn.length, categoriesSr.length);
@@ -481,7 +496,7 @@ router.post("/regenerate", requireAuth, async (req, res) => {
             }
           }
 
-          if (type === "all" || type === "tags") {
+          if (shouldUpdateTags) {
             const tagsEn = categorizeResult.tags.en || [];
             const tagsSr = categorizeResult.tags.sr || [];
             const maxTags = Math.max(tagsEn.length, tagsSr.length);
