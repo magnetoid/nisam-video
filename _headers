@@ -54,15 +54,19 @@
   Pragma: no-cache
   Expires: 0
 
-# Sitemap - cache for 1 day
+# Sitemap - cache for 1 hour
 /sitemap.xml
-  Cache-Control: public, max-age=86400
-  CDN-Cache-Control: public, max-age=86400
+  Cache-Control: public, max-age=3600
+  CDN-Cache-Control: public, max-age=3600
 
-# Robots.txt - cache for 1 day  
+/sitemaps/*.xml
+  Cache-Control: public, max-age=3600
+  CDN-Cache-Control: public, max-age=3600
+
+# Robots.txt - cache for 1 hour  
 /robots.txt
-  Cache-Control: public, max-age=86400
-  CDN-Cache-Control: public, max-age=86400
+  Cache-Control: public, max-age=3600
+  CDN-Cache-Control: public, max-age=3600
 
 # Security headers for all paths
 /*

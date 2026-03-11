@@ -4,10 +4,11 @@ import { storage } from "./storage/index.js";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage/index.js";
 import { registerFeatureRoutes } from "./routes/index.js";
 import { db, isDbReady } from "./db.js";
-import { seoSettings } from "../shared/schema.js";
+import { seoSettings, videos as videosTable } from "../shared/schema.js";
 import { generateSlug } from "./utils.js";
 import { getCache, setCache } from "./services/redis.js";
 import imageRouter from "./routes/images.js";
+import { sql } from "drizzle-orm";
 
 import languageRoutes from "./routes/languages.js";
 
@@ -27,7 +28,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // SEO Routes - Sitemap and Robots
   app.get("/sitemap.xml", async (req, res) => {
     try {
-      const baseUrl = "https://nisam.video";
+      const forwardedProto = String(req.headers["x-forwarded-proto"] || "").split(",")[0].trim();
+      const proto = forwardedProto || req.protocol;
+      const host = req.get("host") || "nisam.video";
+      const baseUrl = process.env.PUBLIC_BASE_URL || `${proto}://${host}`;
+
       const lang = typeof (req.query as any)?.lang === "string" ? String((req.query as any).lang) : "en";
       const maxVideosRaw = typeof (req.query as any)?.maxVideos === "string" ? String((req.query as any).maxVideos) : undefined;
       // Default to 50000 if not specified
@@ -41,8 +46,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const includeTags = String((req.query as any)?.includeTags ?? "1") !== "0";
       const includeChannels = String((req.query as any)?.includeChannels ?? "1") !== "0";
 
+      const pageSize = 300;
+
+      const escapeXml = (value: string) =>
+        value
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/\"/g, "&quot;")
+          .replace(/'/g, "&apos;");
+
+      const withParams = (loc: string) => {
+        const params = new URLSearchParams();
+        if (lang !== "en") params.set("lang", lang);
+        if (maxVideos !== 50000) params.set("maxVideos", String(maxVideos));
+        if (!includeVideos) params.set("includeVideos", "0");
+        if (!includeCategories) params.set("includeCategories", "0");
+        if (!includeTags) params.set("includeTags", "0");
+        if (!includeChannels) params.set("includeChannels", "0");
+        const qs = params.toString();
+        return qs ? `${loc}?${qs}` : loc;
+      };
+
       // Try Redis Cache
-      const cacheKey = `sitemap:xml:${lang}:${maxVideos}:${includeVideos ? 1 : 0}:${includeCategories ? 1 : 0}:${includeTags ? 1 : 0}:${includeChannels ? 1 : 0}`;
+      const cacheKey = `sitemap:index:${lang}:${maxVideos}:${includeVideos ? 1 : 0}:${includeCategories ? 1 : 0}:${includeTags ? 1 : 0}:${includeChannels ? 1 : 0}`;
       try {
         const cachedSitemap = await getCache<string>(cacheKey);
         if (cachedSitemap) {
@@ -54,151 +81,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error("Redis cache error:", err);
       }
 
-      const [videos, categories, tags, channels] = await Promise.all([
-        includeVideos && maxVideos !== 0
-          ? storage.getAllVideos({
-              lang,
-              limit: maxVideos, // 50000
-              sort: "createdAt",
-            })
-          : Promise.resolve([]),
+      const [channels, categories, tags, videoCountRow] = await Promise.all([
+        includeChannels ? storage.getAllChannels() : Promise.resolve([]),
         includeCategories ? storage.getAllLocalizedCategories(lang) : Promise.resolve([]),
         includeTags ? storage.getAllLocalizedTags(lang) : Promise.resolve([]),
-        includeChannels ? storage.getAllChannels() : Promise.resolve([]),
+        includeVideos && maxVideos !== 0
+          ? db.select({ count: sql<number>`count(*)` }).from(videosTable)
+          : Promise.resolve([{ count: 0 }]),
       ]);
 
-      const escapeXml = (value: string) =>
-        value
-          .replace(/&/g, "&amp;")
-          .replace(/</g, "&lt;")
-          .replace(/>/g, "&gt;")
-          .replace(/\"/g, "&quot;")
-          .replace(/'/g, "&apos;");
+      const totalVideos = Math.min(maxVideos, Number(videoCountRow?.[0]?.count || 0));
+      const pages = {
+        static: 1,
+        channels: Math.max(1, Math.ceil(channels.length / pageSize)),
+        categories: Math.max(1, Math.ceil(categories.length / pageSize)),
+        tags: Math.max(1, Math.ceil(tags.length / pageSize)),
+        videos: Math.max(1, Math.ceil(totalVideos / pageSize)),
+      };
 
-      // Build sitemap XML
       let sitemap = '<?xml version="1.0" encoding="UTF-8"?>\n';
-      sitemap += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" ';
-      sitemap +=
-        'xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">\n';
+      sitemap += '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';
 
-      // Homepage
-      sitemap += "  <url>\n";
-      sitemap += `    <loc>${baseUrl}/</loc>\n`;
-      sitemap += "    <changefreq>daily</changefreq>\n";
-      sitemap += "    <priority>1.0</priority>\n";
-      sitemap += "  </url>\n";
+      const addSitemapLoc = (loc: string) => {
+        sitemap += "  <sitemap>\n";
+        sitemap += `    <loc>${escapeXml(withParams(loc))}</loc>\n`;
+        sitemap += "  </sitemap>\n";
+      };
 
-      sitemap += "  <url>\n";
-      sitemap += `    <loc>${baseUrl}/channels</loc>\n`;
-      sitemap += "    <changefreq>weekly</changefreq>\n";
-      sitemap += "    <priority>0.7</priority>\n";
-      sitemap += "  </url>\n";
-
-      // Categories page
-      sitemap += "  <url>\n";
-      sitemap += `    <loc>${baseUrl}/categories</loc>\n`;
-      sitemap += "    <changefreq>weekly</changefreq>\n";
-      sitemap += "    <priority>0.8</priority>\n";
-      sitemap += "  </url>\n";
-
-      // Tags page
-      sitemap += "  <url>\n";
-      sitemap += `    <loc>${baseUrl}/tags</loc>\n`;
-      sitemap += "    <changefreq>weekly</changefreq>\n";
-      sitemap += "    <priority>0.8</priority>\n";
-      sitemap += "  </url>\n";
-
-      sitemap += "  <url>\n";
-      sitemap += `    <loc>${baseUrl}/shorts</loc>\n`;
-      sitemap += "    <changefreq>daily</changefreq>\n";
-      sitemap += "    <priority>0.8</priority>\n";
-      sitemap += "  </url>\n";
-
-      sitemap += "  <url>\n";
-      sitemap += `    <loc>${baseUrl}/about</loc>\n`;
-      sitemap += "    <changefreq>monthly</changefreq>\n";
-      sitemap += "    <priority>0.4</priority>\n";
-      sitemap += "  </url>\n";
-
-      sitemap += "  <url>\n";
-      sitemap += `    <loc>${baseUrl}/donate</loc>\n`;
-      sitemap += "    <changefreq>monthly</changefreq>\n";
-      sitemap += "    <priority>0.3</priority>\n";
-      sitemap += "  </url>\n";
-
-      // Popular page
-      sitemap += "  <url>\n";
-      sitemap += `    <loc>${baseUrl}/popular</loc>\n`;
-      sitemap += "    <changefreq>daily</changefreq>\n";
-      sitemap += "    <priority>0.9</priority>\n";
-      sitemap += "  </url>\n";
-
-      for (const channel of channels) {
-        const slug = `${generateSlug(channel.name, 80)}-${channel.id}`;
-        sitemap += "  <url>\n";
-        sitemap += `    <loc>${baseUrl}/channels/${slug}</loc>\n`;
-        sitemap += "    <changefreq>weekly</changefreq>\n";
-        sitemap += "    <priority>0.6</priority>\n";
-        sitemap += "  </url>\n";
+      addSitemapLoc(`${baseUrl}/sitemaps/static-1.xml`);
+      if (includeChannels) {
+        for (let p = 1; p <= pages.channels; p++) addSitemapLoc(`${baseUrl}/sitemaps/channels-${p}.xml`);
+      }
+      if (includeCategories) {
+        for (let p = 1; p <= pages.categories; p++) addSitemapLoc(`${baseUrl}/sitemaps/categories-${p}.xml`);
+      }
+      if (includeTags) {
+        for (let p = 1; p <= pages.tags; p++) addSitemapLoc(`${baseUrl}/sitemaps/tags-${p}.xml`);
+      }
+      if (includeVideos && maxVideos !== 0) {
+        for (let p = 1; p <= pages.videos; p++) addSitemapLoc(`${baseUrl}/sitemaps/videos-${p}.xml`);
       }
 
-      // Category filter pages
-      for (const category of categories) {
-        sitemap += "  <url>\n";
-        sitemap += `    <loc>${baseUrl}/categories?filter=${category.id}</loc>\n`;
-        sitemap += "    <changefreq>weekly</changefreq>\n";
-        sitemap += "    <priority>0.7</priority>\n";
-        sitemap += "  </url>\n";
-      }
-
-      for (const tag of tags) {
-        const tagSlug = encodeURIComponent(String((tag as any).tagName || "").trim().replace(/\s+/g, "-"));
-        sitemap += "  <url>\n";
-        sitemap += `    <loc>${baseUrl}/tag/${tagSlug}</loc>\n`;
-        sitemap += "    <changefreq>weekly</changefreq>\n";
-        sitemap += "    <priority>0.5</priority>\n";
-        sitemap += "  </url>\n";
-      }
-
-      // Individual video pages with video metadata
-      for (const video of videos) {
-        try {
-          sitemap += "  <url>\n";
-          sitemap += `    <loc>${baseUrl}/video/${video.slug || video.id}</loc>\n`;
-          sitemap += "    <changefreq>monthly</changefreq>\n";
-          sitemap += "    <priority>0.6</priority>\n";
-          sitemap += "    <video:video>\n";
-          sitemap += `      <video:thumbnail_loc>${video.thumbnailUrl}</video:thumbnail_loc>\n`;
-          sitemap += `      <video:title>${escapeXml(video.title)}</video:title>\n`;
-          if (video.description) {
-            sitemap += `      <video:description>${escapeXml(video.description.substring(0, 2048))}</video:description>\n`;
-          }
-          sitemap += `      <video:content_loc>https://www.youtube.com/watch?v=${video.videoId}</video:content_loc>\n`;
-          sitemap += `      <video:player_loc>https://www.youtube.com/embed/${video.videoId}</video:player_loc>\n`;
-          // Use createdAt for publication_date in ISO 8601 format
-          if (video.createdAt) {
-            try {
-              const pubDate = new Date(video.createdAt).toISOString();
-              sitemap += `      <video:publication_date>${pubDate}</video:publication_date>\n`;
-            } catch (dateError) {
-              console.error(
-                `Error formatting date for video ${video.id}:`,
-                dateError,
-              );
-            }
-          }
-          sitemap += "    </video:video>\n";
-          sitemap += "  </url>\n";
-        } catch (videoError) {
-          console.error(
-            `Error processing video ${video.id} in sitemap:`,
-            videoError,
-          );
-          // Continue with next video
-        }
-      }
-
-      sitemap += "</urlset>";
+      sitemap += "</sitemapindex>";
 
       // Cache for 1 hour
       await setCache(cacheKey, sitemap, 3600);
@@ -208,6 +132,158 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.send(sitemap);
     } catch (error) {
       console.error("Sitemap generation error:", error);
+      res.status(500).send("Error generating sitemap");
+    }
+  });
+
+  app.get("/sitemaps/:name.xml", async (req, res) => {
+    try {
+      const forwardedProto = String(req.headers["x-forwarded-proto"] || "").split(",")[0].trim();
+      const proto = forwardedProto || req.protocol;
+      const host = req.get("host") || "nisam.video";
+      const baseUrl = process.env.PUBLIC_BASE_URL || `${proto}://${host}`;
+
+      const lang = typeof (req.query as any)?.lang === "string" ? String((req.query as any).lang) : "en";
+      const maxVideosRaw = typeof (req.query as any)?.maxVideos === "string" ? String((req.query as any).maxVideos) : undefined;
+      const maxVideos = maxVideosRaw && Number.isFinite(parseInt(maxVideosRaw, 10)) 
+        ? Math.max(0, parseInt(maxVideosRaw, 10)) 
+        : 50000;
+
+      const includeVideos = String((req.query as any)?.includeVideos ?? "1") !== "0";
+      const includeCategories = String((req.query as any)?.includeCategories ?? "1") !== "0";
+      const includeTags = String((req.query as any)?.includeTags ?? "1") !== "0";
+      const includeChannels = String((req.query as any)?.includeChannels ?? "1") !== "0";
+
+      const pageSize = 300;
+
+      const escapeXml = (value: string) =>
+        value
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/\"/g, "&quot;")
+          .replace(/'/g, "&apos;");
+
+      const name = String(req.params.name || "");
+      const match = name.match(/^(static|channels|categories|tags|videos)-(\d+)$/);
+      if (!match) return res.status(404).send("Not found");
+      const type = match[1];
+      const page = Math.max(1, parseInt(match[2], 10) || 1);
+      const offset = (page - 1) * pageSize;
+
+      const cacheKey = `sitemap:page:${type}:${page}:${lang}:${maxVideos}:${includeVideos ? 1 : 0}:${includeCategories ? 1 : 0}:${includeTags ? 1 : 0}:${includeChannels ? 1 : 0}`;
+      try {
+        const cached = await getCache<string>(cacheKey);
+        if (cached) {
+          res.header("Content-Type", "application/xml");
+          res.header("X-Cache", "HIT-REDIS");
+          return res.send(cached);
+        }
+      } catch {
+      }
+
+      let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
+      xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">\n';
+
+      const addUrl = (loc: string, opts?: { changefreq?: string; priority?: string; video?: any }) => {
+        xml += "  <url>\n";
+        xml += `    <loc>${escapeXml(loc)}</loc>\n`;
+        if (opts?.changefreq) xml += `    <changefreq>${opts.changefreq}</changefreq>\n`;
+        if (opts?.priority) xml += `    <priority>${opts.priority}</priority>\n`;
+        if (opts?.video) {
+          const v = opts.video;
+          xml += "    <video:video>\n";
+          xml += `      <video:thumbnail_loc>${escapeXml(String(v.thumbnailUrl || ""))}</video:thumbnail_loc>\n`;
+          xml += `      <video:title>${escapeXml(String(v.title || ""))}</video:title>\n`;
+          if (v.description) {
+            xml += `      <video:description>${escapeXml(String(v.description).substring(0, 2048))}</video:description>\n`;
+          }
+          xml += `      <video:content_loc>${escapeXml(String(v.contentLoc || ""))}</video:content_loc>\n`;
+          xml += `      <video:player_loc>${escapeXml(String(v.playerLoc || ""))}</video:player_loc>\n`;
+          if (v.publicationDate) xml += `      <video:publication_date>${escapeXml(String(v.publicationDate))}</video:publication_date>\n`;
+          xml += "    </video:video>\n";
+        }
+        xml += "  </url>\n";
+      };
+
+      if (type === "static") {
+        if (page !== 1) {
+          xml += "</urlset>";
+          res.header("Content-Type", "application/xml");
+          return res.send(xml);
+        }
+        addUrl(`${baseUrl}/`, { changefreq: "daily", priority: "1.0" });
+        addUrl(`${baseUrl}/channels`, { changefreq: "weekly", priority: "0.7" });
+        addUrl(`${baseUrl}/categories`, { changefreq: "weekly", priority: "0.8" });
+        addUrl(`${baseUrl}/tags`, { changefreq: "weekly", priority: "0.8" });
+        addUrl(`${baseUrl}/shorts`, { changefreq: "daily", priority: "0.8" });
+        addUrl(`${baseUrl}/about`, { changefreq: "monthly", priority: "0.4" });
+        addUrl(`${baseUrl}/donate`, { changefreq: "monthly", priority: "0.3" });
+        addUrl(`${baseUrl}/popular`, { changefreq: "daily", priority: "0.9" });
+      }
+
+      if (type === "channels" && includeChannels) {
+        const all = await storage.getAllChannels();
+        const slice = all.slice(offset, offset + pageSize);
+        for (const channel of slice) {
+          const slug = `${generateSlug(channel.name, 80)}-${channel.id}`;
+          addUrl(`${baseUrl}/channels/${slug}`, { changefreq: "weekly", priority: "0.6" });
+        }
+      }
+
+      if (type === "categories" && includeCategories) {
+        const all = await storage.getAllLocalizedCategories(lang);
+        const slice = all.slice(offset, offset + pageSize);
+        for (const category of slice) {
+          addUrl(`${baseUrl}/categories?filter=${category.id}`, { changefreq: "weekly", priority: "0.7" });
+        }
+      }
+
+      if (type === "tags" && includeTags) {
+        const all = await storage.getAllLocalizedTags(lang);
+        const slice = all.slice(offset, offset + pageSize);
+        for (const tag of slice) {
+          const tagSlug = encodeURIComponent(String((tag as any).tagName || "").trim().replace(/\s+/g, "-"));
+          addUrl(`${baseUrl}/tag/${tagSlug}`, { changefreq: "weekly", priority: "0.5" });
+        }
+      }
+
+      if (type === "videos" && includeVideos && maxVideos !== 0) {
+        const cappedOffset = Math.min(offset, maxVideos);
+        const cappedLimit = Math.max(0, Math.min(pageSize, maxVideos - cappedOffset));
+        if (cappedLimit > 0) {
+          const vids = await storage.getAllVideos({
+            lang,
+            limit: cappedLimit,
+            offset: cappedOffset,
+            sort: "createdAt",
+          });
+
+          for (const video of vids) {
+            const publicationDate = video.createdAt ? new Date(video.createdAt).toISOString() : undefined;
+            addUrl(`${baseUrl}/video/${video.slug || video.id}`, {
+              changefreq: "monthly",
+              priority: "0.6",
+              video: {
+                thumbnailUrl: video.thumbnailUrl,
+                title: video.title,
+                description: video.description,
+                contentLoc: `https://www.youtube.com/watch?v=${video.videoId}`,
+                playerLoc: `https://www.youtube.com/embed/${video.videoId}`,
+                publicationDate,
+              },
+            });
+          }
+        }
+      }
+
+      xml += "</urlset>";
+      await setCache(cacheKey, xml, 3600);
+      res.header("Content-Type", "application/xml");
+      res.header("X-Cache", "MISS");
+      res.send(xml);
+    } catch (error) {
+      console.error("Sitemap page generation error:", error);
       res.status(500).send("Error generating sitemap");
     }
   });
