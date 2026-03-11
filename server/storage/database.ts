@@ -2597,7 +2597,7 @@ export class DatabaseStorage implements IStorage {
   // Supported Languages
   async getSupportedLanguages(): Promise<SupportedLanguage[]> {
     try {
-      const langs = await db.select().from(supportedLanguages).orderBy(supportedLanguages.code);
+      let langs = await db.select().from(supportedLanguages).orderBy(supportedLanguages.code);
       if (langs.length === 0) {
         // Seed defaults if empty
         const defaults = [
@@ -2606,6 +2606,28 @@ export class DatabaseStorage implements IStorage {
         ];
         await db.insert(supportedLanguages).values(defaults).onConflictDoNothing();
         return defaults;
+      }
+
+      const hasSr = langs.some((l) => l.code === "sr-Latn");
+      const desiredDefault = hasSr ? "sr-Latn" : (langs.find((l) => l.code === "en")?.code || langs[0].code);
+
+      const currentDefault = langs.find((l) => l.isDefault)?.code;
+      if (currentDefault !== desiredDefault) {
+        await db.update(supportedLanguages).set({ isDefault: false });
+        await db
+          .update(supportedLanguages)
+          .set({ isDefault: true, isActive: true })
+          .where(eq(supportedLanguages.code, desiredDefault));
+
+        // Ensure English stays active as secondary if present
+        if (desiredDefault !== "en") {
+          await db
+            .update(supportedLanguages)
+            .set({ isActive: true, isDefault: false })
+            .where(eq(supportedLanguages.code, "en"));
+        }
+
+        langs = await db.select().from(supportedLanguages).orderBy(supportedLanguages.code);
       }
       return langs;
     } catch (error) {

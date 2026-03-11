@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 
 export default function Popular() {
   const [, setLocation] = useLocation();
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const loadMoreRef = useRef<HTMLDivElement>(null);
   
   const entry = useIntersectionObserver(loadMoreRef, {

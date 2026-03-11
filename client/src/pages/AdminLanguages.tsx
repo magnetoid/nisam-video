@@ -47,12 +47,25 @@ export default function AdminLanguages() {
   const queryClient = useQueryClient();
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editingLang, setEditingLang] = useState<SupportedLanguage | null>(null);
-  const [selectedLangCode, setSelectedLangCode] = useState<string>("en");
+  const [selectedLangCode, setSelectedLangCode] = useState<string>("sr-Latn");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showMissingOnly, setShowMissingOnly] = useState(false);
 
   // Fetch Languages
   const { data: languages = [], isLoading: isLoadingLangs } = useQuery<SupportedLanguage[]>({
     queryKey: ["/api/languages"],
   });
+
+  useEffect(() => {
+    if (!languages.length) return;
+    const primary = languages.find((l) => l.isDefault)?.code;
+    if (!primary) return;
+    setSelectedLangCode((prev) => {
+      if (!prev) return primary;
+      const exists = languages.some((l) => l.code === prev);
+      return exists ? prev : primary;
+    });
+  }, [languages]);
 
   // Fetch Translations for selected language
   const { data: translations = {}, isLoading: isLoadingTrans } = useQuery<Record<string, string>>({
@@ -63,7 +76,7 @@ export default function AdminLanguages() {
   // Fetch English translations as template
   const { data: enTranslations = {} } = useQuery<Record<string, string>>({
     queryKey: ["/api/translations", "en"],
-    enabled: selectedLangCode !== "en",
+    enabled: true,
   });
 
   // Mutations
@@ -174,25 +187,40 @@ export default function AdminLanguages() {
     upsertLangMutation.mutate(formData);
   };
 
-  // Translation Editor Logic
-  // Flatten English keys to show as list
-  const translationKeys = selectedLangCode === "en" 
-    ? Object.keys(translations).sort()
-    : Array.from(new Set([...Object.keys(enTranslations), ...Object.keys(translations)])).sort();
+  const translationKeys = Object.keys(enTranslations).length
+    ? Object.keys(enTranslations).sort()
+    : Object.keys(translations).sort();
+
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+  const missingCount = translationKeys.filter((k) => !(translations[k] || "").trim()).length;
+  const filteredKeys = translationKeys.filter((k) => {
+    const isMissing = !(translations[k] || "").trim();
+    if (showMissingOnly && !isMissing) return false;
+    if (!normalizedQuery) return true;
+    const en = (enTranslations[k] || "").toLowerCase();
+    const cur = (translations[k] || "").toLowerCase();
+    return k.toLowerCase().includes(normalizedQuery) || en.includes(normalizedQuery) || cur.includes(normalizedQuery);
+  });
+
+  const primaryLang = languages.find((l) => l.isDefault) || languages.find((l) => l.code === "sr-Latn");
+  const secondaryLang = languages.find((l) => l.code === "en");
+  const selectedLang = languages.find((l) => l.code === selectedLangCode);
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">{t("admin.languages.title")}</h1>
-          <p className="text-muted-foreground">{t("admin.languages.subtitle")}</p>
+          <h1 className="text-3xl font-bold tracking-tight">{t("admin.translations", "Translations")}</h1>
+          <p className="text-muted-foreground">
+            {t("admin.languages.subtitle", "Manage app translations and supported languages")}
+          </p>
         </div>
       </div>
 
-      <Tabs defaultValue="languages" className="w-full">
+      <Tabs defaultValue="translations" className="w-full">
         <TabsList>
-          <TabsTrigger value="languages">{t("admin.languages.tab_languages")}</TabsTrigger>
-          <TabsTrigger value="translations">{t("admin.languages.tab_translations")}</TabsTrigger>
+          <TabsTrigger value="languages">{t("admin.languages.tab_languages", "Languages")}</TabsTrigger>
+          <TabsTrigger value="translations">{t("admin.languages.tab_translations", "Translations")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="languages" className="space-y-4">
@@ -341,6 +369,28 @@ export default function AdminLanguages() {
                   <CardDescription>{t("admin.languages.translation_editor_desc")}</CardDescription>
                 </div>
                 <div className="flex items-center gap-2">
+                  <div className="hidden md:flex items-center gap-2 mr-2">
+                    <div className="text-xs text-muted-foreground">
+                      {filteredKeys.length}/{translationKeys.length}
+                      {showMissingOnly ? ` · ${missingCount} ${t("admin.languages.missing", "missing")}` : ""}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        checked={showMissingOnly}
+                        onCheckedChange={(v) => setShowMissingOnly(Boolean(v))}
+                        id="missing-only"
+                      />
+                      <Label htmlFor="missing-only" className="text-xs text-muted-foreground">
+                        {t("admin.languages.show_missing_only", "Show missing only")}
+                      </Label>
+                    </div>
+                    <Input
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder={t("admin.languages.search", "Search keys or text")}
+                      className="h-9 w-[260px]"
+                    />
+                  </div>
                   <Button 
                     variant="outline" 
                     size="sm"
@@ -365,11 +415,44 @@ export default function AdminLanguages() {
                     value={selectedLangCode}
                     onChange={(e) => setSelectedLangCode(e.target.value)}
                   >
-                    {languages.map(l => (
-                      <option key={l.code} value={l.code}>{l.name}</option>
-                    ))}
+                    {[...languages]
+                      .sort((a, b) => {
+                        if (a.isDefault !== b.isDefault) return a.isDefault ? -1 : 1;
+                        if (a.code === "en") return 1;
+                        if (b.code === "en") return -1;
+                        return a.name.localeCompare(b.name);
+                      })
+                      .map((l) => (
+                        <option key={l.code} value={l.code}>
+                          {l.name}{l.isDefault ? ` (${t("admin.languages.primary", "Primary")})` : ""}
+                        </option>
+                      ))}
                   </select>
                 </div>
+              </div>
+
+              <div className="flex md:hidden flex-col gap-3 pt-4">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs text-muted-foreground">
+                    {filteredKeys.length}/{translationKeys.length}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      checked={showMissingOnly}
+                      onCheckedChange={(v) => setShowMissingOnly(Boolean(v))}
+                      id="missing-only-mobile"
+                    />
+                    <Label htmlFor="missing-only-mobile" className="text-xs text-muted-foreground">
+                      {t("admin.languages.show_missing_only", "Show missing only")}
+                    </Label>
+                  </div>
+                </div>
+                <Input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder={t("admin.languages.search", "Search keys or text")}
+                  className="h-9"
+                />
               </div>
             </CardHeader>
             <CardContent>
@@ -379,10 +462,10 @@ export default function AdminLanguages() {
                 <div className="space-y-4">
                   <div className="grid grid-cols-12 gap-4 font-medium text-sm text-muted-foreground border-b pb-2">
                     <div className="col-span-4">{t("admin.languages.key")}</div>
-                    <div className="col-span-4">{t("admin.languages.english_reference")}</div>
-                    <div className="col-span-4">{t("admin.languages.translation")}</div>
+                    <div className="col-span-4">{secondaryLang?.name || t("admin.languages.english_reference")}</div>
+                    <div className="col-span-4">{selectedLang?.name || primaryLang?.name || t("admin.languages.translation")}</div>
                   </div>
-                  {translationKeys.map((key) => (
+                  {filteredKeys.map((key) => (
                     <TranslationRow 
                       key={key} 
                       tKey={key} 

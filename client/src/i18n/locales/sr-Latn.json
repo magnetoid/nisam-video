@@ -5,10 +5,18 @@
   },
   "home": {
     "recent": "Nedavno dodato",
+    "popular": "Popularno",
     "trending": "U trendu",
     "noVideos": "Nema dostupnih videa",
     "adminPrompt": "Posetite admin panel da dodate YouTube kanale i počnete sa agregacijom videa",
     "loading": "Učitavanje videa..."
+  },
+  "actions": {
+    "play": "Pusti"
+  },
+  "platforms": {
+    "youtube": "YouTube",
+    "tiktok": "TikTok"
   },
   "nav": {
     "browse": "Pretraži",
@@ -68,17 +76,30 @@
   "categories": {
     "title": "Pregledaj kategorije",
     "description": "Istražite video sadržaj organizovan u AI kategorije",
+    "browseCategories": "Pregledaj kategorije",
+    "browseByCategory": "Pregledaj po kategoriji",
+    "featuredCategory": "Istaknuta kategorija",
+    "latestVideos": "Najnoviji videi",
+    "others": "Ostalo",
+    "othersDescription": "Izaberite kategoriju da biste videli videe. “Ostalo” grupiše manje zastupljene kategorije.",
+    "notFound": "Kategorija nije pronađena",
+    "metaDescription": "Istražite videe organizovane u AI kategorije.",
     "featured": "Istaknuta kategorija",
     "all": "Sve kategorije",
     "filterBy": "Filtriraj po kategoriji",
     "videoCount": "{{count}} video",
     "videoCount_plural": "{{count}} videa",
     "noVideos": "Nema videa u ovoj kategoriji",
-    "explore": "Istraži kategorije"
+    "explore": "Istraži kategorije",
+    "categoryVideos": "Videi u kategoriji"
   },
   "tags": {
     "title": "Istraži po tagovima",
     "description": "Otkrijte sadržaj kroz AI tagove",
+    "exploreByTags": "Istraži po tagovima",
+    "browseByTag": "Pregledaj po tagu",
+    "heroDescription": "Otkrijte sadržaj kroz AI tagove. Kliknite na tag da biste videli povezane videe.",
+    "showingVideosCount": "Prikazujem {{count}} videa za ovaj tag",
     "all": "Svi tagovi",
     "clickToFilter": "Kliknite na tag za filtriranje",
     "noTags": "Nema dostupnih tagova"
@@ -86,6 +107,11 @@
   "popular": {
     "title": "Popularni videi",
     "description": "Otkrijte najgledanije video sadržaje",
+    "metaDescription": "Gledajte najpopularnije i trendujuće videe. Otkrijte šta je trenutno najgledanije.",
+    "noVideosFound": "Nema pronađenih videa",
+    "numberOneTrending": "#1 u trendu",
+    "playNow": "Pusti",
+    "trendingNow": "U trendu",
     "tier1M": "Više od 1M pregleda",
     "tier100K": "100K+ pregleda",
     "tier10K": "10K+ pregleda",
@@ -93,19 +119,36 @@
     "mostPopular": "Najpopularniji video",
     "noVideos": "Nema videa u ovoj kategoriji"
   },
+  "shorts": {
+    "title": "Kratki",
+    "subtitle": "Brzi vertikalni videi sa YouTube Shorts i TikTok-a",
+    "description": "Gledajte najnovije YouTube Shorts i TikTok videe",
+    "metaTitle": "Kratki | YouTube Shorts i TikTok videi",
+    "metaDescription": "Gledajte najnovije YouTube Shorts i TikTok videe. Otkrijte kratak, zanimljiv sadržaj u vertikalnom formatu.",
+    "filterAll": "Svi kratki",
+    "emptyState": "Još uvek nema kratkih videa. Pojaviće se kada se kanali skeniraju."
+  },
+  "auth": {
+    "username": "Korisničko ime",
+    "email": "Email",
+    "password": "Lozinka",
+    "confirmPassword": "Potvrdite lozinku",
+    "login": "Prijava",
+    "role": "Uloga"
+  },
   "admin": {
     "title": "Admin Panel",
-    "dashboard": "Kontrolna tabla",
-    "channels": "Kanali",
-    "videos": "Videi",
-    "categories": "Kategorije",
-    "playlists": "Plejliste",
+    "dashboard": "Dashboard",
+    "channels": "Channels",
+    "videos": "Videos",
+    "categories": "Categories",
+    "playlists": "Playlists",
     "scheduler": "Scrape/Crawl",
-    "analytics": "Analitika",
-    "seo": "SEO Podešavanja",
-    "settings": "Podešavanja",
-    "language": "Jezik",
-    "selectLanguage": "Izaberite jezik"
+    "analytics": "Analytics",
+    "seo": "SEO Settings",
+    "settings": "Settings",
+    "language": "Language",
+    "selectLanguage": "Select language"
   },
   "channels": {
     "title": "Upravljanje kanalima",
@@ -234,6 +277,15 @@
   },
   "common": {
     "loading": "Učitavanje...",
+    "apply": "Primeni",
+    "optional": "Opcionalno",
+    "refresh": "Osveži",
+    "refreshing": "Osvežavanje...",
+    "export": "Izvoz",
+    "comingSoon": "Uskoro",
+    "views": "pregleda",
+    "videosCount": "{{count}} video",
+    "videosCount_plural": "{{count}} videa",
     "save": "Sačuvaj",
     "cancel": "Otkaži",
     "delete": "Obriši",
@@ -248,6 +300,49 @@
     "error": "Greška",
     "confirm": "Potvrdi",
     "close": "Zatvori"
+  },
+  "404": {
+    "title": "Stranica nije pronađena",
+    "description": "Stranica koju tražite ne postoji ili je premeštena.",
+    "suggestions": "Pokušajte da se vratite na početnu stranicu.",
+    "backHome": "Nazad na početnu"
+  },
+  "about": {
+    "tagline": "AI agregator video sadržaja",
+    "heroDescription": "nisam.video prikuplja i organizuje kvalitetan video sadržaj uz pomoć AI tehnologije.",
+    "startWatching": "Počni da gledaš",
+    "exploreCategories": "Istraži kategorije",
+    "techStack": "Tehnologije",
+    "tech": {
+      "ai": "AI kategorizacija",
+      "curated": "Kurirani sadržaj",
+      "fast": "Brzo pretraživanje",
+      "global": "Više jezika"
+    },
+    "mission": {
+      "title": "Naša misija",
+      "p1": "Da omogućimo brz pristup kvalitetnom video sadržaju.",
+      "p2": "Da organizujemo informacije tako da se lako pronalaze."
+    },
+    "stats": {
+      "curatedVideos": "Kurirani videi",
+      "smartCategories": "Pametne kategorije",
+      "autoUpdates": "Automatska ažuriranja"
+    },
+    "features": {
+      "aiCuration": {
+        "title": "AI kuracija",
+        "description": "AI pomaže u organizaciji videa po temama."
+      },
+      "smartDiscovery": {
+        "title": "Pametno otkrivanje",
+        "description": "Lakše pronađite sadržaj koji vas zanima."
+      },
+      "mobileFirst": {
+        "title": "Optimizovano za mobilne",
+        "description": "Udobno gledanje na svim uređajima."
+      }
+    }
   },
   "errors": {
     "generic": "Došlo je do greške. Molimo pokušajte ponovo.",

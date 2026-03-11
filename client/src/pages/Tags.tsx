@@ -14,7 +14,7 @@ type TagStat = { tagName: string; count: number; videoIds?: string[] };
 export default function Tags() {
   const [location] = useLocation();
   const [selectedTag, setSelectedTag] = useState<string | "others" | null>(null);
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   const { data: localizedTags = [], isLoading: tagsLoading, isFetching: tagsFetching } = useQuery<LocalizedTag[]>({
       queryKey: ["/api/tags", i18n.language],

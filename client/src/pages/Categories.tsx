@@ -13,7 +13,7 @@ type TagStat = { tagName: string; count: number; videoIds?: string[] };
 
 export default function Categories() {
   const [location, setLocation] = useLocation();
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [selectedCategory, setSelectedCategory] = useState<string | "others" | null>(null);
 
   useEffect(() => {

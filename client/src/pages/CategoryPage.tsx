@@ -9,7 +9,7 @@ import { apiRequest } from "@/lib/queryClient";
 
 export default function CategoryPage() {
   const { slug } = useParams<{ slug: string }>();
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   // Fetch specific category by slug with language
   const { data: category, isLoading: isCategoryLoading } = useQuery<LocalizedCategory>({

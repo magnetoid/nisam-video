@@ -16,7 +16,7 @@ type FilterType = "all" | "youtube_short" | "tiktok";
 export default function Shorts() {
   const [, setLocation] = useLocation();
   const [filter, setFilter] = useState<FilterType>("all");
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   const queryUrl = filter === "all" 
     ? `/api/shorts?limit=100&lang=${i18n.language}`

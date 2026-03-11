@@ -5,7 +5,14 @@ import { storage } from "../storage/index.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const LOCALES_PATH = path.resolve(__dirname, "../../client/src/i18n/locales");
+const LOCALES_PATHS = [
+  path.resolve(__dirname, "../../client/src/i18n/locales"),
+  path.resolve(process.cwd(), "client/src/i18n/locales"),
+  path.resolve(__dirname, "../../dist/locales"),
+  path.resolve(process.cwd(), "dist/locales"),
+  path.resolve(__dirname, "../../dist/public/locales"),
+  path.resolve(process.cwd(), "dist/public/locales"),
+];
 
 /**
  * Helper to check if item is an object
@@ -51,35 +58,49 @@ export function flattenObject(obj: any, prefix = '', res: Record<string, string>
  * Load file-based translations
  */
 export async function loadFileTranslations(lng: string): Promise<Record<string, any>> {
-  try {
-    const localePath = path.join(LOCALES_PATH, `${lng}.json`);
-    const content = await fs.readFile(localePath, "utf-8");
+  const tryReadJson = async (filePath: string) => {
+    const content = await fs.readFile(filePath, "utf-8");
     return JSON.parse(content);
-  } catch (e) {
-    // Fallback 1: if lng is like "sr-Latn", try base "sr"
-    try {
-      if (lng.includes("-")) {
-        const base = lng.split("-")[0];
-        const basePath = path.join(LOCALES_PATH, `${base}.json`);
-        const baseContent = await fs.readFile(basePath, "utf-8");
-        return JSON.parse(baseContent);
-      }
-    } catch {
-    }
+  };
 
-    // Fallback 2: if lng is base like "sr", try a more specific locale like "sr-Latn"
+  const tryPaths = async (code: string) => {
+    for (const basePath of LOCALES_PATHS) {
+      try {
+        const flatFile = path.join(basePath, `${code}.json`);
+        return await tryReadJson(flatFile);
+      } catch {
+      }
+
+      try {
+        const i18nextPath = path.join(basePath, code, "translation.json");
+        return await tryReadJson(i18nextPath);
+      } catch {
+      }
+    }
+    return null;
+  };
+
+  const direct = await tryPaths(lng);
+  if (direct) return direct;
+
+  if (lng.includes("-")) {
+    const base = lng.split("-")[0];
+    const baseRes = await tryPaths(base);
+    if (baseRes) return baseRes;
+  }
+
+  for (const basePath of LOCALES_PATHS) {
     try {
-      const files = await fs.readdir(LOCALES_PATH);
+      const files = await fs.readdir(basePath);
       const match = files.find((f) => f.startsWith(`${lng}-`) && f.endsWith(".json"));
       if (match) {
-        const content = await fs.readFile(path.join(LOCALES_PATH, match), "utf-8");
-        return JSON.parse(content);
+        return await tryReadJson(path.join(basePath, match));
       }
     } catch {
     }
-
-    return {};
   }
+
+  return {};
 }
 
 /**
