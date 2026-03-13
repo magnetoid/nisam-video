@@ -36,13 +36,14 @@ export class AppErrorBoundary extends Component<
     console.error("AppErrorBoundary caught an error:", error, errorInfo);
 
     const message = error instanceof Error ? error.message : String(error);
+    const isUndefinedT = /\bt is not defined\b/.test(message);
     const isHookMismatch =
       message.includes("Minified React error #310") ||
       message.includes("Rendered more hooks than during the previous render");
 
-    if (isHookMismatch) {
+    if (isHookMismatch || isUndefinedT) {
       try {
-        const key = "react_hook_mismatch_recovered_at";
+        const key = isUndefinedT ? "undefined_t_recovered_at" : "react_hook_mismatch_recovered_at";
         const last = sessionStorage.getItem(key);
         const now = Date.now();
         if (!last || now - parseInt(last, 10) > 10_000) {

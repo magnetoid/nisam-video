@@ -68,6 +68,15 @@
   Cache-Control: public, max-age=3600
   CDN-Cache-Control: public, max-age=3600
 
+# Service worker - never cache (ensures quick updates)
+/sw.js
+  Cache-Control: no-cache
+  CDN-Cache-Control: no-cache
+
+/offline.html
+  Cache-Control: public, max-age=3600
+  CDN-Cache-Control: public, max-age=3600
+
 # Security headers for all paths
 /*
   X-Content-Type-Options: nosniff
