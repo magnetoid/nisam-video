@@ -1,16 +1,29 @@
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { AnalyticsEvent } from "@shared/schema";
+import { useLocation } from "wouter";
+import { getQueryFn } from "@/lib/queryClient";
 
 interface AnalyticsTrackerProps {
   children: React.ReactNode;
 }
 
 export function AnalyticsTracker({ children }: AnalyticsTrackerProps) {
-  const { data: events } = useQuery<AnalyticsEvent[]>({
+  const [location] = useLocation();
+  const isAdminRoute = location.startsWith("/admin");
+
+  const { data: session } = useQuery<{ isAuthenticated: boolean } | null>({
+    queryKey: ["/api/auth/session"],
+    queryFn: getQueryFn({ on401: "returnNull" }),
+    enabled: isAdminRoute,
+    staleTime: 1000 * 60,
+  });
+
+  const { data: events } = useQuery<AnalyticsEvent[] | null>({
     queryKey: ["/api/admin/analytics/events"],
-    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
-    meta: { silenceError: true }, // Silence error to prevent toast notifications
+    queryFn: getQueryFn({ on401: "returnNull" }),
+    enabled: Boolean(isAdminRoute && session?.isAuthenticated),
+    staleTime: 1000 * 60 * 5,
   });
 
   useEffect(() => {

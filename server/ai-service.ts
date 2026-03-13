@@ -121,7 +121,14 @@ async function ollamaGenerate(prompt: string, options: { model: string; url: str
     }
 
     const data = await response.json() as any;
-    return data.message?.content || "";
+
+    const content =
+      data?.message?.content ??
+      data?.response ??
+      data?.choices?.[0]?.message?.content ??
+      "";
+
+    return typeof content === "string" ? content : "";
   } catch (error: any) {
     if (error.cause?.code === 'ECONNREFUSED') {
        throw new Error(`Ollama connection failed (ECONNREFUSED) at ${options.url}. Is Ollama running?`);

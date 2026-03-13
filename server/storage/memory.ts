@@ -39,7 +39,11 @@ import {
   type InsertChannelRecommendation,
   type EmailSettings,
   type InsertEmailSettings,
-  type Tag
+  type Tag,
+  type SupportedLanguage,
+  type InsertSupportedLanguage,
+  type UiTranslation,
+  type InsertUiTranslation
 } from "../../shared/schema.js";
 import { IStorage } from "./types.js";
 import { isEligibleShortsVideo } from "../shorts-validation.js";
@@ -50,31 +54,82 @@ export class MemStorage implements IStorage {
   private channels: Map<string, Channel> = new Map();
   private videos: Map<string, Video> = new Map();
   private categories: Map<string, Category> = new Map();
+  private categoryTranslationsByCategoryId: Map<string, CategoryTranslation[]> =
+    new Map();
   private tags: Map<string, Tag> = new Map();
   private tagTranslationsByTagId: Map<string, TagTranslation[]> = new Map();
   private videoCategories: Map<string, { videoId: string, categoryId: string }> = new Map();
   private playlists: Map<string, Playlist> = new Map();
   private playlistVideos: Map<string, PlaylistVideo> = new Map();
-  private seoSettings: SeoSettings | null = null;
+  private seoSettings: SeoSettings | undefined;
   private scrapeJobs: Map<string, ScrapeJob> = new Map();
-  private schedulerSettings: SchedulerSettings | null = null;
-  private systemSettings: SystemSettings | null = null;
+  private schedulerSettings: SchedulerSettings | undefined;
+  private systemSettings: SystemSettings | undefined;
   private tagImages: Map<string, TagImage> = new Map();
   private heroVideos: Map<string, HeroVideo> = new Map();
   private channelRecommendations: Map<string, ChannelRecommendation> = new Map();
-  private emailSettings: EmailSettings | null = null;
+  private emailSettings: EmailSettings | undefined;
+  private supportedLanguages: Map<string, SupportedLanguage> = new Map();
+  private uiTranslations: Map<string, UiTranslation> = new Map();
 
   constructor() {
+    const now = new Date();
+
+    this.supportedLanguages.set("en", {
+      code: "en",
+      name: "English",
+      rootUri: "/en",
+      isActive: true,
+      isDefault: false,
+      createdAt: now,
+    });
+    this.supportedLanguages.set("sr-Latn", {
+      code: "sr-Latn",
+      name: "Srpski",
+      rootUri: "/",
+      isActive: true,
+      isDefault: true,
+      createdAt: now,
+    });
+
     // Add some initial categories
     const initialCategories = ["Music", "Gaming", "Tech", "News", "Entertainment", "Education"];
     initialCategories.forEach((name, index) => {
         const id = (index + 1).toString();
-        const slug = name.toLowerCase();
         this.categories.set(id, {
             id,
             videoCount: 0,
-            createdAt: new Date()
+            createdAt: now
         });
+
+        const slug = name
+          .toLowerCase()
+          .trim()
+          .replace(/[^\w\s-]/g, "")
+          .replace(/\s+/g, "-")
+          .slice(0, 80);
+        this.categoryTranslationsByCategoryId.set(id, [
+          {
+            id: `${id}-en`,
+            categoryId: id,
+            languageCode: "en",
+            name,
+            slug,
+            description: null,
+            createdAt: now,
+            updatedAt: now,
+          },
+          {
+            id: `${id}-sr`,
+            categoryId: id,
+            languageCode: "sr-Latn",
+            name,
+            slug,
+            description: null,
+            createdAt: now,
+            updatedAt: now,
+          },
+        ]);
     });
 
     // Add a default channel
@@ -85,10 +140,11 @@ export class MemStorage implements IStorage {
         url: "https://youtube.com/demo",
         channelId: "demo",
         thumbnailUrl: "https://placehold.co/100x100",
+        bannerUrl: null,
         videoCount: 1,
         platform: "youtube",
-        lastScraped: new Date(),
-        createdAt: new Date()
+        lastScraped: now,
+        createdAt: now
     });
 
     // Add a default video
@@ -96,19 +152,20 @@ export class MemStorage implements IStorage {
     this.videos.set(videoId, {
         id: videoId,
         channelId: channelId,
+        primaryCategoryId: null,
         videoId: "demo-video",
         slug: "demo-video",
         title: "Welcome to Nisam Video",
         description: "This is a demo video running on in-memory storage.",
         thumbnailUrl: "https://placehold.co/640x360",
-        duration: "0", // 00:00
+        duration: "0",
         viewCount: "1000",
         likesCount: 10,
         internalViewsCount: 5,
-        publishDate: new Date().toISOString(),
+        publishDate: now.toISOString(),
         videoType: "regular",
         embedUrl: null,
-        createdAt: new Date()
+        createdAt: now
     });
 
     // Add a default hero video
@@ -127,8 +184,8 @@ export class MemStorage implements IStorage {
         startDate: null,
         endDate: null,
         isActive: 1,
-        createdAt: new Date(),
-        updatedAt: new Date()
+        createdAt: now,
+        updatedAt: now
     });
   }
 
@@ -180,7 +237,8 @@ export class MemStorage implements IStorage {
         lastScraped: null,
         createdAt: new Date(),
         channelId: channel.channelId || null,
-        thumbnailUrl: channel.thumbnailUrl || null
+        thumbnailUrl: channel.thumbnailUrl || null,
+        bannerUrl: channel.bannerUrl || null
     };
     this.channels.set(id, newChannel);
     return newChannel;
@@ -503,10 +561,14 @@ export class MemStorage implements IStorage {
 
   // Hero Videos
   async getHeroVideos(): Promise<HeroVideoWithVideo[]> {
-    return Array.from(this.heroVideos.values()).map(hero => ({
-      ...hero,
-      video: hero.videoId ? (this.videos.get(hero.videoId) || null) : null,
-    }));
+    const out: HeroVideoWithVideo[] = [];
+    for (const hero of this.heroVideos.values()) {
+      if (!hero.videoId) continue;
+      const video = this.videos.get(hero.videoId);
+      if (!video) continue;
+      out.push({ ...hero, video });
+    }
+    return out;
   }
 
   async getActiveHeroVideos(): Promise<HeroVideoWithVideo[]> {
@@ -521,10 +583,12 @@ export class MemStorage implements IStorage {
         return true;
       })
       .sort((a, b) => a.displayOrder - b.displayOrder)
-      .map(hero => ({
-        ...hero,
-        video: hero.videoId ? (this.videos.get(hero.videoId) || null) : null,
-      }));
+      .flatMap((hero) => {
+        if (!hero.videoId) return [];
+        const video = this.videos.get(hero.videoId);
+        if (!video) return [];
+        return [{ ...hero, video }];
+      });
 
     // If no admin-selected hero videos, fall back to 5 random latest videos
     if (result.length === 0) {
@@ -574,10 +638,10 @@ export class MemStorage implements IStorage {
         id,
         displayOrder: hv.displayOrder ?? index,
         videoId: hv.videoId || null,
-        title: hv.title || "Default Title", // Provide default
-        description: hv.description || null,
-        buttonText: hv.buttonText || null,
-        buttonLink: hv.buttonLink || null,
+        title: hv.title || "Default Title",
+        description: hv.description || "",
+        buttonText: hv.buttonText || "",
+        buttonLink: hv.buttonLink || "",
         thumbnailUrl: hv.thumbnailUrl || null,
         videoUrl: hv.videoUrl || null,
         duration: hv.duration || null,
@@ -606,6 +670,9 @@ export class MemStorage implements IStorage {
         homeHeroMode: 'primary',
         popularPageMode: 'views',
         popularSegments: [],
+        showRecent: true,
+        showTrending: true,
+        showPopular: true,
         updatedAt: new Date()
     };
   }
@@ -623,6 +690,9 @@ export class MemStorage implements IStorage {
         homeHeroMode: 'primary',
         popularPageMode: 'views',
         popularSegments: [],
+        showRecent: true,
+        showTrending: true,
+        showPopular: true,
         updatedAt: new Date(),
         ...data
     };
@@ -692,59 +762,67 @@ export class MemStorage implements IStorage {
         createdAt: new Date()
     };
     this.categories.set(id, newCategory);
-    
-    // Store translations (mock storage for them)
-    // In a real MemStorage we would need a map for translations
-    const fullTranslations = translations.map(t => ({
-        ...t,
-        categoryId: id,
-        id: 'mock-trans-id', // Add mock ID
-        createdAt: new Date(),
-        updatedAt: new Date()
-    })) as CategoryTranslation[];
-    
+
+    const fullTranslations: CategoryTranslation[] = translations.map((t, idx) => ({
+      ...t,
+      categoryId: id,
+      id: `${id}-${t.languageCode}-${idx}`,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      description: t.description ?? null,
+    }));
+    this.categoryTranslationsByCategoryId.set(id, fullTranslations);
+
+    const chosen =
+      fullTranslations.find((t) => t.languageCode === 'en') ||
+      fullTranslations[0];
+
     return {
       ...newCategory,
-      translations: fullTranslations
+      translations: chosen ? [chosen] : [],
+      name: chosen?.name || "",
+      slug: chosen?.slug || "",
+      description: chosen?.description ?? null,
     };
   }
 
   async getLocalizedCategory(id: string, lang: string): Promise<LocalizedCategory | undefined> {
     const category = this.categories.get(id);
     if (!category) return undefined;
-    
-    // Mock translation
+
+    const translations = this.categoryTranslationsByCategoryId.get(id) || [];
+    const chosen =
+      translations.find((t) => t.languageCode === lang) ||
+      translations.find((t) => t.languageCode === 'en') ||
+      translations[0];
+
     return {
       ...category,
-      translations: [{
-        id: 'mock-trans-id',
-        categoryId: category.id,
-        languageCode: lang,
-        name: 'Mock Category',
-        slug: 'mock-category',
-        description: 'Mock Description',
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }],
-      name: 'Mock Category',
-      slug: 'mock-category',
-      description: 'Mock Description'
+      translations: chosen ? [chosen] : [],
+      name: chosen?.name || "",
+      slug: chosen?.slug || "",
+      description: chosen?.description ?? null,
     };
   }
 
   async getLocalizedCategoryBySlug(slug: string, lang: string): Promise<LocalizedCategory | undefined> {
-    // This is hard to implement in MemStorage without a translations map
-    // Returning undefined for now or finding by base slug if available?
-    // Base categories don't have slugs anymore in the schema, but MemStorage initialized them with slugs.
-    // Let's assume MemStorage.categories still has 'slug' for internal use.
-    const category = Array.from(this.categories.values()).find(c => (c as any).slug === slug);
-    if (!category) return undefined;
-    return this.getLocalizedCategory(category.id, lang);
+    for (const [categoryId, trans] of this.categoryTranslationsByCategoryId.entries()) {
+      const match = trans.find((t) => t.languageCode === lang && t.slug === slug);
+      if (match) return this.getLocalizedCategory(categoryId, lang);
+      const fallback = trans.find((t) => t.languageCode === 'en' && t.slug === slug);
+      if (fallback) return this.getLocalizedCategory(categoryId, lang);
+    }
+    return undefined;
   }
 
   async getAllLocalizedCategories(lang: string): Promise<LocalizedCategory[]> {
     const categories = Array.from(this.categories.values());
-    return Promise.all(categories.map(c => this.getLocalizedCategory(c.id, lang) as Promise<LocalizedCategory>));
+    const out: LocalizedCategory[] = [];
+    for (const c of categories) {
+      const localized = await this.getLocalizedCategory(c.id, lang);
+      if (localized) out.push(localized);
+    }
+    return out;
   }
 
   async updateLocalizedCategory(id: string, lang: string, data: Partial<CategoryTranslation>): Promise<CategoryTranslation | undefined> {
@@ -763,7 +841,7 @@ export class MemStorage implements IStorage {
   async updateCategory(id: string, data: Partial<Category>): Promise<Category | undefined> {
       const cat = this.categories.get(id);
       if (!cat) return undefined;
-      const updated = { ...cat, ...data, updatedAt: new Date() };
+      const updated = { ...cat, ...data };
       this.categories.set(id, updated);
       return updated;
   }
@@ -773,27 +851,37 @@ export class MemStorage implements IStorage {
   }
 
   async addCategoryTranslation(categoryId: string, translation: InsertCategoryTranslation): Promise<CategoryTranslation> {
-    return {
+    const createdAt = new Date();
+    const newTranslation: CategoryTranslation = {
       ...translation,
-      description: translation.description || null,
-      id: 'mock-id',
-      createdAt: new Date(),
-      updatedAt: new Date()
+      description: translation.description ?? null,
+      id: `${categoryId}-${translation.languageCode}-${Math.random().toString(36).slice(2, 8)}`,
+      createdAt,
+      updatedAt: createdAt,
     };
+
+    const existing = this.categoryTranslationsByCategoryId.get(categoryId) || [];
+    const filtered = existing.filter((t) => t.languageCode !== translation.languageCode);
+    this.categoryTranslationsByCategoryId.set(categoryId, [...filtered, newTranslation]);
+    return newTranslation;
   }
 
   async deleteCategoryTranslation(categoryId: string, lang: string): Promise<void> {
-    // no-op
+    const existing = this.categoryTranslationsByCategoryId.get(categoryId) || [];
+    this.categoryTranslationsByCategoryId.set(
+      categoryId,
+      existing.filter((t) => t.languageCode !== lang),
+    );
   }
   
   async getCategoryWithAllTranslations(id: string): Promise<(Category & { translations: CategoryTranslation[] }) | undefined> {
       const cat = this.categories.get(id);
       if (!cat) return undefined;
-      return { ...cat, translations: [] };
+      return { ...cat, translations: this.categoryTranslationsByCategoryId.get(id) || [] };
   }
 
   async getAllCategoriesWithTranslations(): Promise<(Category & { translations: CategoryTranslation[] })[]> {
-      return Array.from(this.categories.values()).map(c => ({ ...c, translations: [] }));
+      return Array.from(this.categories.values()).map(c => ({ ...c, translations: this.categoryTranslationsByCategoryId.get(c.id) || [] }));
   }
 
   // Tags (localized)
@@ -1026,10 +1114,30 @@ export class MemStorage implements IStorage {
     if (!this.seoSettings) {
         this.seoSettings = {
             id: "1",
-            siteName: "Nisam Video",
-            siteDescription: "AI-powered video aggregation",
+            siteName: "nisam.video",
+            siteDescription: "AI-powered video aggregation hub featuring curated YouTube content organized by intelligent categorization",
             ogImage: null,
+            twitterHandle: null,
+            socialLinks: {},
             metaKeywords: null,
+            googleSearchConsoleApiKey: null,
+            bingWebmasterApiKey: null,
+            enableAutoSitemapSubmission: false,
+            enableSchemaMarkup: true,
+            enableHreflang: true,
+            enableABTesting: false,
+            defaultLanguage: "en",
+            enableAMP: false,
+            enablePWA: false,
+            robotsTxt: null,
+            enableLocalSEO: false,
+            businessName: null,
+            businessAddress: null,
+            businessPhone: null,
+            businessEmail: null,
+            businessHours: null,
+            latitude: null,
+            longitude: null,
             updatedAt: new Date()
         };
     }
@@ -1102,6 +1210,7 @@ export class MemStorage implements IStorage {
             id: "1",
             isEnabled: 0,
             intervalHours: 6,
+            timezone: "UTC",
             lastRun: null,
             nextRun: null,
             updatedAt: new Date()
@@ -1131,6 +1240,13 @@ export class MemStorage implements IStorage {
             cacheCategoriesTTL: 600,
             cacheApiTTL: 180,
             pwaEnabled: 1,
+            pwaName: "nisam.video - AI Video Hub",
+            pwaShortName: "nisam.video",
+            pwaDescription: "AI-powered YouTube video aggregation hub with curated content",
+            pwaThemeColor: "#E50914",
+            pwaBackgroundColor: "#141414",
+            pwaIcon192: "/icon-192.png",
+            pwaIcon512: "/icon-512.png",
             clientErrorLogging: 1,
             aboutPageContent: null,
             gtmId: null,
@@ -1142,6 +1258,63 @@ export class MemStorage implements IStorage {
         };
     }
     return this.systemSettings;
+  }
+
+  async getSupportedLanguages(): Promise<SupportedLanguage[]> {
+    return Array.from(this.supportedLanguages.values());
+  }
+
+  async upsertSupportedLanguage(lang: InsertSupportedLanguage): Promise<SupportedLanguage> {
+    const createdAt = (this.supportedLanguages.get(lang.code)?.createdAt) || new Date();
+    const next: SupportedLanguage = {
+      code: lang.code,
+      name: lang.name,
+      rootUri: lang.rootUri ?? null,
+      isActive: lang.isActive ?? true,
+      isDefault: lang.isDefault ?? false,
+      createdAt,
+    };
+
+    if (next.isDefault) {
+      for (const existing of this.supportedLanguages.values()) {
+        if (existing.code !== next.code && existing.isDefault) {
+          this.supportedLanguages.set(existing.code, { ...existing, isDefault: false });
+        }
+      }
+    }
+
+    this.supportedLanguages.set(next.code, next);
+    return next;
+  }
+
+  async deleteSupportedLanguage(code: string): Promise<void> {
+    this.supportedLanguages.delete(code);
+  }
+
+  async getUiTranslations(lang: string, namespace?: string): Promise<Record<string, string>> {
+    const out: Record<string, string> = {};
+    for (const t of this.uiTranslations.values()) {
+      if (t.languageCode !== lang) continue;
+      if (namespace && t.namespace !== namespace) continue;
+      out[t.key] = t.value;
+    }
+    return out;
+  }
+
+  async upsertUiTranslation(trans: InsertUiTranslation): Promise<UiTranslation> {
+    const key = `${trans.languageCode}:${trans.namespace || 'translation'}:${trans.key}`;
+    const existing = this.uiTranslations.get(key);
+    const updatedAt = new Date();
+    const row: UiTranslation = {
+      id: existing?.id || Math.random().toString(36).slice(2, 10),
+      languageCode: trans.languageCode,
+      namespace: trans.namespace || 'translation',
+      key: trans.key,
+      value: trans.value,
+      updatedAt,
+    };
+    this.uiTranslations.set(key, row);
+    return row;
   }
 
   async updateSystemSettings(data: Partial<SystemSettings>): Promise<SystemSettings> {
