@@ -35,6 +35,15 @@ function parseBoolEnv(value: string | undefined, defaultValue: boolean) {
   return defaultValue;
 }
 
+function parseIntEnv(value: string | undefined, defaultValue: number, opts?: { min?: number; max?: number }) {
+  if (value == null) return defaultValue;
+  const parsed = parseInt(value.trim(), 10);
+  if (!Number.isFinite(parsed)) return defaultValue;
+  const min = opts?.min ?? -Infinity;
+  const max = opts?.max ?? Infinity;
+  return Math.max(min, Math.min(max, parsed));
+}
+
 function maskConnectionString(connectionString: string) {
   try {
     const url = new URL(connectionString);
@@ -95,13 +104,18 @@ async function withPool<T>(
   connectionString: string,
   sslEnabled: boolean,
   fn: (pool: Pool) => Promise<T>,
+  options?: {
+    max?: number;
+    idleTimeoutMillis?: number;
+    connectionTimeoutMillis?: number;
+  },
 ) {
   const pool = new Pool({
     connectionString,
     ssl: sslEnabled ? { rejectUnauthorized: false } : undefined,
-    max: 3,
-    idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 10000,
+    max: options?.max ?? 3,
+    idleTimeoutMillis: options?.idleTimeoutMillis ?? 30000,
+    connectionTimeoutMillis: options?.connectionTimeoutMillis ?? 30000,
   });
 
   try {
@@ -194,6 +208,16 @@ export class AdminMigrationService {
     const sourceSslEnabled = parseBoolEnv(process.env.MIGRATION_SOURCE_DB_SSL, true);
     const targetSslEnabled = parseBoolEnv(process.env.MIGRATION_TARGET_DB_SSL, parseBoolEnv(process.env.DB_SSL, true));
 
+    const defaultConnectTimeoutMs = parseIntEnv(process.env.MIGRATION_CONNECT_TIMEOUT_MS, 30000, { min: 1000, max: 300000 });
+    const sourceConnectTimeoutMs = parseIntEnv(process.env.MIGRATION_SOURCE_CONNECT_TIMEOUT_MS, defaultConnectTimeoutMs, {
+      min: 1000,
+      max: 300000,
+    });
+    const targetConnectTimeoutMs = parseIntEnv(process.env.MIGRATION_TARGET_CONNECT_TIMEOUT_MS, defaultConnectTimeoutMs, {
+      min: 1000,
+      max: 300000,
+    });
+
     const checks: { name: string; ok: boolean; message?: string }[] = [];
 
     if (!sourceUrl) {
@@ -224,7 +248,10 @@ export class AdminMigrationService {
 
     if (sourceUrl) {
       try {
-        await withPool(sourceUrl, sourceSslEnabled, async (pool) => {
+        await withPool(
+          sourceUrl,
+          sourceSslEnabled,
+          async (pool) => {
           await pool.query("select 1 as ok");
           const hasVideos = await tableExists(pool, "videos");
           checks.push({
@@ -237,7 +264,9 @@ export class AdminMigrationService {
             ok: hasVideos,
             message: hasVideos ? "videos table found" : "videos table missing",
           });
-        });
+          },
+          { connectionTimeoutMillis: sourceConnectTimeoutMs },
+        );
       } catch (e: any) {
         checks.push({
           name: "source_connectivity",
@@ -249,7 +278,10 @@ export class AdminMigrationService {
 
     if (targetUrl) {
       try {
-        await withPool(targetUrl, targetSslEnabled, async (pool) => {
+        await withPool(
+          targetUrl,
+          targetSslEnabled,
+          async (pool) => {
           await pool.query("select 1 as ok");
           const hasVideos = await tableExists(pool, "videos");
           checks.push({
@@ -262,7 +294,9 @@ export class AdminMigrationService {
             ok: hasVideos,
             message: hasVideos ? "videos table found" : "videos table missing (will be created)",
           });
-        });
+          },
+          { connectionTimeoutMillis: targetConnectTimeoutMs },
+        );
       } catch (e: any) {
         checks.push({
           name: "target_connectivity",
