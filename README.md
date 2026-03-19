@@ -102,6 +102,9 @@ Follow these steps to get your local development environment up and running.
     OPENAI_API_KEY="sk-..."
     ```
 
+Notes:
+- `REDIS_URL` supports both `redis://` and `rediss://` (TLS). For `rediss://` the client enables TLS automatically.
+
 ### Coolify / Docker Deploy Notes
 
 If you see Postgres errors like `Tenant or user not found` in logs, your `DATABASE_URL` is pointing to a Postgres host where the user/tenant (or endpoint) does not exist.

@@ -19,11 +19,20 @@ export function getRedisClient(): Redis | null {
     return null;
   }
 
+  let isTls = false;
+  try {
+    const parsed = new URL(redisUrl);
+    isTls = parsed.protocol === "rediss:";
+  } catch {
+    isTls = redisUrl.startsWith("rediss://");
+  }
+
   try {
     console.log("[Redis] Connecting to Redis...");
     redisClient = new Redis(redisUrl, {
       maxRetriesPerRequest: 1, // Fail fast for individual requests
       enableOfflineQueue: false, // Don't queue commands if disconnected
+      ...(isTls ? { tls: { rejectUnauthorized: false } } : {}),
       retryStrategy(times) {
         const delay = Math.min(times * 50, 2000);
         return delay; // Keep retrying indefinitely with backoff
