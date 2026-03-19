@@ -18,6 +18,10 @@
     "youtube": "YouTube",
     "tiktok": "TikTok"
   },
+  "languages": {
+    "en": "Engleski",
+    "sr-Latn": "Srpski"
+  },
   "nav": {
     "browse": "Pretraži",
     "channels": "Kanali",

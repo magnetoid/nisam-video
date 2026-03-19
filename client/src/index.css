@@ -14,6 +14,10 @@ body {
   overflow: hidden;
 }
 
+.ns-transition-duration-10s {
+  transition-duration: 10s;
+}
+
 /* LIGHT MODE */
 :root {
   --button-outline: rgba(0, 0, 0, 0.1);

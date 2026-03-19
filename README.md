@@ -102,6 +102,15 @@ Follow these steps to get your local development environment up and running.
     OPENAI_API_KEY="sk-..."
     ```
 
+### Coolify / Docker Deploy Notes
+
+If you see Postgres errors like `Tenant or user not found` in logs, your `DATABASE_URL` is pointing to a Postgres host where the user/tenant (or endpoint) does not exist.
+
+- Verify `DATABASE_URL` in Coolify matches the database provider exactly (host, database name, username, password).
+- If using a managed Postgres (Neon/Supabase/etc.), ensure the endpoint/role still exists and that SSL requirements match your provider.
+- If you run an internal Postgres without SSL, set `DB_SSL=0` (the app defaults to SSL enabled).
+- You can disable the background KV cleanup job (to stop log spam while debugging DB credentials) by setting `KV_DISABLE_BACKGROUND_TASKS=1`.
+
 4.  **Initialize Database**
     ```bash
     npm run db:push

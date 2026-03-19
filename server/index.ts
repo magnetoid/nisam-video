@@ -15,6 +15,7 @@ import { recordError } from "./error-log-service.js";
 import { recordRequestMetric } from "./performance-metrics.js";
 import { runMigrations } from "./migrate.js";
 import { startCronJobs } from "./services/cron.js";
+import { getHealthSnapshot, startHealthProbes } from "./health.js";
 
 const app = express();
 
@@ -273,6 +274,8 @@ async function startServer() {
   const initStart = Date.now();
   log("Starting server initialization...");
 
+  startHealthProbes();
+
   // Run database migrations on startup
   if (process.env.VERCEL !== "1") {
     try {
@@ -301,15 +304,21 @@ async function startServer() {
   // Health check endpoint with error monitoring
   app.get("/health", (req, res) => {
     const healthStatus = errorMonitor.getHealthStatus();
+    const deps = getHealthSnapshot();
     const dbStatus = {
       ready: isDbReady(),
       pool: pool ? 'connected' : 'disconnected',
     };
+
+    const degraded =
+      (deps.database.configured && !deps.database.ok) ||
+      (deps.redis.configured && !deps.redis.ok);
     
-    res.json({
-      status: healthStatus.status,
+    res.status(200).json({
+      status: degraded ? "degraded" : healthStatus.status,
       timestamp: new Date().toISOString(),
       database: dbStatus,
+      dependencies: deps,
       errorMonitor: healthStatus,
       uptime: process.uptime(),
       memory: process.memoryUsage(),
@@ -324,8 +333,13 @@ async function startServer() {
   } else {
     log("Initializing scheduler...");
     const schedStart = Date.now();
-    await scheduler.init();
-    log(`Scheduler initialized in ${Date.now() - schedStart}ms`);
+    try {
+      await scheduler.init();
+      log(`Scheduler initialized in ${Date.now() - schedStart}ms`);
+    } catch (err: any) {
+      const message = err instanceof Error ? err.message : String(err);
+      log(`Scheduler initialization failed (continuing without scheduler): ${message}`);
+    }
   }
 
   // Start background jobs

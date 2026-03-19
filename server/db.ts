@@ -5,6 +5,14 @@ import { recordError } from "./error-log-service.js";
 
 export const dbUrl = process.env.DATABASE_URL;
 
+function parseBoolEnv(value: string | undefined, defaultValue: boolean) {
+  if (value == null) return defaultValue;
+  const v = value.trim().toLowerCase();
+  if (["1", "true", "yes", "y", "on"].includes(v)) return true;
+  if (["0", "false", "no", "n", "off"].includes(v)) return false;
+  return defaultValue;
+}
+
 export let pool: Pool | null = null;
 export let db: ReturnType<typeof drizzle> | any = null;
 
@@ -18,9 +26,10 @@ if (dbUrl) {
   } catch {}
 
   try {
+    const sslEnabled = parseBoolEnv(process.env.DB_SSL, true);
     pool = new Pool({
       connectionString,
-      ssl: { rejectUnauthorized: false }, // Allow self-signed certs (Supabase pooler)
+      ssl: sslEnabled ? { rejectUnauthorized: false } : undefined,
       // Use env var for max connections, default to 10. 
       // Only use 1 if specifically needed for serverless environments without pooling.
       max: process.env.DB_POOL_MAX ? parseInt(process.env.DB_POOL_MAX, 10) : (process.env.NODE_ENV === "production" ? 10 : 10),

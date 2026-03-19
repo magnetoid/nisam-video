@@ -1,6 +1,7 @@
 import pLimit from "p-limit";
 import pRetry, { AbortError } from "p-retry";
 import { z } from "zod";
+import { translateContent } from "./services/translation-service.js";
 import { db } from "./db.js";
 import { aiSettings } from "../shared/schema.js";
 import { recordError } from "./error-log-service.js";
@@ -267,14 +268,45 @@ Return ONLY valid JSON. Do not include markdown formatting or explanations.`;
              throw new Error(`Invalid JSON schema: ${parsed.error.message}`);
           }
 
+          let categoriesSr = parsed.data.categories_sr;
+          let tagsSr = parsed.data.tags_sr;
+
+          if (categoriesSr.length === 0 && parsed.data.categories_en.length > 0) {
+            try {
+              const payload = Object.fromEntries(
+                parsed.data.categories_en.map((v, i) => [`c${i}`, v]),
+              );
+              const translated = await translateContent("sr-Latn", payload, "en");
+              categoriesSr = parsed.data.categories_en
+                .map((_, i) => translated[`c${i}`])
+                .filter((v): v is string => typeof v === "string" && v.trim().length > 0)
+                .map((v) => v.trim());
+            } catch {
+            }
+          }
+
+          if (tagsSr.length === 0 && parsed.data.tags_en.length > 0) {
+            try {
+              const payload = Object.fromEntries(
+                parsed.data.tags_en.map((v, i) => [`t${i}`, v]),
+              );
+              const translated = await translateContent("sr-Latn", payload, "en");
+              tagsSr = parsed.data.tags_en
+                .map((_, i) => translated[`t${i}`])
+                .filter((v): v is string => typeof v === "string" && v.trim().length > 0)
+                .map((v) => v.trim());
+            } catch {
+            }
+          }
+
           return {
             categories: {
               en: parsed.data.categories_en,
-              sr: parsed.data.categories_sr
+              sr: categoriesSr
             },
             tags: {
               en: parsed.data.tags_en,
-              sr: parsed.data.tags_sr
+              sr: tagsSr
             },
           };
         } catch (error: any) {

@@ -1,4 +1,5 @@
 import Redis from "ioredis";
+import pRetry from "p-retry";
 
 // Global instance
 let redisClient: Redis | null = null;
@@ -112,7 +113,21 @@ export async function getCache<T>(key: string): Promise<T | null> {
   if (!redis) return null;
 
   try {
-    const data = await redis.get(key);
+    const data = await pRetry(
+      async () => {
+        if (redis.status !== "ready") {
+          throw new Error(`Redis not ready (status=${redis.status})`);
+        }
+        return await redis.get(key);
+      },
+      {
+        retries: 3,
+        factor: 2,
+        minTimeout: 100,
+        maxTimeout: 1500,
+        onFailedAttempt: () => {},
+      },
+    ).catch(() => null);
     if (!data) return null;
     
     // Attempt to parse JSON
@@ -135,7 +150,21 @@ export async function setCache(key: string, value: any, ttlSeconds: number = 300
   if (!redis) return;
 
   try {
-    await redis.set(key, JSON.stringify(value), "EX", ttlSeconds);
+    await pRetry(
+      async () => {
+        if (redis.status !== "ready") {
+          throw new Error(`Redis not ready (status=${redis.status})`);
+        }
+        await redis.set(key, JSON.stringify(value), "EX", ttlSeconds);
+      },
+      {
+        retries: 3,
+        factor: 2,
+        minTimeout: 100,
+        maxTimeout: 1500,
+        onFailedAttempt: () => {},
+      },
+    ).catch(() => {});
   } catch (error) {
     // Ignore set errors
   }
@@ -146,9 +175,37 @@ export async function clearCache(pattern: string): Promise<void> {
   if (!redis) return;
 
   try {
-    const keys = await redis.keys(pattern);
+    const keys = await pRetry(
+      async () => {
+        if (redis.status !== "ready") {
+          throw new Error(`Redis not ready (status=${redis.status})`);
+        }
+        return await redis.keys(pattern);
+      },
+      {
+        retries: 3,
+        factor: 2,
+        minTimeout: 200,
+        maxTimeout: 2000,
+        onFailedAttempt: () => {},
+      },
+    ).catch(() => [] as string[]);
     if (keys.length > 0) {
-      await redis.del(keys);
+      await pRetry(
+        async () => {
+          if (redis.status !== "ready") {
+            throw new Error(`Redis not ready (status=${redis.status})`);
+          }
+          await redis.del(keys);
+        },
+        {
+          retries: 3,
+          factor: 2,
+          minTimeout: 200,
+          maxTimeout: 2000,
+          onFailedAttempt: () => {},
+        },
+      ).catch(() => {});
     }
   } catch (error) {
     console.error(`[Redis] Clear error for pattern ${pattern}:`, error);

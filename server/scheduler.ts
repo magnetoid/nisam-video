@@ -17,16 +17,19 @@ class SchedulerService {
   private isRunning = false;
 
   async init() {
-    // Ensure scheduler settings exist
-    const settings = await this.getSettings();
-    if (!settings) {
-      await storage.updateSchedulerSettings({
-        isEnabled: 0,
-        intervalHours: 6,
-      });
-    } else if (settings.isEnabled) {
-      // Start scheduler if enabled
-      await this.start();
+    try {
+      const settings = await this.getSettings();
+      if (!settings) {
+        await storage.updateSchedulerSettings({
+          isEnabled: 0,
+          intervalHours: 6,
+        });
+      } else if (settings.isEnabled) {
+        await this.start();
+      }
+    } catch (err: any) {
+      const message = err instanceof Error ? err.message : String(err);
+      logger.warn(`[Scheduler] init skipped due to error: ${message}`);
     }
   }
 

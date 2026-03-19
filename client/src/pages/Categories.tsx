@@ -193,7 +193,7 @@ export default function Categories() {
               }`}
               data-testid={`button-filter-${category.id}`}
             >
-              {(category.translations?.[0]?.name || category.id)} ({count})
+              {(category.name || category.id)} ({count})
             </button>
           ))}
           {otherCategories.length > 0 && (
@@ -223,7 +223,7 @@ export default function Categories() {
             videos={gridVideos}
             title={
               selectedCategory
-                ? (top20Categories.find((g) => g.category.id === selectedCategory)?.category.translations?.[0]?.name ||
+                ? (top20Categories.find((g) => g.category.id === selectedCategory)?.category.name ||
                     t("categories.categoryVideos", "Category Videos"))
                 : t("categories.latestVideos", "Latest Videos")
             }

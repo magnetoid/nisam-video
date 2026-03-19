@@ -98,7 +98,7 @@ export default function Popular() {
                 <img
                   src={getMaxResolutionThumbnail(topVideo.thumbnailUrl, topVideo.videoId)}
                   alt={topVideo.title}
-                  className="w-full h-full object-cover transition-transform duration-[10s] ease-linear group-hover:scale-105"
+                  className="w-full h-full object-cover transition-transform ns-transition-duration-10s ease-linear group-hover:scale-105"
                   loading="eager"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />

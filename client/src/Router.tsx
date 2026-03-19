@@ -2,6 +2,8 @@ import { lazy, Suspense, LazyExoticComponent, ComponentType, ReactNode, useEffec
 import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
+import type { SupportedLanguage } from "@shared/schema";
+import { stripLanguagePrefix } from "@/lib/languageRouting";
 
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AdminLayout } from "@/components/AdminLayout";
@@ -139,12 +141,6 @@ function AppRoutes() {
   );
 }
 
-interface SupportedLanguage {
-  code: string;
-  isDefault: boolean;
-  rootUri: string | null;
-}
-
 export function AppRouter() {
   const [location] = useLocation();
 
@@ -159,32 +155,16 @@ export function AppRouter() {
   }
 
   const defaultLang = languages.find(l => l.isDefault)?.code || "sr-Latn";
-  
-  // Helper to get effective root URI
-  const getRootUri = (lang: SupportedLanguage) => {
-    if (lang.rootUri) return lang.rootUri === '/' ? '' : lang.rootUri;
-    return lang.isDefault ? '' : `/${lang.code}`;
-  };
 
-  // Sort languages by root URI length (desc) to match most specific first
-  const sortedLangs = [...languages]
-    .filter(l => getRootUri(l)) // Only consider languages with non-empty root URI for prefix matching
-    .sort((a, b) => getRootUri(b).length - getRootUri(a).length);
+  const routingLanguages = languages.map((l) => ({
+    code: l.code,
+    rootUri: l.rootUri,
+    isDefault: l.isDefault,
+  }));
 
-  let matchedLang: SupportedLanguage | undefined;
-  let base = "";
-
-  for (const l of sortedLangs) {
-    const uri = getRootUri(l);
-    if (location.startsWith(`${uri}/`) || location === uri) {
-      matchedLang = l;
-      base = uri;
-      break;
-    }
-  }
-
-  if (matchedLang) {
-    const langCode = matchedLang.code;
+  const { matched, base } = stripLanguagePrefix(location, routingLanguages);
+  if (matched) {
+    const langCode = matched.code;
     return (
       <WouterRouter base={base}>
         <LanguageWrapper lang={langCode}>

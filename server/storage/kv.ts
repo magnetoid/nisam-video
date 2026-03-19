@@ -1,6 +1,33 @@
 import { db } from "../db.js";
 import { kvStore } from "../../shared/schema.js";
 import { eq, like, and, lt, sql } from "drizzle-orm";
+import pRetry from "p-retry";
+
+let lastKvErrorLogAt = 0;
+let suppressedKvErrorCount = 0;
+
+function logKvError(op: string, error: unknown) {
+  const message =
+    error && typeof (error as any).message === "string"
+      ? (error as any).message
+      : String(error);
+
+  const now = Date.now();
+  const throttleMs = 5 * 60 * 1000;
+  if (now - lastKvErrorLogAt < throttleMs) {
+    suppressedKvErrorCount++;
+    return;
+  }
+
+  const suffix =
+    suppressedKvErrorCount > 0
+      ? ` (suppressed ${suppressedKvErrorCount} similar errors)`
+      : "";
+  suppressedKvErrorCount = 0;
+  lastKvErrorLogAt = now;
+
+  console.error(`[kv] ${op} failed: ${message}${suffix}`);
+}
 
 // Re-implement the kvStore interface using Drizzle
 export const kvStorage = {
@@ -25,7 +52,7 @@ export const kvStorage = {
           }
         });
     } catch (error) {
-      console.error(`KV set failed for key ${key}:`, error);
+      logKvError(`set (${key})`, error);
       throw error;
     }
   },
@@ -52,7 +79,7 @@ export const kvStorage = {
 
       return result[0].value;
     } catch (error) {
-      console.error(`KV get failed for key ${key}:`, error);
+      logKvError(`get (${key})`, error);
       return null;
     }
   },
@@ -62,7 +89,7 @@ export const kvStorage = {
     try {
       await db.delete(kvStore).where(eq(kvStore.key, key));
     } catch (error) {
-      console.error(`KV delete failed for key ${key}:`, error);
+      logKvError(`delete (${key})`, error);
       throw error;
     }
   },
@@ -70,20 +97,39 @@ export const kvStorage = {
   // List all keys (optionally with a prefix filter)
   async list(prefix?: string): Promise<string[]> {
     try {
-      let query = db.select({ key: kvStore.key }).from(kvStore);
+      let query = db
+        .select({ key: kvStore.key })
+        .from(kvStore)
+        .where(sql`(${kvStore.expiresAt} IS NULL OR ${kvStore.expiresAt} > NOW())`);
       
       if (prefix) {
-        query = query.where(like(kvStore.key, `${prefix}%`));
+        query = query.where(
+          and(
+            like(kvStore.key, `${prefix}%`),
+            sql`(${kvStore.expiresAt} IS NULL OR ${kvStore.expiresAt} > NOW())`,
+          ),
+        );
       }
 
       // Filter expired
       // Note: This might be slow for large tables without an index on expiresAt
       // But for this use case (rate limits, buffers) it's acceptable
       
-      const rows = await query;
+      const rows = await pRetry(
+        async () => {
+          return await query;
+        },
+        {
+          retries: 3,
+          factor: 2,
+          minTimeout: 200,
+          maxTimeout: 2000,
+        },
+      ).catch(() => null);
+      if (!rows) return [];
       return rows.map((r: { key: string }) => r.key);
     } catch (error) {
-      console.error(`KV list failed:`, error);
+      logKvError(prefix ? `list (${prefix})` : "list", error);
       return [];
     }
   },
@@ -100,7 +146,7 @@ export const kvStorage = {
       
       return result;
     } catch (error) {
-      console.error(`KV getAll failed:`, error);
+      logKvError(prefix ? `getAll (${prefix})` : "getAll", error);
       return {};
     }
   },
@@ -114,7 +160,7 @@ export const kvStorage = {
         await db.delete(kvStore);
       }
     } catch (error) {
-      console.error(`KV clear failed:`, error);
+      logKvError(prefix ? `clear (${prefix})` : "clear", error);
       throw error;
     }
   },
@@ -128,7 +174,7 @@ export const kvStorage = {
         
       return result.length;
     } catch (error) {
-      console.error(`KV cleanup failed:`, error);
+      logKvError("cleanupExpired", error);
       return 0;
     }
   }

@@ -25,34 +25,27 @@ import { Loader2, Plus, Trash2, Edit, Save, Globe, Sparkles } from "lucide-react
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { useTranslation } from "react-i18next";
 
-interface SupportedLanguage {
-  code: string;
-  name: string;
-  rootUri: string | null;
-  isActive: boolean;
-  isDefault: boolean;
-}
+import type { SupportedLanguageLite } from "@/types/languages";
 
 interface UiTranslation {
   key: string;
   value: string;
 }
 
-import { useTranslation } from "react-i18next";
-
 export default function AdminLanguages() {
   const { t } = useTranslation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isAddOpen, setIsAddOpen] = useState(false);
-  const [editingLang, setEditingLang] = useState<SupportedLanguage | null>(null);
+  const [editingLang, setEditingLang] = useState<SupportedLanguageLite | null>(null);
   const [selectedLangCode, setSelectedLangCode] = useState<string>("sr-Latn");
   const [searchQuery, setSearchQuery] = useState("");
   const [showMissingOnly, setShowMissingOnly] = useState(false);
 
   // Fetch Languages
-  const { data: languages = [], isLoading: isLoadingLangs } = useQuery<SupportedLanguage[]>({
+  const { data: languages = [], isLoading: isLoadingLangs } = useQuery<SupportedLanguageLite[]>({
     queryKey: ["/api/languages"],
   });
 
@@ -81,7 +74,7 @@ export default function AdminLanguages() {
 
   // Mutations
   const upsertLangMutation = useMutation({
-    mutationFn: async (data: Partial<SupportedLanguage>) => {
+    mutationFn: async (data: Partial<SupportedLanguageLite>) => {
       const res = await apiRequest("POST", "/api/languages", data);
       return res.json();
     },
@@ -162,7 +155,7 @@ export default function AdminLanguages() {
   });
 
   // Form State
-  const [formData, setFormData] = useState<Partial<SupportedLanguage>>({
+  const [formData, setFormData] = useState<Partial<SupportedLanguageLite>>({
     code: "",
     name: "",
     rootUri: "",
@@ -170,7 +163,7 @@ export default function AdminLanguages() {
     isDefault: false,
   });
 
-  const handleEdit = (lang: SupportedLanguage) => {
+  const handleEdit = (lang: SupportedLanguageLite) => {
     setFormData(lang);
     setEditingLang(lang);
     setIsAddOpen(true);

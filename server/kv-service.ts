@@ -18,6 +18,14 @@ const VIEW_BUFFER_TIMEOUT = 30 * 1000; // Or sync every 30 seconds
 // Viewing history configuration
 const MAX_HISTORY_ITEMS = 20; // Keep last 20 videos per session
 
+const KV_DEBUG = process.env.KV_DEBUG === "1";
+const KV_DISABLE_BACKGROUND_TASKS = process.env.KV_DISABLE_BACKGROUND_TASKS === "1";
+
+function kvDebug(message: string, ...args: any[]) {
+  if (!KV_DEBUG) return;
+  console.log(message, ...args);
+}
+
 export const kvService = {
   /**
    * Rate limiting for likes
@@ -28,13 +36,13 @@ export const kvService = {
     const now = Date.now();
     
     try {
-      console.log(`[KV] Checking rate limit for key: ${key}`);
+      kvDebug(`[kv] rate limit check: ${key}`);
       const data = await kvStore.get(key);
-      console.log(`[KV] Rate limit data retrieved:`, data);
+      kvDebug(`[kv] rate limit data:`, data);
       
       if (!data) {
         // First action, allow and create entry
-        console.log(`[KV] First action, setting rate limit`);
+        kvDebug(`[kv] rate limit init`);
         await kvStore.set(key, {
           count: 1,
           windowStart: now
@@ -48,7 +56,7 @@ export const kvService = {
       // Check if window has expired
       if (windowAge > RATE_LIMIT_WINDOW) {
         // Reset window
-        console.log(`[KV] Window expired, resetting`);
+        kvDebug(`[kv] rate limit reset`);
         await kvStore.set(key, {
           count: 1,
           windowStart: now
@@ -58,12 +66,12 @@ export const kvService = {
       
       // Check if limit exceeded
       if (count >= MAX_LIKES_PER_WINDOW) {
-        console.log(`[KV] Rate limit exceeded: ${count} >= ${MAX_LIKES_PER_WINDOW}`);
+        kvDebug(`[kv] rate limit exceeded: ${count} >= ${MAX_LIKES_PER_WINDOW}`);
         return false;
       }
       
       // Increment counter
-      console.log(`[KV] Incrementing counter to ${count + 1}`);
+      kvDebug(`[kv] rate limit increment: ${count + 1}`);
       await kvStore.set(key, {
         count: count + 1,
         windowStart
@@ -227,13 +235,16 @@ export const kvService = {
       let cleaned = 0;
       
       for (const key of rateLimitKeys) {
-        const data = await kvStore.get(key);
-        if (data && data.windowStart) {
-          const age = now - data.windowStart;
-          if (age > RATE_LIMIT_WINDOW) {
-            await kvStore.delete(key);
-            cleaned++;
+        try {
+          const data = await kvStore.get(key);
+          if (data && data.windowStart) {
+            const age = now - data.windowStart;
+            if (age > RATE_LIMIT_WINDOW) {
+              await kvStore.delete(key);
+              cleaned++;
+            }
           }
+        } catch {
         }
       }
       
@@ -254,13 +265,16 @@ export const kvService = {
       let flushed = 0;
       
       for (const key of bufferKeys) {
-        const videoId = key.replace('viewbuffer:', '');
-        const buffer = await kvStore.get(key);
-        
-        if (buffer && buffer.count > 0) {
-          await this.syncViewBuffer(videoId, buffer.count);
-          await kvStore.set(key, { count: 0, lastSync: Date.now() });
-          flushed++;
+        try {
+          const videoId = key.replace('viewbuffer:', '');
+          const buffer = await kvStore.get(key);
+          
+          if (buffer && buffer.count > 0) {
+            await this.syncViewBuffer(videoId, buffer.count);
+            await kvStore.set(key, { count: 0, lastSync: Date.now() });
+            flushed++;
+          }
+        } catch {
         }
       }
       
@@ -274,6 +288,7 @@ export const kvService = {
 
 // Background task to periodically flush view buffers and clean up rate limits
 setInterval(async () => {
+  if (KV_DISABLE_BACKGROUND_TASKS) return;
   try {
     const [flushed, cleaned] = await Promise.all([
       kvService.flushAllViewBuffers(),

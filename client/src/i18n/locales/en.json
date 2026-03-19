@@ -1065,6 +1065,10 @@
     "tiktok": "TikTok",
     "youtube": "YouTube"
   },
+  "languages": {
+    "en": "English",
+    "sr-Latn": "Serbian"
+  },
   "playlists": {
     "actions": "Actions",
     "cancel": "Cancel",
