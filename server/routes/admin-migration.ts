@@ -7,6 +7,15 @@ const router = Router();
 
 router.use(requireAdmin);
 
+router.get("/preflight", async (_req, res) => {
+  try {
+    const result = await adminMigrationService.preflight();
+    res.json(result);
+  } catch (e: any) {
+    res.status(500).json({ error: e?.message ? String(e.message) : "Preflight failed" });
+  }
+});
+
 router.post("/preflight", async (_req, res) => {
   try {
     const result = await adminMigrationService.preflight();
