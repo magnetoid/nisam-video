@@ -50,7 +50,6 @@ const adminPages = {
   aiSettings: lazy(() => import("@/pages/AdminAISettings")),
   users: lazy(() => import("@/pages/AdminUsers")),
   languages: lazy(() => import("@/pages/AdminLanguages")),
-  migration: lazy(() => import("@/pages/AdminMigration")),
 };
 
 type AdminPageKey = keyof typeof adminPages;
@@ -61,7 +60,6 @@ interface AdminRouteConfig {
 }
 
 const adminRoutes: AdminRouteConfig[] = [
-  { path: "/admin/migration", page: "migration" },
   { path: "/admin/channels", page: "channels" },
   { path: "/admin/videos", page: "videos" },
   { path: "/admin/categories", page: "categories" },

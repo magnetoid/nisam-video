@@ -26,7 +26,6 @@ import usersRouter from "./users.js";
 import channelRecommendationsRouter from "./channel-recommendations.js";
 import adminChannelRecommendationsRouter from "./admin-channel-recommendations.js";
 import emailSettingsRouter from "./email-settings.js";
-import adminMigrationRouter from "./admin-migration.js";
 
 export function registerFeatureRoutes(app: Express): void {
   app.use("/api", publicRouter);
@@ -35,7 +34,6 @@ export function registerFeatureRoutes(app: Express): void {
   app.use("/api", channelRecommendationsRouter);
   app.use("/api/tiktok-profiles", tiktokRouter);
   app.use("/api/admin/email-settings", emailSettingsRouter);
-  app.use("/api/admin/migration", adminMigrationRouter);
   app.use("/api/admin", adminChannelRecommendationsRouter);
   app.use("/api/admin", adminRouter);
   app.use("/api/videos", videosRouter);

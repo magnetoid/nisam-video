@@ -176,12 +176,6 @@ export function AdminSidebar({ open = false, onClose, className }: AdminSidebarP
           testId: "link-export",
         },
         {
-          icon: RefreshCw,
-          label: t("admin.migration", "Migration & Cutover"),
-          path: "/admin/migration",
-          testId: "link-migration",
-        },
-        {
           icon: Database,
           label: t("admin.cacheSettings", "Cache Settings"),
           path: "/admin/cache",
