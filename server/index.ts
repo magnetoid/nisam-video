@@ -10,6 +10,7 @@ import { scheduler } from "./scheduler.js";
 import { cacheMiddleware } from "./cache-middleware.js";
 import { storage } from "./storage/index.js";
 import { fileURLToPath } from "url";
+import crypto from "crypto";
 import { errorMonitor, asyncHandler } from "./error-monitor.js";
 import { recordError } from "./error-log-service.js";
 import { recordRequestMetric } from "./performance-metrics.js";
@@ -118,9 +119,21 @@ app.set("trust proxy", true);
 
 const PgStore = connectPgSimple(session);
 
+function getSessionSecret() {
+  const raw = typeof process.env.SESSION_SECRET === "string" ? process.env.SESSION_SECRET.trim() : "";
+  if (raw.length >= 32) return raw;
+
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("SESSION_SECRET is required in production and must be at least 32 characters");
+  }
+
+  const generated = crypto.randomBytes(32).toString("hex");
+  log("SESSION_SECRET not set; using ephemeral secret for this process", "config");
+  return generated;
+}
+
 const sessionConfig: session.SessionOptions = {
-  secret:
-    process.env.SESSION_SECRET || "nisam-video-secret-key-change-in-production",
+  secret: getSessionSecret(),
   resave: false,
   saveUninitialized: false,
   cookie: {

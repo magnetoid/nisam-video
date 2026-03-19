@@ -26,13 +26,18 @@ function getConfiguredAdmin() {
   }
 
   if (process.env.NODE_ENV === "development") {
-    if (!ADMIN_USERNAME || !ADMIN_PASSWORD) {
-      console.warn("[Auth] Using default admin credentials (admin/admin) for development mode.");
+    if (ADMIN_USERNAME && ADMIN_PASSWORD) {
+      return {
+        username: normalizeCredential(ADMIN_USERNAME),
+        password: normalizeCredential(ADMIN_PASSWORD),
+      };
     }
-    return {
-      username: normalizeCredential(ADMIN_USERNAME || "admin"),
-      password: normalizeCredential(ADMIN_PASSWORD || "admin"),
-    };
+
+    const allowDevDefault = process.env.ALLOW_DEV_DEFAULT_ADMIN === "1";
+    if (!allowDevDefault) return null;
+
+    console.warn("[Auth] Using default admin credentials (admin/admin) because ALLOW_DEV_DEFAULT_ADMIN=1.");
+    return { username: "admin", password: "admin" };
   }
 
   return null;

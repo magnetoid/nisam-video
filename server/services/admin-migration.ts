@@ -155,6 +155,25 @@ export class AdminMigrationService {
     sslEnabled: boolean | null;
   } | null = null;
 
+  private getSourceUrl() {
+    return (
+      process.env.MIGRATION_SOURCE_DATABASE_URL ||
+      process.env.SUPABASE_POSTGRES_URL ||
+      process.env.DB_URL ||
+      null
+    );
+  }
+
+  private getTargetUrl() {
+    return (
+      process.env.MIGRATION_TARGET_DATABASE_URL ||
+      process.env.DATABASE_URL ||
+      process.env.SUPABASE_POSTGRES_URL ||
+      process.env.DB_URL ||
+      null
+    );
+  }
+
   getJob(jobId: string) {
     return this.jobs.get(jobId) || null;
   }
@@ -169,8 +188,8 @@ export class AdminMigrationService {
   async preflight() {
     const migrationsFolder = getMigrationsFolder();
 
-    const sourceUrl = process.env.MIGRATION_SOURCE_DATABASE_URL;
-    const targetUrl = process.env.MIGRATION_TARGET_DATABASE_URL || process.env.DATABASE_URL;
+    const sourceUrl = this.getSourceUrl();
+    const targetUrl = this.getTargetUrl();
 
     const sourceSslEnabled = parseBoolEnv(process.env.MIGRATION_SOURCE_DB_SSL, true);
     const targetSslEnabled = parseBoolEnv(process.env.MIGRATION_TARGET_DB_SSL, parseBoolEnv(process.env.DB_SSL, true));
@@ -178,13 +197,21 @@ export class AdminMigrationService {
     const checks: { name: string; ok: boolean; message?: string }[] = [];
 
     if (!sourceUrl) {
-      checks.push({ name: "source_configured", ok: false, message: "MIGRATION_SOURCE_DATABASE_URL not set" });
+      checks.push({
+        name: "source_configured",
+        ok: false,
+        message: "No source DB configured (set MIGRATION_SOURCE_DATABASE_URL, or SUPABASE_POSTGRES_URL, or DB_URL)",
+      });
     } else {
       checks.push({ name: "source_configured", ok: true });
     }
 
     if (!targetUrl) {
-      checks.push({ name: "target_configured", ok: false, message: "MIGRATION_TARGET_DATABASE_URL or DATABASE_URL not set" });
+      checks.push({
+        name: "target_configured",
+        ok: false,
+        message: "No target DB configured (set MIGRATION_TARGET_DATABASE_URL, or DATABASE_URL, or SUPABASE_POSTGRES_URL, or DB_URL)",
+      });
     } else {
       checks.push({ name: "target_configured", ok: true });
     }
@@ -298,14 +325,18 @@ export class AdminMigrationService {
     if (!job) return;
 
     const migrationsFolder = getMigrationsFolder();
-    const sourceUrl = process.env.MIGRATION_SOURCE_DATABASE_URL;
-    const targetUrl = process.env.MIGRATION_TARGET_DATABASE_URL || process.env.DATABASE_URL;
+    const sourceUrl = this.getSourceUrl();
+    const targetUrl = this.getTargetUrl();
     const sourceSslEnabled = parseBoolEnv(process.env.MIGRATION_SOURCE_DB_SSL, true);
     const targetSslEnabled = parseBoolEnv(process.env.MIGRATION_TARGET_DB_SSL, parseBoolEnv(process.env.DB_SSL, true));
 
     if (!migrationsFolder) throw new Error("Migrations folder not found");
-    if (!sourceUrl) throw new Error("MIGRATION_SOURCE_DATABASE_URL not set");
-    if (!targetUrl) throw new Error("Target database URL not set");
+    if (!sourceUrl) {
+      throw new Error("No source DB configured (set MIGRATION_SOURCE_DATABASE_URL, or SUPABASE_POSTGRES_URL, or DB_URL)");
+    }
+    if (!targetUrl) {
+      throw new Error("No target DB configured (set MIGRATION_TARGET_DATABASE_URL, or DATABASE_URL, or SUPABASE_POSTGRES_URL, or DB_URL)");
+    }
 
     job.state = "running";
     job.phase = "migrating_schema";

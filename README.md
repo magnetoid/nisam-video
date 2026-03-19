@@ -97,9 +97,9 @@ Follow these steps to get your local development environment up and running.
     SESSION_SECRET="super-secret-key"
     ADMIN_USERNAME="admin"
     ADMIN_PASSWORD="password"
+    ALLOW_DEV_DEFAULT_ADMIN="0"
     # Optional:
     REDIS_URL="redis://localhost:6379"
-    OPENAI_API_KEY="sk-..."
     ```
 
 Notes:
