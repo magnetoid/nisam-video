@@ -106,8 +106,10 @@ process.on('uncaughtException', (error) => {
     module: "process",
   });
   
-  // Exit gracefully
-  process.exit(1);
+  const shouldExit = process.env.EXIT_ON_UNCAUGHT_EXCEPTION === "1";
+  if (shouldExit) {
+    process.exit(1);
+  }
 });
 
 // Trust proxy for Cloudflare and other reverse proxies
@@ -130,11 +132,64 @@ const sessionConfig: session.SessionOptions = {
 };
 
 if (process.env.NODE_ENV === "production" && pool) {
-  sessionConfig.store = new PgStore({
+  const primaryStore = new PgStore({
     pool,
     tableName: "session",
     createTableIfMissing: true,
   });
+  const fallbackStore = new session.MemoryStore();
+
+  class HybridSessionStore extends session.Store {
+    private isDbHealthy() {
+      try {
+        const deps = getHealthSnapshot();
+        return deps.database.configured && deps.database.ok;
+      } catch {
+        return false;
+      }
+    }
+
+    private store() {
+      return this.isDbHealthy() ? primaryStore : fallbackStore;
+    }
+
+    get(sid: string, cb: (err: any, session?: any | null) => void) {
+      this.store().get(sid, (err: any, sess: any) => {
+        if (!err) return cb(null, sess);
+        fallbackStore.get(sid, (_e: any, fallbackSess: any) => cb(null, fallbackSess));
+      });
+    }
+
+    set(sid: string, sess: any, cb: (err?: any) => void) {
+      this.store().set(sid, sess, (err: any) => {
+        if (!err) return cb(null);
+        fallbackStore.set(sid, sess, () => cb(null));
+      });
+    }
+
+    destroy(sid: string, cb: (err?: any) => void) {
+      this.store().destroy(sid, (err: any) => {
+        if (!err) return cb(null);
+        fallbackStore.destroy(sid, () => cb(null));
+      });
+    }
+
+    touch(sid: string, sess: any, cb: (err?: any) => void) {
+      const s: any = this.store();
+      if (typeof s.touch === "function") {
+        s.touch(sid, sess, (err: any) => {
+          if (!err) return cb(null);
+          const f: any = fallbackStore;
+          if (typeof f.touch === "function") f.touch(sid, sess, () => cb(null));
+          else cb(null);
+        });
+        return;
+      }
+      cb(null);
+    }
+  }
+
+  sessionConfig.store = new HybridSessionStore();
 }
 
 app.use(session(sessionConfig));
