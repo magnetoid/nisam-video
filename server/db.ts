@@ -15,6 +15,92 @@ function parseBoolEnv(value: string | undefined, defaultValue: boolean) {
 
 export let pool: Pool | null = null;
 export let db: ReturnType<typeof drizzle> | any = null;
+let activeConnectionString: string | null = null;
+let activeSslEnabled: boolean | null = null;
+let activeLabel: string = process.env.DB_ACTIVE_LABEL || "primary";
+
+function maskConnectionString(connectionString: string) {
+  try {
+    const url = new URL(connectionString);
+    return `${url.protocol}//${url.host}${url.pathname}`;
+  } catch {
+    return "(invalid)";
+  }
+}
+
+function createPoolAndDb(connectionString: string, sslEnabled: boolean) {
+  const newPool = new Pool({
+    connectionString,
+    ssl: sslEnabled ? { rejectUnauthorized: false } : undefined,
+    max: process.env.DB_POOL_MAX ? parseInt(process.env.DB_POOL_MAX, 10) : (process.env.NODE_ENV === "production" ? 10 : 10),
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 10000,
+  });
+
+  newPool.on("error", (err) => {
+    console.error("Unexpected error on idle client", err);
+    recordError({
+      level: "critical",
+      type: "db_pool_error",
+      message: err.message,
+      stack: err.stack,
+      module: "db",
+    });
+  });
+
+  const newDb = drizzle(newPool, { schema });
+  return { newPool, newDb };
+}
+
+export async function switchDatabaseConnection(params: {
+  label: string;
+  connectionString: string;
+  sslEnabled: boolean;
+}) {
+  const prev = {
+    label: activeLabel,
+    connectionString: activeConnectionString,
+    sslEnabled: activeSslEnabled,
+  };
+
+  const { newPool, newDb } = createPoolAndDb(params.connectionString, params.sslEnabled);
+
+  const oldPool = pool;
+  pool = newPool;
+  db = newDb;
+  activeLabel = params.label;
+  activeConnectionString = params.connectionString;
+  activeSslEnabled = params.sslEnabled;
+
+  try {
+    await newPool.query("select 1 as ok");
+  } catch (e) {
+    pool = oldPool;
+    db = oldPool ? drizzle(oldPool, { schema }) : null;
+    activeLabel = prev.label;
+    activeConnectionString = prev.connectionString;
+    activeSslEnabled = prev.sslEnabled;
+    try {
+      await newPool.end();
+    } catch {}
+    throw e;
+  }
+
+  try {
+    if (oldPool) await oldPool.end();
+  } catch {}
+
+  return prev;
+}
+
+export function getActiveDatabaseInfo() {
+  return {
+    label: activeLabel,
+    configured: Boolean(activeConnectionString || dbUrl),
+    maskedUrl: activeConnectionString ? maskConnectionString(activeConnectionString) : dbUrl ? maskConnectionString(dbUrl) : null,
+    sslEnabled: activeSslEnabled,
+  };
+}
 
 if (dbUrl) {
   let connectionString = dbUrl;
@@ -27,30 +113,11 @@ if (dbUrl) {
 
   try {
     const sslEnabled = parseBoolEnv(process.env.DB_SSL, true);
-    pool = new Pool({
-      connectionString,
-      ssl: sslEnabled ? { rejectUnauthorized: false } : undefined,
-      // Use env var for max connections, default to 10. 
-      // Only use 1 if specifically needed for serverless environments without pooling.
-      max: process.env.DB_POOL_MAX ? parseInt(process.env.DB_POOL_MAX, 10) : (process.env.NODE_ENV === "production" ? 10 : 10),
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 10000, // Increased to 10s to allow more time for connection acquisition
-    });
-
-    // Prevent crashes on idle client errors
-    pool.on('error', (err) => {
-      console.error('Unexpected error on idle client', err);
-      recordError({
-        level: "critical",
-        type: "db_pool_error",
-        message: err.message,
-        stack: err.stack,
-        module: "db",
-      });
-      // process.exit(-1); // Do not exit, let it recover
-    });
-
-    db = drizzle(pool, { schema });
+    const created = createPoolAndDb(connectionString, sslEnabled);
+    pool = created.newPool;
+    db = created.newDb;
+    activeConnectionString = connectionString;
+    activeSslEnabled = sslEnabled;
   } catch (error) {
     console.error("Failed to initialize database connection:", error);
     recordError({

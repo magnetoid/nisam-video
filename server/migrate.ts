@@ -1,8 +1,39 @@
-import { migrate } from "drizzle-orm/node-postgres/migrator";
-import { db, pool } from "./db.js";
+import { pool } from "./db.js";
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
+
+async function applySqlMigrations(migrationsFolder: string) {
+  if (!pool) return;
+  const entries = fs.readdirSync(migrationsFolder, { withFileTypes: true });
+  const files = entries
+    .filter((e) => e.isFile() && e.name.endsWith(".sql"))
+    .map((e) => e.name)
+    .sort((a, b) => a.localeCompare(b));
+
+  const duplicateCodes = new Set(["42P07", "42701", "42710"]);
+
+  for (const file of files) {
+    const fullPath = path.join(migrationsFolder, file);
+    const sqlText = fs.readFileSync(fullPath, "utf8");
+    const statements = sqlText
+      .split("--> statement-breakpoint")
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    for (const stmt of statements) {
+      try {
+        await pool.query(stmt);
+      } catch (e: any) {
+        if (e?.code && duplicateCodes.has(String(e.code))) {
+          console.log(`[migrate] Skipped already-applied statement (${e.code}) from ${file}`);
+          continue;
+        }
+        throw e;
+      }
+    }
+  }
+}
 
 async function ensureScrapeJobsColumns() {
   if (!pool) return;
@@ -328,6 +359,42 @@ export async function runMigrations() {
   console.log("[migrate] Starting database migrations...");
 
   try {
+    // Determine the migrations folder path
+    // Try multiple common locations for Vercel/Serverless environments
+    const candidates = [
+      path.join(process.cwd(), "migrations"), // Standard Vercel root
+      path.join(process.cwd(), "../migrations"), // If CWD is api/
+      path.join(path.dirname(fileURLToPath(import.meta.url)), "../migrations"), // Relative to this file
+      path.join(path.dirname(fileURLToPath(import.meta.url)), "../../migrations"), // Relative to build output
+      // Dodajem i apsolutnu putanju za Docker
+      "/app/migrations"
+    ];
+
+    let migrationsFolder = "";
+    
+    for (const candidate of candidates) {
+      if (fs.existsSync(candidate) && fs.existsSync(path.join(candidate, "meta"))) {
+        migrationsFolder = candidate;
+        console.log(`[migrate] Found migrations folder at ${migrationsFolder}`);
+        break;
+      }
+    }
+    
+    if (!migrationsFolder) {
+      console.warn(`[migrate] Migrations folder not found. Searched: ${candidates.join(", ")}`);
+      // List contents of current directory to help debug
+      try {
+        console.log(`[migrate] CWD contents: ${fs.readdirSync(process.cwd()).join(", ")}`);
+      } catch (e) {
+        console.warn("[migrate] Failed to list CWD");
+      }
+      return;
+    }
+
+    await applySqlMigrations(migrationsFolder);
+
+    console.log("[migrate] Database migrations completed successfully");
+
     try {
       await ensureScrapeJobsColumns();
     } catch (e) {
@@ -368,50 +435,8 @@ export async function runMigrations() {
     } catch (e) {
       console.error("[migrate] ai tables bootstrap failed:", e);
     }
-
-    // Determine the migrations folder path
-    // Try multiple common locations for Vercel/Serverless environments
-    const candidates = [
-      path.join(process.cwd(), "migrations"), // Standard Vercel root
-      path.join(process.cwd(), "../migrations"), // If CWD is api/
-      path.join(path.dirname(fileURLToPath(import.meta.url)), "../migrations"), // Relative to this file
-      path.join(path.dirname(fileURLToPath(import.meta.url)), "../../migrations"), // Relative to build output
-      // Dodajem i apsolutnu putanju za Docker
-      "/app/migrations"
-    ];
-
-    let migrationsFolder = "";
-    
-    for (const candidate of candidates) {
-      if (fs.existsSync(candidate) && fs.existsSync(path.join(candidate, "meta"))) {
-        migrationsFolder = candidate;
-        console.log(`[migrate] Found migrations folder at ${migrationsFolder}`);
-        break;
-      }
-    }
-    
-    if (!migrationsFolder) {
-      console.warn(`[migrate] Migrations folder not found. Searched: ${candidates.join(", ")}`);
-      // List contents of current directory to help debug
-      try {
-        console.log(`[migrate] CWD contents: ${fs.readdirSync(process.cwd()).join(", ")}`);
-      } catch (e) {
-        console.warn("[migrate] Failed to list CWD");
-      }
-      return;
-    }
-
-    // Run migrations
-    // @ts-ignore - db type mismatch with migrator but strictly compatible at runtime
-    await migrate(db, { migrationsFolder });
-
-    console.log("[migrate] Database migrations completed successfully");
   } catch (error: any) {
-    if (error?.code === '42P07') {
-      console.log("[migrate] Tables already exist, skipping migration (safe to ignore)");
-    } else {
-      console.error("[migrate] Database migration failed:", error);
-    }
+    console.error("[migrate] Database migration failed:", error);
     // We don't throw here to prevent the server from crashing completely
   }
 }
