@@ -32,6 +32,10 @@ vi.mock("../server/middleware/auth.js", () => ({
     req.user = { id: "admin", role: "admin" };
     next();
   },
+  requireAdmin: (req: any, res: any, next: any) => {
+    req.user = { id: "admin", role: "admin" };
+    next();
+  },
 }));
 
 // Mock other dependencies used in admin.ts

@@ -1,14 +1,13 @@
 import { Router } from "express";
 import { storage } from "../storage/index.js";
+import { requireAdmin } from "../middleware/auth.js";
 
 const router = Router();
 
+router.use(requireAdmin);
+
 // Get all users
 router.get("/", async (req, res) => {
-  if (!req.session.isAuthenticated || req.session.role !== "admin") {
-    return res.status(403).json({ error: "Unauthorized" });
-  }
-
   try {
     const users = await storage.getAllUsers();
     // Don't return passwords
@@ -28,10 +27,6 @@ router.get("/", async (req, res) => {
 
 // Update user role
 router.patch("/:id/role", async (req, res) => {
-  if (!req.session.isAuthenticated || req.session.role !== "admin") {
-    return res.status(403).json({ error: "Unauthorized" });
-  }
-
   const { id } = req.params;
   const { role } = req.body;
 
@@ -53,15 +48,9 @@ router.patch("/:id/role", async (req, res) => {
 
 // Delete user
 router.delete("/:id", async (req, res) => {
-  // @ts-ignore
-  if (!req.session.isAuthenticated || req.session.role !== "admin") {
-    return res.status(403).json({ error: "Unauthorized" });
-  }
-
   const { id } = req.params;
 
   // Prevent deleting yourself
-  // @ts-ignore
   if (req.session.userId === id) {
     return res.status(400).json({ error: "Cannot delete yourself" });
   }

@@ -20,26 +20,6 @@ import { getHealthSnapshot, startHealthProbes } from "./health.js";
 
 const app = express();
 
-process.on("unhandledRejection", (reason: any) => {
-  recordError({
-    level: "critical",
-    type: "unhandled_rejection",
-    message: reason?.message || String(reason),
-    stack: reason?.stack,
-    module: "process",
-  });
-});
-
-process.on("uncaughtException", (error: any) => {
-  recordError({
-    level: "critical",
-    type: "uncaught_exception",
-    message: error?.message || String(error),
-    stack: error?.stack,
-    module: "process",
-  });
-});
-
 if (pool) {
   pool.on("error", (err: any) => {
     recordError({
@@ -88,7 +68,7 @@ process.on('unhandledRejection', (reason, promise) => {
   // Record the error
   recordError({
     level: "critical",
-    type: "unhandled_promise_rejection",
+    type: "unhandled_rejection",
     message: reason instanceof Error ? reason.message : String(reason),
     stack: reason instanceof Error ? reason.stack : undefined,
     module: "process",

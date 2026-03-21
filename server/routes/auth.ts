@@ -79,9 +79,7 @@ router.post("/register", async (req, res) => {
 
     req.session.isAuthenticated = true;
     req.session.username = newUser.username;
-    // @ts-ignore
     req.session.userId = newUser.id;
-    // @ts-ignore
     req.session.role = newUser.role;
 
     req.session.save((err) => {
