@@ -412,3 +412,118 @@ export async function listBookmarks(limit = 200) {
     throw error;
   }
 }
+
+type AuditAction = 
+  | "auth.login.success"
+  | "auth.login.failure"
+  | "auth.login.error"
+  | "auth.logout"
+  | "user.register"
+  | "user.update"
+  | "user.delete"
+  | "admin.action"
+  | "data.export"
+  | "sensitive.operation";
+
+export type AuditLogInput = {
+  action: AuditAction;
+  userId?: string;
+  username?: string;
+  ip?: string;
+  userAgent?: string;
+  metadata?: Record<string, unknown>;
+};
+
+const memoryAuditLogs: any[] = [];
+const MAX_AUDIT_LOG_MEMORY = 1000;
+
+function createAuditFingerprint(input: AuditLogInput): string {
+  const base = [
+    input.action,
+    input.userId || "",
+    input.username || "",
+    input.ip || "",
+    new Date().toISOString().slice(0, 13),
+  ].join("|");
+  return createHash("sha256").update(base).digest("hex").slice(0, 32);
+}
+
+export async function recordAuditLog(input: AuditLogInput) {
+  const now = new Date();
+  const fingerprint = createAuditFingerprint(input);
+  
+  const auditEntry = {
+    id: createHash("sha1").update(`${fingerprint}-${now.getTime()}`).digest("hex").slice(0, 16),
+    fingerprint,
+    action: input.action,
+    userId: safeString(input.userId, 200) || null,
+    username: safeString(input.username, 200) || null,
+    ip: safeString(input.ip, 100) || null,
+    userAgent: safeString(input.userAgent, 1000) || null,
+    metadata: input.metadata ? sanitizeUnknown(input.metadata) : null,
+    createdAt: now,
+  };
+
+  if (memoryAuditLogs.length >= MAX_AUDIT_LOG_MEMORY) {
+    memoryAuditLogs.shift();
+  }
+  memoryAuditLogs.push(auditEntry);
+
+  try {
+    if (!db) {
+      console.warn("[audit] Database not available, using in-memory audit log");
+      return auditEntry;
+    }
+
+    const auditTableExists = await checkTableExists("audit_logs");
+    if (!auditTableExists) {
+      console.warn("[audit] audit_logs table does not exist, using in-memory storage");
+      return auditEntry;
+    }
+
+    await db.execute(sql`
+      INSERT INTO audit_logs (
+        fingerprint, action, user_id, username, ip, user_agent, metadata, created_at
+      ) VALUES (
+        ${auditEntry.fingerprint},
+        ${auditEntry.action},
+        ${auditEntry.userId},
+        ${auditEntry.username},
+        ${auditEntry.ip},
+        ${auditEntry.userAgent},
+        ${JSON.stringify(auditEntry.metadata)},
+        ${auditEntry.createdAt}
+      )
+    `);
+    
+    return auditEntry;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (message.includes("audit_logs") && (message.includes("does not exist") || message.includes("relation"))) {
+      console.warn("[audit] audit_logs table not available, using in-memory storage");
+      return auditEntry;
+    }
+    
+    console.error("[audit] recordAuditLog failed:", error);
+    return auditEntry;
+  }
+}
+
+async function checkTableExists(tableName: string): Promise<boolean> {
+  try {
+    const result = await db.execute(sql`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = ${tableName}
+      ) as exists
+    `);
+    return result.rows?.[0]?.exists === true;
+  } catch {
+    return false;
+  }
+}
+
+export function getRecentAuditLogs(limit = 100): any[] {
+  return memoryAuditLogs.slice(-limit);
+}

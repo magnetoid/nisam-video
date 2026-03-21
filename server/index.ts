@@ -3,7 +3,10 @@ import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
 import compression from "compression";
 import connectPgSimple from "connect-pg-simple";
+import helmet from "helmet";
 import { pool, isDbReady } from "./db.js";
+import { getHelmetConfig, createRateLimiters, csrfMiddleware } from "./middleware/security.js";
+import { corsMiddleware } from "./middleware/cors.js";
 import { registerRoutes } from "./routes.js";
 import publicRoutes from "./routes/public.js";
 import { scheduler } from "./scheduler.js";
@@ -192,14 +195,26 @@ declare module "http" {
     rawBody: unknown;
   }
 }
-app.use(
-  express.json({
-    verify: (req, _res, buf) => {
-      req.rawBody = buf;
-    },
-  }),
-);
-app.use(express.urlencoded({ extended: false }));
+
+// Security middleware - Helmet
+app.use(helmet(getHelmetConfig()));
+
+// CORS middleware
+app.use(corsMiddleware);
+
+// Rate limiting - general
+const rateLimiters = createRateLimiters();
+app.use(rateLimiters.standard);
+
+// Request body size limits
+app.use(express.json({ 
+  limit: "10mb",
+  verify: (req, _res, buf) => {
+    req.rawBody = buf;
+  },
+}));
+app.use(express.urlencoded({ extended: false, limit: "10mb" }));
+app.use(express.raw({ limit: "25mb", type: () => true }));
 
 // Cloudflare-optimized caching headers middleware
 app.use((req, res, next) => {
@@ -243,11 +258,8 @@ app.use((req, res, next) => {
     res.setHeader("CDN-Cache-Control", "public, max-age=3600"); // 1 hour on edge
   }
 
-  // Security headers for Cloudflare
-  res.setHeader("X-Content-Type-Options", "nosniff");
-  res.setHeader("X-Frame-Options", "DENY");
-  res.setHeader("X-XSS-Protection", "1; mode=block");
-  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  // Note: X-Content-Type-Options, X-Frame-Options, X-XSS-Protection, Referrer-Policy
+  // are now handled by Helmet middleware
 
   next();
 });

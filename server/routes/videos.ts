@@ -782,4 +782,170 @@ router.post("/batch/like-status", async (req, res) => {
   }
 });
 
+router.post("/scrape", requireAuth, async (req, res) => {
+  try {
+    const { url } = req.body;
+    if (!url) {
+      return res.status(400).json({ error: "URL is required" });
+    }
+
+    const { scrapeYouTubeVideoPage } = await import("../video-scraper.js");
+    const result = await scrapeYouTubeVideoPage(url);
+
+    if (!result.success) {
+      return res.status(400).json({ error: result.error, partial: false });
+    }
+
+    const video = result.data!;
+    const existing = await storage.getVideoByVideoId(video.videoId);
+
+    const updateData: any = {};
+    let needsUpdate = false;
+
+    if (!existing) {
+      const channel = await storage.getAllChannels().then(channels => 
+        channels.find(c => c.platform === "youtube")
+      );
+      
+      if (!channel) {
+        return res.status(400).json({ error: "No YouTube channel configured. Please create a channel first." });
+      }
+
+      const slug = video.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").substring(0, 80);
+      const newVideo = await storage.createVideo({
+        channelId: channel.id,
+        videoId: video.videoId,
+        slug,
+        title: video.title,
+        description: video.description || null,
+        thumbnailUrl: video.thumbnailUrl,
+        duration: video.duration || null,
+        viewCount: video.viewCount || null,
+        publishDate: video.publishDate || null,
+        videoType: video.isShort ? "youtube_short" : "regular",
+      });
+
+      return res.json({
+        success: true,
+        action: "created",
+        video: newVideo,
+        partial: result.partial,
+      });
+    }
+
+    if (video.title && video.title !== existing.title) {
+      updateData.title = video.title;
+      needsUpdate = true;
+    }
+    if (video.description && video.description !== existing.description) {
+      updateData.description = video.description;
+      needsUpdate = true;
+    }
+    if (video.viewCount && video.viewCount !== existing.viewCount) {
+      updateData.viewCount = video.viewCount;
+      needsUpdate = true;
+    }
+    if (video.duration && video.duration !== existing.duration) {
+      updateData.duration = video.duration;
+      needsUpdate = true;
+    }
+
+    if (needsUpdate) {
+      await storage.updateVideo(existing.id, updateData);
+    }
+
+    const updatedVideo = await storage.getVideo(existing.id);
+
+    res.json({
+      success: true,
+      action: needsUpdate ? "updated" : "unchanged",
+      video: updatedVideo,
+      partial: result.partial,
+      updatedFields: Object.keys(updateData),
+    });
+  } catch (error) {
+    console.error("Scrape video error:", error);
+    res.status(500).json({ error: "Failed to scrape video" });
+  }
+});
+
+router.post("/scrape-batch", requireAuth, async (req, res) => {
+  try {
+    const { urls } = req.body;
+    if (!Array.isArray(urls) || urls.length === 0) {
+      return res.status(400).json({ error: "URLs array is required" });
+    }
+
+    const maxUrls = Math.min(urls.length, 20);
+    const limitedUrls = urls.slice(0, maxUrls);
+
+    const { scrapeMultipleVideos } = await import("../video-scraper.js");
+    const results = await scrapeMultipleVideos(limitedUrls);
+
+    const response: any = {
+      total: limitedUrls.length,
+      successful: 0,
+      failed: 0,
+      partial: 0,
+      videos: [],
+      errors: [],
+    };
+
+    const channels = await storage.getAllChannels().then(ch => 
+      ch.filter(c => c.platform === "youtube")
+    );
+    const channel = channels[0];
+
+    for (const [url, result] of results) {
+      if (!result.success) {
+        response.failed++;
+        response.errors.push({ url, error: result.error });
+        continue;
+      }
+
+      const video = result.data!;
+      response.successful++;
+      if (result.partial) response.partial++;
+
+      try {
+        const existing = await storage.getVideoByVideoId(video.videoId);
+        if (existing) {
+          const updateData: any = {};
+          if (video.title && video.title !== existing.title) updateData.title = video.title;
+          if (video.description && video.description !== existing.description) updateData.description = video.description;
+          if (video.viewCount && video.viewCount !== existing.viewCount) updateData.viewCount = video.viewCount;
+          if (video.duration && video.duration !== existing.duration) updateData.duration = video.duration;
+
+          if (Object.keys(updateData).length > 0) {
+            await storage.updateVideo(existing.id, updateData);
+          }
+          response.videos.push({ id: existing.id, videoId: video.videoId, action: "updated" });
+        } else if (channel) {
+          const slug = video.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").substring(0, 80);
+          const newVideo = await storage.createVideo({
+            channelId: channel.id,
+            videoId: video.videoId,
+            slug,
+            title: video.title,
+            description: video.description || null,
+            thumbnailUrl: video.thumbnailUrl,
+            duration: video.duration || null,
+            viewCount: video.viewCount || null,
+            publishDate: video.publishDate || null,
+            videoType: video.isShort ? "youtube_short" : "regular",
+          });
+          response.videos.push({ id: newVideo.id, videoId: video.videoId, action: "created" });
+        }
+      } catch (e) {
+        response.errors.push({ url, videoId: video.videoId, error: String(e) });
+      }
+    }
+
+    res.json(response);
+  } catch (error) {
+    console.error("Batch scrape error:", error);
+    res.status(500).json({ error: "Failed to batch scrape videos" });
+  }
+});
+
 export default router;

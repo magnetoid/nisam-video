@@ -26,16 +26,25 @@ import usersRouter from "./users.js";
 import channelRecommendationsRouter from "./channel-recommendations.js";
 import adminChannelRecommendationsRouter from "./admin-channel-recommendations.js";
 import emailSettingsRouter from "./email-settings.js";
+import { createRateLimiters } from "../middleware/security.js";
 
 export function registerFeatureRoutes(app: Express): void {
+  const { auth, upload, api, sensitiveAction } = createRateLimiters();
+  
   app.use("/api", publicRouter);
-  app.use("/api/auth", authRouter);
+  
+  // Auth routes with strict rate limiting
+  app.use("/api/auth", auth, authRouter);
+  app.use("/api/users", usersRouter);
+  
   app.use("/api/channels", channelsRouter);
   app.use("/api", channelRecommendationsRouter);
   app.use("/api/tiktok-profiles", tiktokRouter);
   app.use("/api/admin/email-settings", emailSettingsRouter);
   app.use("/api/admin", adminChannelRecommendationsRouter);
-  app.use("/api/admin", adminRouter);
+  
+  // Admin routes with sensitive action rate limiting for mutations
+  app.use("/api/admin", sensitiveAction, adminRouter);
   app.use("/api/videos", videosRouter);
   app.use("/api/categories", categoriesRouter);
   app.use("/api/tags", tagsRouter);
@@ -48,11 +57,12 @@ export function registerFeatureRoutes(app: Express): void {
   app.use("/api/utils", utilsRouter);
   app.use("/api/shorts", shortsRouter);
   app.use("/api/user", userRouter);
-  app.use("/api/users", usersRouter);
   app.use("/api", logsRouter); // Mounts /client-logs and /activity-logs
   app.use("/api/export", exportsRouter);
   app.use("/api/ai", aiSettingsRouter);
   app.use("/api/cron", cronRouter);
-  app.use("/api/uploads", uploadsRouter);
+  
+  // Upload routes with upload-specific rate limiting
+  app.use("/api/uploads", upload, uploadsRouter);
   app.use("/api", tagImagesRouter);
 }
