@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta
       name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1"
+      content="width=device-width, initial-scale=1.0"
     />
     <title>nisam.video - AI-Powered Video Hub</title>
     <meta
@@ -13,16 +13,40 @@
     />
 
     <link rel="icon" type="image/png" href="/favicon.png" />
-
+    <link rel="apple-touch-icon" href="/icon-192.png" />
     <link rel="manifest" href="/manifest.json" />
+
     <meta name="theme-color" content="#E50914" />
+    <meta name="color-scheme" content="dark" />
     <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta
       name="apple-mobile-web-app-status-bar-style"
       content="black-translucent"
     />
     <meta name="apple-mobile-web-app-title" content="nisam.video" />
-    <link rel="apple-touch-icon" href="/icon-192.png" />
+
+    <!-- Default Open Graph (overridden per-page by SSR middleware + client SEO component) -->
+    <meta property="og:site_name" content="nisam.video" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="nisam.video - AI-Powered Video Hub" />
+    <meta property="og:description" content="Discover and explore curated video content with AI-powered categorization and intelligent search." />
+    <meta property="og:url" content="https://nisam.video/" />
+    <meta property="og:image" content="https://nisam.video/og-image.jpg" />
+    <meta property="og:image:width" content="1280" />
+    <meta property="og:image:height" content="720" />
+    <meta property="og:image:alt" content="nisam.video - AI-Powered Video Hub" />
+
+    <!-- Default Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@nisamvideo" />
+    <meta name="twitter:title" content="nisam.video - AI-Powered Video Hub" />
+    <meta name="twitter:description" content="Discover and explore curated video content with AI-powered categorization and intelligent search." />
+    <meta name="twitter:image" content="https://nisam.video/og-image.jpg" />
+
+    <!-- Robots -->
+    <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -33,6 +57,7 @@
 
     <link rel="preconnect" href="https://i.ytimg.com" crossorigin>
     <link rel="dns-prefetch" href="https://i.ytimg.com">
+    <link rel="dns-prefetch" href="https://www.youtube.com">
   </head>
   <body class="dark">
     <div id="root"></div>

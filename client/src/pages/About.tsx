@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { SEO } from "@/components/SEO";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -24,8 +25,79 @@ export default function About() {
     queryKey: ["/api/system/settings"],
   });
 
+  const aboutStructuredData = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": "https://nisam.video/#organization",
+        name: "nisam.video",
+        url: "https://nisam.video",
+        logo: {
+          "@type": "ImageObject",
+          url: "https://nisam.video/icon-512.png",
+          width: 512,
+          height: 512,
+        },
+        description: "AI-powered video aggregation hub with curated YouTube and TikTok content, automatically categorized and tagged for your viewing pleasure.",
+        sameAs: [],
+      },
+      {
+        "@type": "WebPage",
+        "@id": "https://nisam.video/about",
+        url: "https://nisam.video/about",
+        name: "About nisam.video - AI-Powered Video Hub",
+        isPartOf: { "@id": "https://nisam.video/#website" },
+        about: { "@id": "https://nisam.video/#organization" },
+      },
+      {
+        "@type": "FAQPage",
+        mainEntity: [
+          {
+            "@type": "Question",
+            name: "What is nisam.video?",
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: "nisam.video is an AI-powered video aggregation platform that automatically discovers, categorizes, and curates the best YouTube and TikTok content. It works like Netflix but for free online videos.",
+            },
+          },
+          {
+            "@type": "Question",
+            name: "How does the AI curation work?",
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: "Our system uses advanced AI (GPT-based models) to analyze video titles, descriptions, and metadata. It automatically assigns categories, generates relevant tags, and ranks content by quality and relevance — all without manual intervention.",
+            },
+          },
+          {
+            "@type": "Question",
+            name: "Is nisam.video free to use?",
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: "Yes, nisam.video is completely free to use. You can browse, search, and watch all curated videos without any subscription or registration.",
+            },
+          },
+          {
+            "@type": "Question",
+            name: "Can I suggest a YouTube channel?",
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: "Yes! You can recommend a channel through the 'Recommend Channel' option in the footer. Our team reviews suggestions and adds quality channels to the platform.",
+            },
+          },
+        ],
+      },
+    ],
+  };
+
   return (
     <div className="min-h-screen bg-background flex flex-col font-sans">
+      <SEO
+        title="About - AI-Powered Video Hub"
+        description="nisam.video is an AI-powered video aggregation platform that discovers and curates the best YouTube and TikTok content — automatically categorized, tagged, and organized for you."
+        canonical="https://nisam.video/about"
+        structuredData={aboutStructuredData}
+      />
       <Header />
       
       {/* Hero Section */}

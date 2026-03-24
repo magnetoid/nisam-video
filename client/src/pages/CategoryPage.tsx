@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { VideoGrid } from "@/components/VideoGrid";
+import { SEO } from "@/components/SEO";
 import { LocalizedCategory, VideoWithLocalizedRelations } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -46,8 +47,37 @@ export default function CategoryPage() {
     </div>
   );
 
+  const currentUrl = `${window.location.origin}/category/${slug}`;
+
+  const categoryStructuredData = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "CollectionPage",
+        name: category.name,
+        description: category.description || `Browse ${category.name} videos on nisam.video`,
+        url: currentUrl,
+        numberOfItems: videos?.length ?? 0,
+      },
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: "Home", item: window.location.origin },
+          { "@type": "ListItem", position: 2, name: "Categories", item: `${window.location.origin}/categories` },
+          { "@type": "ListItem", position: 3, name: category.name, item: currentUrl },
+        ],
+      },
+    ],
+  };
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
+      <SEO
+        title={category.name}
+        description={category.description || `Browse the best ${category.name} videos on nisam.video. Curated and categorized by AI.`}
+        canonical={currentUrl}
+        structuredData={categoryStructuredData}
+      />
       <Header />
       <main className="flex-1 container mx-auto px-4 py-8">
         <div className="mb-8">

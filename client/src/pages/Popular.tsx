@@ -1,10 +1,10 @@
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { SEO } from "@/components/SEO";
-import type { VideoWithLocalizedRelations } from "@shared/schema";
+import type { VideoWithLocalizedRelations, SupportedLanguage } from "@shared/schema";
 import { TrendingUp, Eye, Play, Loader2 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { getOptimizedThumbnail, getMaxResolutionThumbnail } from "@/lib/video";
@@ -54,10 +54,14 @@ export default function Popular() {
   const topVideo = videos[0];
   const gridVideos = videos.slice(1);
 
+  const { data: languages = [] } = useQuery<SupportedLanguage[]>({
+    queryKey: ["/api/languages"],
+    staleTime: Infinity,
+  });
+
   const currentUrl = `${window.location.origin}/popular`;
   const hreflangLinks = [
-    { lang: "sr-Latn", url: currentUrl },
-    { lang: "en", url: currentUrl },
+    ...languages.map(lang => ({ lang: lang.code, url: currentUrl })),
     { lang: "x-default", url: currentUrl },
   ];
 

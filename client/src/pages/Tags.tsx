@@ -6,7 +6,7 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { VideoGrid } from "@/components/VideoGrid";
 import { SEO } from "@/components/SEO";
-import type { VideoWithLocalizedRelations, TagImage, LocalizedTag } from "@shared/schema";
+import type { VideoWithLocalizedRelations, TagImage, LocalizedTag, SupportedLanguage } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 
 type TagStat = { tagName: string; count: number; videoIds?: string[] };
@@ -108,10 +108,14 @@ export default function Tags() {
   const defaultHeroImage = featuredTagWithImage?.tagName ? tagImageMap[featuredTagWithImage.tagName]?.imageUrl : null;
   const displayHeroImage = heroImage || defaultHeroImage;
 
+  const { data: languages = [] } = useQuery<SupportedLanguage[]>({
+    queryKey: ["/api/languages"],
+    staleTime: Infinity,
+  });
+
   const currentUrl = `${window.location.origin}/tags`;
   const hreflangLinks = [
-    { lang: "sr-Latn", url: currentUrl },
-    { lang: "en", url: currentUrl },
+    ...languages.map(lang => ({ lang: lang.code, url: currentUrl })),
     { lang: "x-default", url: currentUrl },
   ];
 

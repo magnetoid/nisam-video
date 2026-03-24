@@ -172,6 +172,8 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <SEO
+        title={t("home.metaTitle", "AI-Powered Video Hub – Discover Curated Videos")}
+        description={t("home.metaDescription", "Discover and explore curated video content with AI-powered categorization. Browse trending, popular, and recently added YouTube and TikTok videos – organized just for you.")}
         path={effectivePrefix}
         structuredData={websiteStructuredData}
         canonical={currentCanonical}

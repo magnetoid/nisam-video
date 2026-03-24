@@ -214,17 +214,26 @@ export default function VideoPage() {
   const effectivePrefix = currentLang ? currentPrefix : (i18n.language === 'en' ? '/en' : '');
   const currentCanonical = `${origin}${effectivePrefix}/video/${videoSlugOrId}`;
 
+  // og:video embed URL for social media video preview
+  const ogVideoUrl = isTikTok
+    ? `https://www.tiktok.com/embed/v2/${video.videoId}`
+    : `https://www.youtube.com/embed/${video.videoId}`;
+
   return (
     <>
       <SEO
         title={seoTitle}
         description={seoDescription}
         image={seoImage}
+        imageAlt={video.title}
         path={`${effectivePrefix}/video/${videoSlugOrId}`}
         type="video.other"
         structuredData={combinedStructuredData}
         canonical={currentCanonical}
         hreflang={hreflangLinks}
+        videoUrl={ogVideoUrl}
+        videoSecureUrl={ogVideoUrl}
+        publishedTime={video.publishDate || undefined}
       />
 
       <Header />

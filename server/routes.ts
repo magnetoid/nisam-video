@@ -185,9 +185,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
       xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">\n';
 
-      const addUrl = (loc: string, opts?: { changefreq?: string; priority?: string; video?: any }) => {
+      const addUrl = (loc: string, opts?: { changefreq?: string; priority?: string; lastmod?: string; video?: any }) => {
         xml += "  <url>\n";
         xml += `    <loc>${escapeXml(loc)}</loc>\n`;
+        if (opts?.lastmod) xml += `    <lastmod>${opts.lastmod}</lastmod>\n`;
         if (opts?.changefreq) xml += `    <changefreq>${opts.changefreq}</changefreq>\n`;
         if (opts?.priority) xml += `    <priority>${opts.priority}</priority>\n`;
         if (opts?.video) {
@@ -212,14 +213,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           res.header("Content-Type", "application/xml");
           return res.send(xml);
         }
-        addUrl(`${baseUrl}/`, { changefreq: "daily", priority: "1.0" });
-        addUrl(`${baseUrl}/channels`, { changefreq: "weekly", priority: "0.7" });
-        addUrl(`${baseUrl}/categories`, { changefreq: "weekly", priority: "0.8" });
-        addUrl(`${baseUrl}/tags`, { changefreq: "weekly", priority: "0.8" });
-        addUrl(`${baseUrl}/shorts`, { changefreq: "daily", priority: "0.8" });
+        const today = new Date().toISOString().split("T")[0];
+        addUrl(`${baseUrl}/`, { changefreq: "daily", priority: "1.0", lastmod: today });
+        addUrl(`${baseUrl}/channels`, { changefreq: "weekly", priority: "0.7", lastmod: today });
+        addUrl(`${baseUrl}/categories`, { changefreq: "weekly", priority: "0.8", lastmod: today });
+        addUrl(`${baseUrl}/tags`, { changefreq: "weekly", priority: "0.8", lastmod: today });
+        addUrl(`${baseUrl}/shorts`, { changefreq: "daily", priority: "0.8", lastmod: today });
         addUrl(`${baseUrl}/about`, { changefreq: "monthly", priority: "0.4" });
         addUrl(`${baseUrl}/donate`, { changefreq: "monthly", priority: "0.3" });
-        addUrl(`${baseUrl}/popular`, { changefreq: "daily", priority: "0.9" });
+        addUrl(`${baseUrl}/popular`, { changefreq: "daily", priority: "0.9", lastmod: today });
       }
 
       if (type === "channels" && includeChannels) {
@@ -227,7 +229,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const slice = all.slice(offset, offset + pageSize);
         for (const channel of slice) {
           const slug = `${generateSlug(channel.name, 80)}-${channel.id}`;
-          addUrl(`${baseUrl}/channels/${slug}`, { changefreq: "weekly", priority: "0.6" });
+          const lastmod = (channel as any).updatedAt
+            ? new Date((channel as any).updatedAt).toISOString().split("T")[0]
+            : undefined;
+          addUrl(`${baseUrl}/channels/${slug}`, { changefreq: "weekly", priority: "0.6", lastmod });
         }
       }
 
@@ -235,7 +240,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const all = await storage.getAllLocalizedCategories(lang);
         const slice = all.slice(offset, offset + pageSize);
         for (const category of slice) {
-          addUrl(`${baseUrl}/categories?filter=${category.id}`, { changefreq: "weekly", priority: "0.7" });
+          // Use slug-based URLs for proper SEO; fall back to id-based slug
+          const catSlug = (category as any).slug || generateSlug(category.name || String(category.id), 80);
+          const lastmod = (category as any).updatedAt
+            ? new Date((category as any).updatedAt).toISOString().split("T")[0]
+            : undefined;
+          addUrl(`${baseUrl}/category/${catSlug}`, { changefreq: "weekly", priority: "0.7", lastmod });
         }
       }
 
@@ -261,9 +271,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           for (const video of vids) {
             const publicationDate = video.createdAt ? new Date(video.createdAt).toISOString() : undefined;
+            const lastmod = (video as any).updatedAt
+              ? new Date((video as any).updatedAt).toISOString().split("T")[0]
+              : publicationDate?.split("T")[0];
             addUrl(`${baseUrl}/video/${video.slug || video.id}`, {
               changefreq: "monthly",
               priority: "0.6",
+              lastmod,
               video: {
                 thumbnailUrl: video.thumbnailUrl,
                 title: video.title,

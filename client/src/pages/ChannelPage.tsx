@@ -111,7 +111,18 @@ export default function ChannelPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
-      <SEO title={pageTitle} description={t("channelPage.videosTitle")} />
+      <SEO
+        title={pageTitle}
+        description={
+          description ||
+          t("channelPage.seoDescription", {
+            channel: pageTitle,
+            defaultValue: `Watch all videos from ${pageTitle} on nisam.video. AI-curated content from this channel.`,
+          })
+        }
+        image={channel?.thumbnailUrl || channel?.bannerUrl || undefined}
+        imageAlt={pageTitle}
+      />
       <Header />
 
       <main className="pt-16">
