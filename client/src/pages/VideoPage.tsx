@@ -129,6 +129,23 @@ export default function VideoPage() {
     ? `https://www.tiktok.com/@${video.channel?.name || 'user'}/video/${video.videoId}`
     : `https://www.youtube.com/watch?v=${video.videoId}`;
 
+  // Parse duration string to seconds (supports ISO 8601 PT#M#S and HH:MM:SS / MM:SS formats)
+  const parseDurationToSeconds = (dur: string | null | undefined): number | undefined => {
+    if (!dur) return undefined;
+    // ISO 8601: PT1H2M30S, PT5M, PT30S
+    const isoMatch = dur.match(/^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/i);
+    if (isoMatch) {
+      return (parseInt(isoMatch[1] || "0") * 3600) + (parseInt(isoMatch[2] || "0") * 60) + parseInt(isoMatch[3] || "0");
+    }
+    // HH:MM:SS or MM:SS
+    const parts = dur.split(":").map(Number);
+    if (parts.length === 3 && parts.every(n => !isNaN(n))) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+    if (parts.length === 2 && parts.every(n => !isNaN(n))) return parts[0] * 60 + parts[1];
+    return undefined;
+  };
+
+  const durationSeconds = parseDurationToSeconds(video.duration);
+
   const videoStructuredData = {
     "@context": "https://schema.org",
     "@type": "VideoObject",
@@ -136,6 +153,7 @@ export default function VideoPage() {
     description: video.description || seoDescription,
     thumbnailUrl: [video.thumbnailUrl],
     uploadDate: video.publishDate,
+    ...(video.duration && { duration: video.duration.startsWith("PT") ? video.duration : `PT${video.duration.replace(/:/g, "M")}S` }),
     contentUrl,
     embedUrl,
     ...(viewCountNumber && {
@@ -233,6 +251,7 @@ export default function VideoPage() {
         hreflang={hreflangLinks}
         videoUrl={ogVideoUrl}
         videoSecureUrl={ogVideoUrl}
+        videoDuration={durationSeconds}
         publishedTime={video.publishDate || undefined}
       />
 

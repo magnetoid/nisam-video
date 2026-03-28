@@ -64,7 +64,7 @@ export function SEO({
   videoWidth = "1280",
   videoHeight = "720",
 }: SEOProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [location] = useLocation();
   const currentPath = location;
   
@@ -171,6 +171,13 @@ export function SEO({
       script.textContent = JSON.stringify(effectiveSchema);
     }
 
+    // Set HTML lang attribute based on current i18n language
+    const langCode = document.documentElement.lang;
+    const currentLangCode = i18n.language === "sr-Latn" ? "sr" : i18n.language;
+    if (langCode !== currentLangCode) {
+      document.documentElement.setAttribute("lang", currentLangCode);
+    }
+
     // Article meta tags (for videos and blog-like content)
     if (publishedTime) {
       updateMetaTag("article:published_time", publishedTime, true);
@@ -178,7 +185,7 @@ export function SEO({
     if (modifiedTime) {
       updateMetaTag("article:modified_time", modifiedTime, true);
     }
-  }, [title, description, image, imageAlt, imageWidth, imageHeight, type, publishedTime, modifiedTime, settings, currentPath, seoMeta, fullTitle, url, structuredData, canonical, hreflang, videoUrl, videoSecureUrl, videoDuration, videoWidth, videoHeight]);
+  }, [title, description, image, imageAlt, imageWidth, imageHeight, type, publishedTime, modifiedTime, settings, currentPath, seoMeta, fullTitle, url, structuredData, canonical, hreflang, videoUrl, videoSecureUrl, videoDuration, videoWidth, videoHeight, i18n.language]);
 
   return null;
 }

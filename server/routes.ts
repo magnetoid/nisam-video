@@ -12,6 +12,19 @@ import { sql } from "drizzle-orm";
 
 import languageRoutes from "./routes/languages.js";
 
+function parseDurationToSitemapSeconds(dur: string): number | undefined {
+  // ISO 8601: PT1H2M30S, PT5M, PT30S
+  const isoMatch = dur.match(/^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/i);
+  if (isoMatch) {
+    return (parseInt(isoMatch[1] || "0") * 3600) + (parseInt(isoMatch[2] || "0") * 60) + parseInt(isoMatch[3] || "0");
+  }
+  // HH:MM:SS or MM:SS
+  const parts = dur.split(":").map(Number);
+  if (parts.length === 3 && parts.every(n => !isNaN(n))) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+  if (parts.length === 2 && parts.every(n => !isNaN(n))) return parts[0] * 60 + parts[1];
+  return undefined;
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Image proxy
   app.use("/api/images", imageRouter);
@@ -202,6 +215,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           xml += `      <video:content_loc>${escapeXml(String(v.contentLoc || ""))}</video:content_loc>\n`;
           xml += `      <video:player_loc>${escapeXml(String(v.playerLoc || ""))}</video:player_loc>\n`;
           if (v.publicationDate) xml += `      <video:publication_date>${escapeXml(String(v.publicationDate))}</video:publication_date>\n`;
+          if (v.duration) xml += `      <video:duration>${escapeXml(String(v.duration))}</video:duration>\n`;
+          if (v.viewCount) xml += `      <video:view_count>${escapeXml(String(v.viewCount))}</video:view_count>\n`;
+          if (v.uploader) xml += `      <video:uploader>${escapeXml(String(v.uploader))}</video:uploader>\n`;
+          xml += "      <video:family_friendly>yes</video:family_friendly>\n";
           xml += "    </video:video>\n";
         }
         xml += "  </url>\n";
@@ -285,6 +302,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 contentLoc: `https://www.youtube.com/watch?v=${video.videoId}`,
                 playerLoc: `https://www.youtube.com/embed/${video.videoId}`,
                 publicationDate,
+                duration: video.duration ? parseDurationToSitemapSeconds(video.duration) : undefined,
+                viewCount: video.viewCount ? parseInt(String(video.viewCount).replace(/[,\s]/g, "").match(/\d+/)?.[0] || "0") || undefined : undefined,
+                uploader: (video as any).channel?.name,
               },
             });
           }

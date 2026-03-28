@@ -175,30 +175,98 @@ export async function seoMiddleware(req: Request, res: Response, next: NextFunct
       title = "Browse by Tags | nisam.video";
       description = "Discover videos through AI-generated tags on nisam.video. Find content by specific topics, keywords, and themes.";
       canonicalUrl = `${baseUrl}/tags`;
+      structuredData = JSON.stringify({
+        "@context": "https://schema.org",
+        "@graph": [
+          { "@type": "CollectionPage", "name": "Browse by Tags", "description": description, "url": canonicalUrl },
+          { "@type": "BreadcrumbList", "itemListElement": [
+            { "@type": "ListItem", "position": 1, "name": "Home", "item": baseUrl },
+            { "@type": "ListItem", "position": 2, "name": "Tags", "item": canonicalUrl },
+          ]},
+        ],
+      });
     }
 
     if (req.path === "/categories") {
       title = "Video Categories | nisam.video";
       description = "Browse all video categories on nisam.video. Find AI-curated content organized by topic, genre, and theme.";
       canonicalUrl = `${baseUrl}/categories`;
+      structuredData = JSON.stringify({
+        "@context": "https://schema.org",
+        "@graph": [
+          { "@type": "CollectionPage", "name": "Video Categories", "description": description, "url": canonicalUrl },
+          { "@type": "BreadcrumbList", "itemListElement": [
+            { "@type": "ListItem", "position": 1, "name": "Home", "item": baseUrl },
+            { "@type": "ListItem", "position": 2, "name": "Categories", "item": canonicalUrl },
+          ]},
+        ],
+      });
     }
 
     if (req.path === "/channels") {
       title = "Video Channels | nisam.video";
       description = "Browse all YouTube and TikTok channels on nisam.video. Discover quality content creators curated by AI.";
       canonicalUrl = `${baseUrl}/channels`;
+      structuredData = JSON.stringify({
+        "@context": "https://schema.org",
+        "@graph": [
+          { "@type": "CollectionPage", "name": "Video Channels", "description": description, "url": canonicalUrl },
+          { "@type": "BreadcrumbList", "itemListElement": [
+            { "@type": "ListItem", "position": 1, "name": "Home", "item": baseUrl },
+            { "@type": "ListItem", "position": 2, "name": "Channels", "item": canonicalUrl },
+          ]},
+        ],
+      });
     }
 
     if (req.path === "/about") {
       title = "About nisam.video - AI-Powered Video Hub";
       description = "nisam.video is an AI-powered video aggregation platform that discovers and curates the best YouTube and TikTok content — automatically categorized, tagged, and organized for you.";
       canonicalUrl = `${baseUrl}/about`;
+      structuredData = JSON.stringify({
+        "@context": "https://schema.org",
+        "@graph": [
+          { "@type": "WebPage", "name": "About nisam.video", "description": description, "url": canonicalUrl },
+          { "@type": "Organization", "name": "nisam.video", "url": baseUrl, "description": description },
+        ],
+      });
     }
 
     if (req.path === "/shorts") {
       title = "Short Videos | nisam.video";
       description = "Watch the best short-form videos on nisam.video. AI-curated quick content from YouTube Shorts and TikTok.";
       canonicalUrl = `${baseUrl}/shorts`;
+      structuredData = JSON.stringify({
+        "@context": "https://schema.org",
+        "@graph": [
+          { "@type": "CollectionPage", "name": "Short Videos", "description": description, "url": canonicalUrl },
+          { "@type": "BreadcrumbList", "itemListElement": [
+            { "@type": "ListItem", "position": 1, "name": "Home", "item": baseUrl },
+            { "@type": "ListItem", "position": 2, "name": "Shorts", "item": canonicalUrl },
+          ]},
+        ],
+      });
+    }
+
+    // ── Tag Pages: /tag/:slug ───────────────────────────────────────────
+    const tagMatch = req.path.match(/^\/tag\/([^\/]+)$/);
+    if (tagMatch) {
+      const tagSlug = decodeURIComponent(tagMatch[1]);
+      const tagName = tagSlug.replace(/-/g, " ");
+      title = `${tagName} Videos | nisam.video`;
+      description = `Browse videos tagged with "${tagName}" on nisam.video. Discover AI-curated content about ${tagName}.`;
+      canonicalUrl = `${baseUrl}/tag/${tagMatch[1]}`;
+      structuredData = JSON.stringify({
+        "@context": "https://schema.org",
+        "@graph": [
+          { "@type": "CollectionPage", "name": `${tagName} Videos`, "description": description, "url": canonicalUrl },
+          { "@type": "BreadcrumbList", "itemListElement": [
+            { "@type": "ListItem", "position": 1, "name": "Home", "item": baseUrl },
+            { "@type": "ListItem", "position": 2, "name": "Tags", "item": `${baseUrl}/tags` },
+            { "@type": "ListItem", "position": 3, "name": tagName, "item": canonicalUrl },
+          ]},
+        ],
+      });
     }
 
     // ── Build meta tag HTML ────────────────────────────────────────────────

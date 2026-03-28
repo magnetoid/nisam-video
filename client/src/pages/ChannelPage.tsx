@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { apiRequest } from "@/lib/queryClient";
 import { getOptimizedImageUrl } from "@/lib/image";
-import type { Channel, VideoWithLocalizedRelations } from "@shared/schema";
+import type { Channel, VideoWithLocalizedRelations, SupportedLanguage } from "@shared/schema";
 
 export default function ChannelPage() {
   const { t, i18n } = useTranslation();
@@ -109,19 +109,72 @@ export default function ChannelPage() {
     return getOptimizedImageUrl(url, 1920);
   }, [channel]);
 
+  const { data: languages = [] } = useQuery<SupportedLanguage[]>({
+    queryKey: ["/api/languages"],
+    staleTime: Infinity,
+  });
+
+  const origin = typeof window !== "undefined" ? window.location.origin : "https://nisam.video";
+  const currentLang = languages.find(l => l.code === i18n.language);
+  const currentPrefix = currentLang?.isDefault ? "" : `/${i18n.language}`;
+  const effectivePrefix = currentLang ? currentPrefix : (i18n.language === "en" ? "/en" : "");
+  const channelCanonical = canonicalSlug ? `${origin}${effectivePrefix}/channels/${canonicalSlug}` : undefined;
+
+  const hreflangLinks = canonicalSlug
+    ? [
+        ...languages.map(lang => {
+          const prefix = lang.isDefault ? "" : `/${lang.code}`;
+          return { lang: lang.code, url: `${origin}${prefix}/channels/${canonicalSlug}` };
+        }),
+        { lang: "x-default", url: `${origin}/channels/${canonicalSlug}` },
+      ]
+    : undefined;
+
+  const seoDescription = description ||
+    t("channelPage.seoDescription", {
+      channel: pageTitle,
+      defaultValue: `Watch all videos from ${pageTitle} on nisam.video. AI-curated content from this channel.`,
+    });
+
+  const channelStructuredData = channel
+    ? {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "ProfilePage",
+            name: channel.name,
+            description: seoDescription,
+            url: channelCanonical,
+            ...(channel.thumbnailUrl && { image: channel.thumbnailUrl }),
+            mainEntity: {
+              "@type": "Organization",
+              name: channel.name,
+              ...(channel.url && { url: channel.url }),
+              ...(channel.thumbnailUrl && { logo: channel.thumbnailUrl }),
+            },
+          },
+          {
+            "@type": "BreadcrumbList",
+            itemListElement: [
+              { "@type": "ListItem", position: 1, name: "Home", item: origin },
+              { "@type": "ListItem", position: 2, name: t("nav.channels", "Channels"), item: `${origin}/channels` },
+              { "@type": "ListItem", position: 3, name: channel.name, item: channelCanonical },
+            ],
+          },
+        ],
+      }
+    : undefined;
+
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
       <SEO
         title={pageTitle}
-        description={
-          description ||
-          t("channelPage.seoDescription", {
-            channel: pageTitle,
-            defaultValue: `Watch all videos from ${pageTitle} on nisam.video. AI-curated content from this channel.`,
-          })
-        }
+        description={seoDescription}
         image={channel?.thumbnailUrl || channel?.bannerUrl || undefined}
         imageAlt={pageTitle}
+        canonical={channelCanonical}
+        hreflang={hreflangLinks}
+        structuredData={channelStructuredData}
       />
       <Header />
 

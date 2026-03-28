@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiRequest } from "@/lib/queryClient";
+import type { SupportedLanguage } from "@shared/schema";
 
 type Channel = {
   id: string;
@@ -123,7 +124,7 @@ function ChannelGridCard({ channel }: { channel: Channel }) {
 }
 
 export default function Channels() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [query, setQuery] = useState("");
 
   const { data, isLoading, error, refetch } = useQuery<Channel[]>({
@@ -157,10 +158,56 @@ export default function Channels() {
   }, [channels]);
 
   const pageTitle = t("nav.channels", "Channels");
+  const pageDescription = t("channelsDirectory.subtitle");
+
+  const { data: languages = [] } = useQuery<SupportedLanguage[]>({
+    queryKey: ["/api/languages"],
+    staleTime: Infinity,
+  });
+
+  const origin = typeof window !== "undefined" ? window.location.origin : "https://nisam.video";
+  const currentLang = languages.find(l => l.code === i18n.language);
+  const currentPrefix = currentLang?.isDefault ? "" : `/${i18n.language}`;
+  const effectivePrefix = currentLang ? currentPrefix : (i18n.language === "en" ? "/en" : "");
+  const canonicalUrl = `${origin}${effectivePrefix}/channels`;
+
+  const hreflangLinks = [
+    ...languages.map(lang => {
+      const prefix = lang.isDefault ? "" : `/${lang.code}`;
+      return { lang: lang.code, url: `${origin}${prefix}/channels` };
+    }),
+    { lang: "x-default", url: `${origin}/channels` },
+  ];
+
+  const channelsStructuredData = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "CollectionPage",
+        name: pageTitle,
+        description: pageDescription,
+        url: canonicalUrl,
+        ...(channels.length > 0 && { numberOfItems: channels.length }),
+      },
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: "Home", item: origin },
+          { "@type": "ListItem", position: 2, name: pageTitle, item: canonicalUrl },
+        ],
+      },
+    ],
+  };
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
-      <SEO title={pageTitle} description={t("channelsDirectory.subtitle")} />
+      <SEO
+        title={pageTitle}
+        description={pageDescription}
+        canonical={canonicalUrl}
+        hreflang={hreflangLinks}
+        structuredData={channelsStructuredData}
+      />
       <Header />
 
       <main className="pt-16">
