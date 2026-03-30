@@ -27,7 +27,7 @@ router.get("/", async (req, res) => {
       lang: lang as string | undefined,
       limit: limitNum,
       offset: limitNum ? offsetNum : undefined,
-      sort: sortValue as "publishDate" | "createdAt",
+      sort: sortValue,
     };
     const videosList = await storage.getAllVideos(filters);
     res.json(videosList);
@@ -754,6 +754,9 @@ router.post("/batch/like-status", async (req, res) => {
     if (!Array.isArray(videoIds) || videoIds.length === 0) {
       return res.status(400).json({ error: "videoIds array is required" });
     }
+    if (videoIds.length > 200) {
+      return res.status(400).json({ error: "Maximum 200 video IDs per request" });
+    }
 
     const userIdentifier = getUserIdentifier(req);
 
@@ -811,7 +814,8 @@ router.post("/scrape", requireAuth, async (req, res) => {
         return res.status(400).json({ error: "No YouTube channel configured. Please create a channel first." });
       }
 
-      const slug = video.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").substring(0, 80);
+      const { generateUniqueSlug } = await import("../video-ingestion.js");
+      const slug = await generateUniqueSlug(video.title);
       const newVideo = await storage.createVideo({
         channelId: channel.id,
         videoId: video.videoId,

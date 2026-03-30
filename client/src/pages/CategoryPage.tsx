@@ -5,7 +5,7 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { VideoGrid } from "@/components/VideoGrid";
 import { SEO } from "@/components/SEO";
-import { LocalizedCategory, VideoWithLocalizedRelations } from "@shared/schema";
+import type { LocalizedCategory, VideoWithLocalizedRelations, SupportedLanguage } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 
 export default function CategoryPage() {
@@ -47,7 +47,24 @@ export default function CategoryPage() {
     </div>
   );
 
-  const currentUrl = `${window.location.origin}/category/${slug}`;
+  const { data: languages = [] } = useQuery<SupportedLanguage[]>({
+    queryKey: ["/api/languages"],
+    staleTime: Infinity,
+  });
+
+  const origin = window.location.origin;
+  const currentLang = languages.find(l => l.code === i18n.language);
+  const currentPrefix = currentLang?.isDefault ? "" : `/${i18n.language}`;
+  const effectivePrefix = currentLang ? currentPrefix : (i18n.language === "en" ? "/en" : "");
+  const currentUrl = `${origin}${effectivePrefix}/category/${slug}`;
+
+  const hreflangLinks = [
+    ...languages.map(lang => {
+      const prefix = lang.isDefault ? "" : `/${lang.code}`;
+      return { lang: lang.code, url: `${origin}${prefix}/category/${slug}` };
+    }),
+    { lang: "x-default", url: `${origin}/category/${slug}` },
+  ];
 
   const categoryStructuredData = {
     "@context": "https://schema.org",
@@ -76,6 +93,7 @@ export default function CategoryPage() {
         title={category.name}
         description={category.description || `Browse the best ${category.name} videos on nisam.video. Curated and categorized by AI.`}
         canonical={currentUrl}
+        hreflang={hreflangLinks}
         structuredData={categoryStructuredData}
       />
       <Header />

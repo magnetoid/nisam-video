@@ -7,7 +7,8 @@ import { Footer } from "@/components/Footer";
 import { SEO } from "@/components/SEO";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { VideoWithLocalizedRelations } from "@shared/schema";
+import type { VideoWithLocalizedRelations, SupportedLanguage } from "@shared/schema";
+import { apiRequest } from "@/lib/queryClient";
 import { Play, Smartphone, Film } from "lucide-react";
 import { SiYoutube, SiTiktok } from "react-icons/si";
 
@@ -24,13 +25,24 @@ export default function Shorts() {
 
   const { data: shorts = [], isLoading } = useQuery<VideoWithLocalizedRelations[]>({
     queryKey: [queryUrl],
+    queryFn: async () => {
+      const res = await apiRequest("GET", queryUrl);
+      return res.json();
+    },
   });
 
-  const currentUrl = `${window.location.origin}/shorts`;
+  const { data: languages = [] } = useQuery<SupportedLanguage[]>({
+    queryKey: ["/api/languages"],
+    staleTime: Infinity,
+  });
+
+  const origin = window.location.origin;
   const hreflangLinks = [
-    { lang: "sr-Latn", url: currentUrl },
-    { lang: "en", url: currentUrl },
-    { lang: "x-default", url: currentUrl },
+    ...languages.map(lang => {
+      const prefix = lang.isDefault ? "" : `/${lang.code}`;
+      return { lang: lang.code, url: `${origin}${prefix}/shorts` };
+    }),
+    { lang: "x-default", url: `${origin}/shorts` },
   ];
 
   const structuredData = {

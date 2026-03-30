@@ -153,7 +153,7 @@ export default function VideoPage() {
     description: video.description || seoDescription,
     thumbnailUrl: [video.thumbnailUrl],
     uploadDate: video.publishDate,
-    ...(video.duration && { duration: video.duration.startsWith("PT") ? video.duration : `PT${video.duration.replace(/:/g, "M")}S` }),
+    ...(durationSeconds && { duration: `PT${Math.floor(durationSeconds / 3600) > 0 ? Math.floor(durationSeconds / 3600) + "H" : ""}${Math.floor((durationSeconds % 3600) / 60)}M${durationSeconds % 60}S` }),
     contentUrl,
     embedUrl,
     ...(viewCountNumber && {

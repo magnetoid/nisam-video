@@ -59,9 +59,13 @@ export default function Popular() {
     staleTime: Infinity,
   });
 
-  const currentUrl = `${window.location.origin}/popular`;
+  const origin = window.location.origin;
+  const currentUrl = `${origin}/popular`;
   const hreflangLinks = [
-    ...languages.map(lang => ({ lang: lang.code, url: currentUrl })),
+    ...languages.map(lang => {
+      const prefix = lang.isDefault ? "" : `/${lang.code}`;
+      return { lang: lang.code, url: `${origin}${prefix}/popular` };
+    }),
     { lang: "x-default", url: currentUrl },
   ];
 
@@ -123,10 +127,12 @@ export default function Popular() {
                   </h1>
 
                   <div className="flex items-center gap-4 text-white/90 font-medium text-sm md:text-lg">
+                    {topVideo.viewCount && (
                     <div className="flex items-center gap-2">
                       <Eye className="h-5 w-5" />
                       <span>{topVideo.viewCount} {t("common.views", "views")}</span>
                     </div>
+                    )}
                     {topVideo.publishDate && (
                       <>
                         <span className="text-white/50">•</span>
@@ -198,9 +204,9 @@ export default function Popular() {
                         {video.title}
                       </h3>
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <span>{video.viewCount} {t("common.views", "views")}</span>
-                        <span>•</span>
-                        <span>{video.publishDate}</span>
+                        {video.viewCount && <span>{video.viewCount} {t("common.views", "views")}</span>}
+                        {video.viewCount && video.publishDate && <span>•</span>}
+                        {video.publishDate && <span>{video.publishDate}</span>}
                       </div>
                     </div>
                   </div>

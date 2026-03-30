@@ -1,5 +1,3 @@
-import { storage } from "../storage/index.js";
-
 const INDEXNOW_KEY = "c357aac9b13401a2c0b03d34ff781820";
 const INDEXNOW_ENDPOINTS = [
   "https://api.indexnow.org/indexnow",
