@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { SEO } from "@/components/SEO";
+import { PageBreadcrumb } from "@/components/PageBreadcrumb";
 import { VideoGrid } from "@/components/VideoGrid";
 import type { VideoWithLocalizedRelations, SupportedLanguage } from "@shared/schema";
 
@@ -77,7 +78,11 @@ export default function TagPage() {
         structuredData={structuredData}
       />
       <Header />
-      <main className="flex-1 container mx-auto px-4 py-8">
+      <main className="flex-1 container mx-auto px-4 py-8 pt-24">
+        <PageBreadcrumb items={[
+          { label: t("nav.tags", "Tags"), href: "/tags" },
+          { label: tagName },
+        ]} />
         <h1 className="text-3xl font-bold mb-6 capitalize">
           {pageTitle}
         </h1>

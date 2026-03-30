@@ -5,6 +5,7 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { VideoGrid } from "@/components/VideoGrid";
 import { SEO } from "@/components/SEO";
+import { PageBreadcrumb } from "@/components/PageBreadcrumb";
 import type { LocalizedCategory, VideoWithLocalizedRelations, SupportedLanguage } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -97,7 +98,11 @@ export default function CategoryPage() {
         structuredData={categoryStructuredData}
       />
       <Header />
-      <main className="flex-1 container mx-auto px-4 py-8">
+      <main className="flex-1 container mx-auto px-4 py-8 pt-24">
+        <PageBreadcrumb items={[
+          { label: t("nav.categories", "Categories"), href: "/categories" },
+          { label: category.name },
+        ]} />
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">{category.name}</h1>
           {category.description && (

@@ -242,6 +242,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         addUrl(`${baseUrl}/shorts`, { changefreq: "daily", priority: "0.8", lastmod: today });
         addUrl(`${baseUrl}/about`, { changefreq: "monthly", priority: "0.4" });
         addUrl(`${baseUrl}/donate`, { changefreq: "monthly", priority: "0.3" });
+        addUrl(`${baseUrl}/faq`, { changefreq: "monthly", priority: "0.5" });
+        addUrl(`${baseUrl}/privacy`, { changefreq: "yearly", priority: "0.2" });
+        addUrl(`${baseUrl}/terms`, { changefreq: "yearly", priority: "0.2" });
         addUrl(`${baseUrl}/popular`, { changefreq: "daily", priority: "0.9", lastmod: today });
       }
 

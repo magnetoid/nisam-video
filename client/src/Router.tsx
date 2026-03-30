@@ -30,6 +30,9 @@ const PublicLog = lazy(() => import("@/pages/PublicLog"));
 const PublicErrorLogs = lazy(() => import("@/pages/PublicErrorLogs"));
 const CategoryPage = lazy(() => import("@/pages/CategoryPage"));
 const TagPage = lazy(() => import("@/pages/TagPage"));
+const PrivacyPolicy = lazy(() => import("@/pages/PrivacyPolicy"));
+const TermsOfService = lazy(() => import("@/pages/TermsOfService"));
+const FAQ = lazy(() => import("@/pages/FAQ"));
 
 const adminPages = {
   dashboard: lazy(() => import("@/pages/AdminDashboard")),
@@ -143,6 +146,9 @@ function AppRoutes() {
       <Route path="/shorts">{() => <LazyRoute component={Shorts} />}</Route>
       <Route path="/about">{() => <LazyRoute component={About} />}</Route>
       <Route path="/donate">{() => <LazyRoute component={Donate} />}</Route>
+      <Route path="/privacy">{() => <LazyRoute component={PrivacyPolicy} />}</Route>
+      <Route path="/terms">{() => <LazyRoute component={TermsOfService} />}</Route>
+      <Route path="/faq">{() => <LazyRoute component={FAQ} />}</Route>
       <Route path="/login">{() => <LazyRoute component={Login} />}</Route>
       <Route path="/register">{() => <LazyRoute component={Register} />}</Route>
       <Route path="/settings">{() => <LazyRoute component={Settings} />}</Route>

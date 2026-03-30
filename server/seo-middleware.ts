@@ -248,6 +248,24 @@ export async function seoMiddleware(req: Request, res: Response, next: NextFunct
       });
     }
 
+    if (req.path === "/privacy") {
+      title = "Privacy Policy | nisam.video";
+      description = "Learn how nisam.video collects, uses, and protects your personal information. Read our full privacy policy.";
+      canonicalUrl = `${baseUrl}/privacy`;
+    }
+
+    if (req.path === "/terms") {
+      title = "Terms of Service | nisam.video";
+      description = "Read the terms of service for nisam.video. Understand your rights and responsibilities when using our platform.";
+      canonicalUrl = `${baseUrl}/terms`;
+    }
+
+    if (req.path === "/faq") {
+      title = "FAQ | nisam.video";
+      description = "Find answers to common questions about nisam.video. Learn how our AI-powered video platform works.";
+      canonicalUrl = `${baseUrl}/faq`;
+    }
+
     // ── Tag Pages: /tag/:slug ───────────────────────────────────────────
     const tagMatch = req.path.match(/^\/tag\/([^\/]+)$/);
     if (tagMatch) {

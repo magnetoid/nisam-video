@@ -9,6 +9,8 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { VideoCard } from "@/components/VideoCard";
 import { LikeButton } from "@/components/LikeButton";
+import { PageBreadcrumb } from "@/components/PageBreadcrumb";
+import { ShareButtons } from "@/components/ShareButtons";
 import { useTranslation } from "react-i18next";
 import { useEffect, useState } from "react";
 import type { VideoWithLocalizedRelations, SupportedLanguage } from "@shared/schema";
@@ -314,6 +316,12 @@ export default function VideoPage() {
 
         {/* Video details - below the player */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 pb-8">
+          <PageBreadcrumb items={[
+            ...(video.categories && video.categories.length > 0
+              ? [{ label: video.categories[0].name, href: `/category/${video.categories[0].slug || video.categories[0].id}` }]
+              : []),
+            { label: video.title },
+          ]} />
           <div className="space-y-6">
             {/* Title and stats */}
             <div className="space-y-4">
@@ -370,8 +378,11 @@ export default function VideoPage() {
                   )}
                 </div>
 
-                {/* Like button */}
-                <LikeButton videoId={video.id} size="default" />
+                {/* Like button + Share */}
+                <div className="flex items-center gap-3">
+                  <LikeButton videoId={video.id} size="default" />
+                  <ShareButtons url={`/video/${videoSlugOrId}`} title={video.title} description={video.description || undefined} />
+                </div>
               </div>
             </div>
 
@@ -400,7 +411,7 @@ export default function VideoPage() {
                   {video.categories.map((category) => (
                     <Link
                       key={category.id}
-                      href={`/categories?filter=${category.id}`}
+                      href={`/category/${category.slug || category.id}`}
                     >
                       <Badge
                         variant="secondary"
@@ -423,7 +434,7 @@ export default function VideoPage() {
                 </h3>
                 <div className="flex flex-wrap gap-2">
                   {video.tags.map((tag) => (
-                    <Link key={tag.id} href={`/tags?filter=${tag.id}`}>
+                    <Link key={tag.id} href={`/tag/${encodeURIComponent(String(tag.tagName || "").trim().replace(/\s+/g, "-"))}`}>
                       <Badge
                         variant="outline"
                         className="cursor-pointer hover-elevate"

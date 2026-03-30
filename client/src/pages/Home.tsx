@@ -181,7 +181,7 @@ export default function Home() {
       />
       <Header onSearchClick={() => setShowSearch(true)} />
 
-      <main className="pt-16">
+      <main id="main-content" className="pt-16">
         <LikeStatusBatchProvider videoIds={allVideoIds}>
           <div className="space-y-0">
             <HeroImageSlider
