@@ -88,6 +88,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const cachedSitemap = await getCache<string>(cacheKey);
         if (cachedSitemap) {
           res.header("Content-Type", "application/xml");
+          res.header("Cache-Control", "public, max-age=3600, s-maxage=3600");
           res.header("X-Cache", "HIT-REDIS");
           return res.send(cachedSitemap);
         }
@@ -142,6 +143,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await setCache(cacheKey, sitemap, 3600);
 
       res.header("Content-Type", "application/xml");
+      res.header("Cache-Control", "public, max-age=3600, s-maxage=3600");
       res.header("X-Cache", "MISS");
       res.send(sitemap);
     } catch (error) {
@@ -190,6 +192,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const cached = await getCache<string>(cacheKey);
         if (cached) {
           res.header("Content-Type", "application/xml");
+          res.header("Cache-Control", "public, max-age=3600, s-maxage=3600");
           res.header("X-Cache", "HIT-REDIS");
           return res.send(cached);
         }
@@ -315,6 +318,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       xml += "</urlset>";
       await setCache(cacheKey, xml, 3600);
       res.header("Content-Type", "application/xml");
+      res.header("Cache-Control", "public, max-age=3600, s-maxage=3600");
       res.header("X-Cache", "MISS");
       res.send(xml);
     } catch (error) {
@@ -359,6 +363,7 @@ Crawl-delay: 1
     }
 
     res.header("Content-Type", "text/plain");
+    res.header("Cache-Control", "public, max-age=86400, s-maxage=86400");
     res.send(robotsTxt);
   });
 

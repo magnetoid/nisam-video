@@ -82,8 +82,11 @@ export const VideoCard = memo(function VideoCard({ video, onClick, variant = "ca
         <img
           src={optimizedThumbnail}
           alt={video.title}
+          width={480}
+          height={270}
           className="w-full h-full object-cover relative z-1 transform-gpu transition-transform duration-300 ease-out group-hover:scale-105"
           loading="lazy"
+          decoding="async"
           data-testid="img-thumbnail"
           onError={() => setImgError(true)}
         />

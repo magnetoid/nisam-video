@@ -9,25 +9,27 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AdminLayout } from "@/components/AdminLayout";
 import { AdminErrorBoundary, AdminLoadingFallback } from "@/components/AdminErrorBoundary";
 
-// Pages
+// Critical pages loaded eagerly (landing + video - most common entries)
 import Home from "@/pages/Home";
 import VideoPage from "@/pages/VideoPage";
-import Categories from "@/pages/Categories";
-import Channels from "@/pages/Channels";
-import ChannelPage from "@/pages/ChannelPage";
-import Tags from "@/pages/Tags";
-import Popular from "@/pages/Popular";
-import Shorts from "@/pages/Shorts";
-import Donate from "@/pages/Donate";
-import Login from "@/pages/Login";
-import Register from "@/pages/Register";
-import Settings from "@/pages/Settings";
-import About from "@/pages/About";
-import PublicLog from "@/pages/PublicLog";
-import PublicErrorLogs from "@/pages/PublicErrorLogs";
 import NotFound from "@/pages/not-found";
-import CategoryPage from "@/pages/CategoryPage";
-import TagPage from "@/pages/TagPage";
+
+// Lazy-loaded public pages (code-split for smaller initial bundle)
+const Categories = lazy(() => import("@/pages/Categories"));
+const Channels = lazy(() => import("@/pages/Channels"));
+const ChannelPage = lazy(() => import("@/pages/ChannelPage"));
+const Tags = lazy(() => import("@/pages/Tags"));
+const Popular = lazy(() => import("@/pages/Popular"));
+const Shorts = lazy(() => import("@/pages/Shorts"));
+const Donate = lazy(() => import("@/pages/Donate"));
+const Login = lazy(() => import("@/pages/Login"));
+const Register = lazy(() => import("@/pages/Register"));
+const Settings = lazy(() => import("@/pages/Settings"));
+const About = lazy(() => import("@/pages/About"));
+const PublicLog = lazy(() => import("@/pages/PublicLog"));
+const PublicErrorLogs = lazy(() => import("@/pages/PublicErrorLogs"));
+const CategoryPage = lazy(() => import("@/pages/CategoryPage"));
+const TagPage = lazy(() => import("@/pages/TagPage"));
 
 const adminPages = {
   dashboard: lazy(() => import("@/pages/AdminDashboard")),
@@ -77,7 +79,6 @@ const adminRoutes: AdminRouteConfig[] = [
   { path: "/admin/logs", page: "logs" },
   { path: "/admin/about", page: "about" },
   { path: "/admin/tiktok", page: "tiktok" },
-  { path: "/admin/hero", page: "hero" },
   { path: "/admin/ai-settings", page: "aiSettings" },
   { path: "/admin/debug", page: "logs" },
   { path: "/admin/users", page: "users" },
@@ -110,27 +111,43 @@ function LanguageWrapper({ lang, children }: { lang: string, children: ReactNode
   return <>{children}</>;
 }
 
+function PageFallback() {
+  return (
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+    </div>
+  );
+}
+
+function LazyRoute({ component: Component }: { component: LazyExoticComponent<ComponentType<any>> }) {
+  return (
+    <Suspense fallback={<PageFallback />}>
+      <Component />
+    </Suspense>
+  );
+}
+
 function AppRoutes() {
   return (
     <Switch>
       <Route path="/" component={Home} />
-      <Route path="/public/log" component={PublicLog} />
       <Route path="/video/:slug" component={VideoPage} />
-      <Route path="/channels/:slug" component={ChannelPage} />
-      <Route path="/channels" component={Channels} />
-      <Route path="/categories" component={Categories} />
-      <Route path="/category/:slug" component={CategoryPage} />
-      <Route path="/tags" component={Tags} />
-      <Route path="/tag/:slug" component={TagPage} />
-      <Route path="/popular" component={Popular} />
-      <Route path="/shorts" component={Shorts} />
-      <Route path="/about" component={About} />
-      <Route path="/donate" component={Donate} />
-      <Route path="/login" component={Login} />
-      <Route path="/register" component={Register} />
-      <Route path="/settings" component={Settings} />
-      <Route path="/admin/login" component={Login} />
-      <Route path="/public/error-logs" component={PublicErrorLogs} />
+      <Route path="/public/log">{() => <LazyRoute component={PublicLog} />}</Route>
+      <Route path="/channels/:slug">{() => <LazyRoute component={ChannelPage} />}</Route>
+      <Route path="/channels">{() => <LazyRoute component={Channels} />}</Route>
+      <Route path="/categories">{() => <LazyRoute component={Categories} />}</Route>
+      <Route path="/category/:slug">{() => <LazyRoute component={CategoryPage} />}</Route>
+      <Route path="/tags">{() => <LazyRoute component={Tags} />}</Route>
+      <Route path="/tag/:slug">{() => <LazyRoute component={TagPage} />}</Route>
+      <Route path="/popular">{() => <LazyRoute component={Popular} />}</Route>
+      <Route path="/shorts">{() => <LazyRoute component={Shorts} />}</Route>
+      <Route path="/about">{() => <LazyRoute component={About} />}</Route>
+      <Route path="/donate">{() => <LazyRoute component={Donate} />}</Route>
+      <Route path="/login">{() => <LazyRoute component={Login} />}</Route>
+      <Route path="/register">{() => <LazyRoute component={Register} />}</Route>
+      <Route path="/settings">{() => <LazyRoute component={Settings} />}</Route>
+      <Route path="/admin/login">{() => <LazyRoute component={Login} />}</Route>
+      <Route path="/public/error-logs">{() => <LazyRoute component={PublicErrorLogs} />}</Route>
       {adminRoutes.map(({ path, page }) => (
         <Route key={path} path={path}>
           <AdminRoute component={adminPages[page]} />

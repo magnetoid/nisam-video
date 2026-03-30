@@ -36,6 +36,17 @@ export default defineConfig(async () => {
     build: {
       outDir: path.resolve(__dirname, "dist", "public"),
       emptyOutDir: true,
+      sourcemap: false,
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            "vendor-react": ["react", "react-dom"],
+            "vendor-query": ["@tanstack/react-query"],
+            "vendor-motion": ["framer-motion"],
+            "vendor-charts": ["recharts"],
+          },
+        },
+      },
     },
     server: {
       fs: {
