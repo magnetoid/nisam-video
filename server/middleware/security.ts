@@ -86,7 +86,7 @@ export function createRateLimiters() {
   
   const standardLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 100,
+    max: 500,  // increased from 100 - SPA makes many API calls per page
     standardHeaders: true,
     legacyHeaders: false,
     message: { error: "Too many requests, please try again later." },
@@ -113,10 +113,10 @@ export function createRateLimiters() {
 
   const apiLimiter = rateLimit({
     windowMs: 1 * 60 * 1000,
-    max: 60,
+    max: 200,  // increased from 60
     standardHeaders: true,
     legacyHeaders: false,
-    skip: (req) => req.path.startsWith("/api/videos") || req.path.startsWith("/api/channels"),
+    skip: (req) => req.path.startsWith("/api/videos") || req.path.startsWith("/api/channels") || req.path.startsWith("/api/categories") || req.path.startsWith("/api/tags"),
     message: { error: "API rate limit exceeded, please slow down." },
   });
 
