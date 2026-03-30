@@ -24,7 +24,7 @@ ENV NODE_ENV=production
 ENV PUPPETEER_SKIP_DOWNLOAD=1
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
-RUN apk add --no-cache chromium nss freetype harfbuzz ca-certificates
+RUN apk add --no-cache chromium nss freetype harfbuzz ca-certificates wget
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nodejs
