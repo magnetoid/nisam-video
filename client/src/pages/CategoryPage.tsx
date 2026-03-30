@@ -1,4 +1,4 @@
-import { useParams } from "wouter";
+import { useParams, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Header } from "@/components/Header";
@@ -9,9 +9,18 @@ import { PageBreadcrumb } from "@/components/PageBreadcrumb";
 import type { LocalizedCategory, VideoWithLocalizedRelations, SupportedLanguage } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 
+const LANGUAGE_CODES = ['en', 'sr', 'sr-latn', 'sr-cyrl', 'bs', 'hr', 'me'];
+
 export default function CategoryPage() {
   const { slug } = useParams<{ slug: string }>();
   const { t, i18n } = useTranslation();
+  const [, navigate] = useLocation ? useLocation() : [null, null];
+
+  // Guard: if slug looks like a language code, it means routing mismatch - go home
+  if (slug && LANGUAGE_CODES.includes(slug.toLowerCase())) {
+    if (typeof window !== 'undefined') window.location.href = '/';
+    return null;
+  }
 
   // Fetch specific category by slug with language
   const { data: category, isLoading: isCategoryLoading } = useQuery<LocalizedCategory>({
@@ -20,7 +29,7 @@ export default function CategoryPage() {
       const res = await apiRequest("GET", `/api/categories/${slug}?lang=${i18n.language}`);
       return res.json();
     },
-    enabled: !!slug
+    enabled: !!slug && !LANGUAGE_CODES.includes((slug || '').toLowerCase())
   });
 
   const { data: videos, isLoading: isVideosLoading } = useQuery<VideoWithLocalizedRelations[]>({

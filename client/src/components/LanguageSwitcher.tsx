@@ -18,10 +18,10 @@ export function LanguageSwitcher() {
     staleTime: Infinity, // Ensure languages don't re-fetch unnecessarily
   });
 
-  // Filter active languages
+  // Filter active languages - fallback has no URL prefix (rootUri=null means no prefix)
   const activeLanguages = languages.length > 0 ? languages.filter(l => l.isActive) : [
-    { code: "en", name: "English", rootUri: "/en", isActive: true, isDefault: false },
-    { code: "sr-Latn", name: "Srpski", rootUri: "/", isActive: true, isDefault: true }
+    { code: "en", name: "English", rootUri: null, isActive: true, isDefault: false },
+    { code: "sr-Latn", name: "Srpski", rootUri: null, isActive: true, isDefault: true }
   ];
 
   const changeLanguage = (lng: string) => {
