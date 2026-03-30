@@ -11,6 +11,7 @@ import imageRouter from "./routes/images.js";
 import { sql } from "drizzle-orm";
 
 import languageRoutes from "./routes/languages.js";
+import { getIndexNowKey } from "./services/indexnow.js";
 
 function parseDurationToSitemapSeconds(dur: string): number | undefined {
   // ISO 8601: PT1H2M30S, PT5M, PT30S
@@ -320,6 +321,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Sitemap page generation error:", error);
       res.status(500).send("Error generating sitemap");
     }
+  });
+
+  // IndexNow key verification file
+  app.get(`/${getIndexNowKey()}.txt`, (_req, res) => {
+    res.type("text/plain").send(getIndexNowKey());
   });
 
   app.get("/robots.txt", async (req, res) => {

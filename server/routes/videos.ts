@@ -948,4 +948,43 @@ router.post("/scrape-batch", requireAuth, async (req, res) => {
   }
 });
 
+// Enrich video descriptions by scraping full YouTube video pages
+// This fixes truncated descriptions from channel-level scraping
+router.post("/enrich-descriptions", requireAuth, async (req, res) => {
+  try {
+    const { limit = 50 } = req.body || {};
+    const cappedLimit = Math.min(Number(limit) || 50, 200);
+
+    // Find YouTube videos with short descriptions (likely truncated snippets)
+    const allVideos = await storage.getAllVideos({
+      limit: cappedLimit,
+      sort: "createdAt",
+    });
+
+    const candidates = allVideos.filter(
+      v => v.videoType !== "tiktok" && (!v.description || v.description.length < 300)
+    );
+
+    if (candidates.length === 0) {
+      return res.json({ message: "No videos need description enrichment", enriched: 0, failed: 0 });
+    }
+
+    // Respond immediately, run enrichment in background
+    res.json({
+      message: `Starting description enrichment for ${candidates.length} videos`,
+      candidates: candidates.length,
+    });
+
+    const { enrichVideoDescriptions } = await import("../video-ingestion.js");
+    enrichVideoDescriptions(candidates.map(v => v.id)).then(({ enriched, failed }) => {
+      console.log(`[enrich-descriptions] Complete: ${enriched} enriched, ${failed} failed`);
+    }).catch(err => {
+      console.error("[enrich-descriptions] Error:", err);
+    });
+  } catch (error) {
+    console.error("Enrich descriptions error:", error);
+    res.status(500).json({ error: "Failed to start description enrichment" });
+  }
+});
+
 export default router;

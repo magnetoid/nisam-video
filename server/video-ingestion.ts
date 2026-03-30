@@ -3,6 +3,8 @@ import { storage } from "./storage.js";
 import { generateSlug } from "./utils.js";
 import { categorizeVideo as aiCategorizeVideo } from "./ai-service.js";
 import { logger } from "./lib/logger.js";
+import { notifyVideoChange, submitUrls } from "./services/indexnow.js";
+import { scrapeYouTubeVideoPage } from "./video-scraper.js";
 
 interface ScrapedVideo {
   videoId: string;
@@ -131,6 +133,36 @@ export async function processScrapedVideos(
     await categorizeNewVideos(result.newVideoIds);
   }
 
+  // Enrich descriptions by scraping individual video pages (runs in background)
+  if (result.newVideoIds.length > 0 && platform === "youtube") {
+    enrichVideoDescriptions(result.newVideoIds).then(({ enriched, failed }) => {
+      if (enriched > 0) {
+        logger.info(`[video-ingestion] Description enrichment complete: ${enriched} enriched, ${failed} failed`);
+      }
+    }).catch(err => {
+      logger.error("[video-ingestion] Description enrichment error:", err);
+    });
+  }
+
+  // Notify IndexNow about newly created videos
+  if (result.newVideoIds.length > 0) {
+    try {
+      const baseUrl = process.env.PUBLIC_BASE_URL || "https://nisam.video";
+      const urls: string[] = [];
+      for (const id of result.newVideoIds) {
+        const video = await storage.getVideo(id);
+        if (video) {
+          urls.push(`${baseUrl}/video/${video.slug || video.id}`);
+        }
+      }
+      if (urls.length > 0) {
+        submitUrls(urls);
+      }
+    } catch (err) {
+      logger.error("[video-ingestion] IndexNow notification failed:", err);
+    }
+  }
+
   return result;
 }
 
@@ -245,4 +277,65 @@ async function categorizeNewVideos(videoIds: string[]): Promise<void> {
       );
     }
   }
+}
+
+/**
+ * Enrich videos with full descriptions by scraping individual YouTube pages.
+ * YouTube channel listings only provide truncated description snippets (~100-200 chars).
+ * This fetches the full description from each video's watch page.
+ *
+ * @param videoIds - Array of internal video IDs to enrich
+ * @param delayMs - Delay between requests to avoid rate limiting (default 1500ms)
+ */
+export async function enrichVideoDescriptions(
+  videoIds: string[],
+  delayMs: number = 1500
+): Promise<{ enriched: number; failed: number }> {
+  let enriched = 0;
+  let failed = 0;
+
+  for (const id of videoIds) {
+    try {
+      const video = await storage.getVideo(id);
+      if (!video) continue;
+
+      // Skip TikTok videos (scraper is YouTube-only)
+      if (video.videoType === "tiktok") continue;
+
+      // Skip if description already looks full (> 300 chars suggests it was already enriched)
+      if (video.description && video.description.length > 300) continue;
+
+      const videoUrl = `https://www.youtube.com/watch?v=${video.videoId}`;
+      const result = await scrapeYouTubeVideoPage(videoUrl);
+
+      if (result.success && result.data?.description) {
+        const fullDescription = result.data.description;
+
+        // Only update if the scraped description is longer than what we have
+        if (!video.description || fullDescription.length > video.description.length) {
+          await storage.updateVideo(video.id, {
+            description: fullDescription,
+            // Also update duration and viewCount if available and missing
+            ...(result.data.duration && !video.duration && { duration: result.data.duration }),
+            ...(result.data.viewCount && { viewCount: result.data.viewCount }),
+          });
+          enriched++;
+          logger.info(`[video-ingestion] Enriched description for: ${video.title} (${fullDescription.length} chars)`);
+        }
+      } else {
+        failed++;
+        logger.warn(`[video-ingestion] Could not enrich: ${video.title}`);
+      }
+
+      // Rate limiting delay
+      if (delayMs > 0) {
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+      }
+    } catch (error) {
+      failed++;
+      logger.error(`[video-ingestion] Enrich failed for ${id}:`, error);
+    }
+  }
+
+  return { enriched, failed };
 }

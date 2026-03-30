@@ -204,6 +204,29 @@ export default function AdminAutomation() {
     }
   });
 
+  const enrichDescriptionsMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/videos/enrich-descriptions", { limit: 50 });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: t("automation.enrichStarted", "Description Enrichment Started"),
+        description: t("automation.enrichStartedDesc", {
+          count: data.candidates || 0,
+          defaultValue: "Fetching full descriptions for {{count}} videos in background.",
+        }),
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: t("automation.enrichFailed", "Enrichment Failed"),
+        description: error instanceof Error ? error.message : "Unknown error",
+        variant: "destructive",
+      });
+    },
+  });
+
   useEffect(() => {
     const jobId = activeJob?.id;
     if (!jobId) {
@@ -517,6 +540,29 @@ export default function AdminAutomation() {
                       </Button>
                       <p className="text-xs text-muted-foreground mt-2">
                         {t("automation.regenerateDesc", "Runs in batches of 50 videos. Check logs for progress. Using AI services may incur costs.")}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>{t("automation.enrichDescriptions", "Enrich Descriptions")}</CardTitle>
+                    <CardDescription>{t("automation.enrichDescriptionsDesc", "Fetch full YouTube descriptions for videos with truncated snippets")}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex flex-col gap-2">
+                      <Button
+                        onClick={() => enrichDescriptionsMutation.mutate()}
+                        disabled={enrichDescriptionsMutation.isPending}
+                        variant="outline"
+                        className="w-full justify-start"
+                      >
+                        <RefreshCw className={`mr-2 h-4 w-4 ${enrichDescriptionsMutation.isPending ? "animate-spin" : ""}`} />
+                        {t("automation.enrichDescriptionsBtn", "Enrich Descriptions (Batch 50)")}
+                      </Button>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        {t("automation.enrichDescriptionsHelp", "Scrapes individual YouTube video pages to replace truncated description snippets with full descriptions. Runs in background, processing 50 videos per batch.")}
                       </p>
                     </div>
                   </CardContent>
