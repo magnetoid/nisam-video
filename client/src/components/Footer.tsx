@@ -3,13 +3,18 @@ import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { RecommendChannelDialog } from "@/components/RecommendChannelDialog";
+import { apiRequest } from "@/lib/queryClient";
 import type { LocalizedCategory } from "@shared/schema";
 
 export function Footer() {
   const { t, i18n } = useTranslation();
 
   const { data: categories = [] } = useQuery<LocalizedCategory[]>({
-    queryKey: ["/api/categories", i18n.language],
+    queryKey: ["footer-categories", i18n.language],
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/categories?lang=${i18n.language}`);
+      return res.json();
+    },
     staleTime: 30 * 60 * 1000,
   });
 

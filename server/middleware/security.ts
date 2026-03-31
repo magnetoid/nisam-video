@@ -15,9 +15,15 @@ export function getHelmetConfig() {
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: isProduction
-          ? ["'self'"]
-          : ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+        scriptSrc: [
+          "'self'",
+          "'unsafe-inline'",
+          "https://www.googletagmanager.com",
+          "https://www.google-analytics.com",
+          "https://static.cloudflareinsights.com",
+          "https://donorbox.org",
+          ...(isProduction ? [] : ["'unsafe-eval'"]),
+        ],
         styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
         fontSrc: ["'self'", "https://fonts.gstatic.com"],
         imgSrc: [
@@ -25,28 +31,20 @@ export function getHelmetConfig() {
           "data:",
           "blob:",
           "https:",
-          "https://img.youtube.com",
-          "https://i.ytimg.com",
-          "https://*.ytimg.com",
-          "https://*.googlevideo.com",
-          "https://*.tiktok.com",
-          "https://*.tiktokcdn.com",
-          "https://pbs.twimg.com",
-          "https://*.ctfassets.net",
-          "https://images.unsplash.com",
         ],
         mediaSrc: [
           "'self'",
           "https:",
-          "https://*.youtube.com",
-          "https://*.googlevideo.com",
-          "https://*.tiktok.com",
-          "https://*.tiktokcdn.com",
         ],
         connectSrc: [
           "'self'",
-          "https://",
-          "wss://",
+          "https://*.google-analytics.com",
+          "https://*.analytics.google.com",
+          "https://*.googletagmanager.com",
+          "https://static.cloudflareinsights.com",
+          "https://cloudflareinsights.com",
+          "https://donorbox.org",
+          "wss://*.nisam.video",
           ...allowedOrigins,
         ],
         frameSrc: [
@@ -54,6 +52,8 @@ export function getHelmetConfig() {
           "https://www.youtube.com",
           "https://www.youtube-nocookie.com",
           "https://player.tiktok.com",
+          "https://www.tiktok.com",
+          "https://donorbox.org",
         ],
         frameAncestors: ["'none'"],
         formAction: ["'self'"],
