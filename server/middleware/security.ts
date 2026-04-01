@@ -129,11 +129,11 @@ export function createRateLimiters() {
   });
 
   const sensitiveActionLimiter = rateLimit({
-    windowMs: 60 * 60 * 1000,
-    max: 10,
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 200, // Admin panel makes many API calls per page
     standardHeaders: true,
     legacyHeaders: false,
-    message: { error: "Too many sensitive actions. Please try again in an hour." },
+    message: { error: "Too many admin actions. Please try again in a few minutes." },
   });
 
   return {
