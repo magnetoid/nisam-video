@@ -308,7 +308,7 @@ router.get("/ai-status", requireAuth, async (_req, res) => {
     res.json({
       provider: cfg?.provider || "ollama",
       openai: {
-        configured: Boolean(cfg?.openaiApiKey && cfg.openaiApiKey.trim().length > 0),
+        configured: Boolean((cfg?.openaiApiKey && cfg.openaiApiKey.trim().length > 0) || process.env.OPENAI_API_KEY),
         model: cfg?.openaiModel || "gpt-4o-mini",
         baseUrlConfigured: Boolean(cfg?.openaiBaseUrl && cfg.openaiBaseUrl.trim().length > 0),
       },
@@ -322,14 +322,14 @@ router.get("/ai-status", requireAuth, async (_req, res) => {
     if (error?.code === "42P01") {
       return res.json({
         provider: "ollama",
-        openai: { configured: false, model: "gpt-4o-mini", baseUrlConfigured: true },
+        openai: { configured: Boolean(process.env.OPENAI_API_KEY), model: "gpt-4o-mini", baseUrlConfigured: true },
         ollama: { configured: true, model: "llama3", url: "http://localhost:11434" },
       });
     }
     console.error("AI status error:", error);
     res.json({
       provider: "ollama",
-      openai: { configured: false, model: "gpt-4o-mini", baseUrlConfigured: true },
+      openai: { configured: Boolean(process.env.OPENAI_API_KEY), model: "gpt-4o-mini", baseUrlConfigured: true },
       ollama: { configured: false, model: "llama3", url: "http://localhost:11434" },
     });
   }

@@ -22,7 +22,10 @@ router.get("/config", requireAuth, async (req, res) => {
     // Mask API key if present (legacy)
     if (config.openaiApiKey) {
       config.openaiApiKey = "********";
+    } else if (process.env.OPENAI_API_KEY) {
+      config.openaiApiKey = "********"; // Show as configured if present in env
     }
+    
     if (config.ollamaApiKey) {
       config.ollamaApiKey = "********";
     }
@@ -194,15 +197,41 @@ router.patch("/models/:id/toggle", requireAuth, async (req, res) => {
 // Test connection
 router.post("/test", requireAuth, async (req, res) => {
   try {
-    const { provider, url, apiKey } = req.body;
+    let { provider, url, apiKey } = req.body;
+    
+    // If testing an existing configuration where the key is masked on frontend
+    if (!apiKey) {
+      try {
+        const settings = await db.select().from(aiSettings).limit(1);
+        if (settings.length > 0) {
+          if (provider === "ollama") {
+            apiKey = settings[0].ollamaApiKey || undefined;
+            if (!url) url = settings[0].ollamaUrl || "http://localhost:11434";
+          } else {
+            apiKey = settings[0].openaiApiKey || undefined;
+            if (!url) url = settings[0].openaiBaseUrl || undefined;
+          }
+        }
+      } catch (e: any) {
+        if (e?.code !== '42P01') {
+          console.error("Error fetching AI settings for test:", e);
+        }
+      }
+    }
     
     if (provider === "ollama") {
+      if (!url) url = "http://localhost:11434";
       const success = await testOllamaConnection(url, apiKey);
       return res.json({ success });
     }
     
     if (!apiKey) {
-      return res.status(400).json({ success: false, error: "OpenAI API key is required" });
+      // Also fallback to process.env.OPENAI_API_KEY if not in DB
+      if (process.env.OPENAI_API_KEY) {
+        apiKey = process.env.OPENAI_API_KEY;
+      } else {
+        return res.status(400).json({ success: false, error: "OpenAI API key is required" });
+      }
     }
     const baseUrl = typeof url === "string" && url.trim() ? url.trim() : "https://api.openai.com/v1";
     const success = await testOpenAIConnection(baseUrl, apiKey);

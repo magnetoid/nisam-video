@@ -47,7 +47,7 @@ async function getAiConfig() {
       openai: {
         baseUrl: openaiBaseUrl,
         model: config?.openaiModel || "gpt-4o-mini",
-        apiKey: config?.openaiApiKey,
+        apiKey: config?.openaiApiKey || process.env.OPENAI_API_KEY,
       },
     };
   } catch (error: any) {
@@ -69,7 +69,7 @@ async function getAiConfig() {
       openai: {
         baseUrl: "https://api.openai.com/v1",
         model: "gpt-4o-mini",
-        apiKey: undefined,
+        apiKey: process.env.OPENAI_API_KEY,
       },
     };
   }
