@@ -103,9 +103,14 @@ export default function AdminTikTok() {
   });
 
   const handleAdd = () => {
-    if (url.trim() && name.trim()) {
-      addProfileMutation.mutate({ url: url.trim(), name: name.trim() });
+    const trimmedUrl = url.trim();
+    const trimmedName = name.trim();
+    if (!trimmedUrl || !trimmedName) return;
+    if (!trimmedUrl.includes("tiktok.com/")) {
+      toast({ title: "Invalid URL", description: "Please enter a valid TikTok profile URL (e.g. https://www.tiktok.com/@username)", variant: "destructive" });
+      return;
     }
+    addProfileMutation.mutate({ url: trimmedUrl, name: trimmedName });
   };
 
   return (

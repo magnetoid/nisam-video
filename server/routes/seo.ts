@@ -1,4 +1,5 @@
 import { Router } from "express";
+import crypto from "crypto";
 import { storage } from "../storage/index.js";
 import { requireAuth } from "../middleware/auth.js";
 import { insertSeoSettingsSchema } from "../../shared/schema.js";
@@ -341,14 +342,29 @@ router.post("/enhanced/meta-tags", requireAuth, async (req, res) => {
 // Update meta tag
 router.patch("/enhanced/meta-tags/:id", requireAuth, async (req, res) => {
   try {
+    if (!isDbReady()) return res.status(503).json({ error: "Database not ready" });
     const { id } = req.params;
-    const validatedData = updateSeoMetaTagSchema.parse(req.body);
-    const currentTag = await storage.getSeoMetaTags({ pageUrl: id }); // Assume id is pageUrl for update
-    if (!currentTag.length) return res.status(404).json({ error: "Meta tag not found", code: "NOT_FOUND" });
-    const updatedData = { ...currentTag[0], ...validatedData };
-    const metaTag = await storage.upsertSeoMetaTag(updatedData);
-    if (!metaTag) throw new Error("Failed to update meta tag");
-    res.json(metaTag);
+    const validatedData = z.object({
+      pageUrl: z.string().optional(),
+      pageType: z.string().optional(),
+      title: z.string().optional(),
+      description: z.string().optional(),
+      keywords: z.string().optional(),
+      ogTitle: z.string().optional(),
+      ogDescription: z.string().optional(),
+      ogImage: z.string().optional(),
+      canonicalUrl: z.string().optional(),
+      isActive: z.boolean().optional(),
+    }).parse(req.body);
+
+    const [existing] = await db.select().from(seoMetaTags).where(eq(seoMetaTags.id, id)).limit(1);
+    if (!existing) return res.status(404).json({ error: "Meta tag not found", code: "NOT_FOUND" });
+
+    const [updated] = await db.update(seoMetaTags)
+      .set({ ...validatedData, updatedAt: new Date() })
+      .where(eq(seoMetaTags.id, id))
+      .returning();
+    res.json(updated);
   } catch (error: any) {
     console.error("Update meta tag error:", error);
     if (error instanceof z.ZodError) {
@@ -1050,50 +1066,57 @@ function calculateSEOScore(metaTag: any): number {
 }
 
 async function runSEOAudit(pageUrl: string): Promise<any> {
-  // This is a simplified audit - in a real implementation, you'd integrate with
-  // tools like Google PageSpeed Insights, Lighthouse, or custom audit logic
-  
-  const issues = [];
-  const recommendations = [];
+  const issues: { type: string; severity: "error" | "warning" | "info"; message: string; suggestion: string }[] = [];
+  const recommendations: string[] = [];
   let score = 100;
-  
-  // Simulate audit results
-  if (Math.random() > 0.7) {
-    issues.push({
-      type: "title",
-      severity: "warning" as const,
-      message: "Title tag could be optimized",
-      suggestion: "Consider adding target keywords to your title"
-    });
-    score -= 10;
+
+  // Check if page has meta tags configured
+  try {
+    if (isDbReady()) {
+      const [metaTag] = await db.select().from(seoMetaTags)
+        .where(eq(seoMetaTags.pageUrl, pageUrl)).limit(1);
+
+      if (!metaTag) {
+        issues.push({ type: "meta", severity: "warning", message: "No custom meta tags configured for this page", suggestion: "Add page-specific meta title and description" });
+        score -= 15;
+      } else {
+        if (!metaTag.title || metaTag.title.length < 10) {
+          issues.push({ type: "title", severity: "warning", message: "Meta title is missing or too short", suggestion: "Add a descriptive title between 30-60 characters" });
+          score -= 10;
+        } else if (metaTag.title.length > 60) {
+          issues.push({ type: "title", severity: "info", message: "Meta title exceeds 60 characters and may be truncated in search results", suggestion: "Shorten your title to under 60 characters" });
+          score -= 5;
+        }
+
+        if (!metaTag.description || metaTag.description.length < 50) {
+          issues.push({ type: "description", severity: "warning", message: "Meta description is missing or too short", suggestion: "Add a compelling description between 120-160 characters" });
+          score -= 10;
+        } else if (metaTag.description.length > 160) {
+          issues.push({ type: "description", severity: "info", message: "Meta description exceeds 160 characters", suggestion: "Trim description to under 160 characters" });
+          score -= 5;
+        }
+
+        if (!metaTag.ogImage) {
+          issues.push({ type: "og:image", severity: "warning", message: "Open Graph image is not set", suggestion: "Add an OG image (1200x630px recommended) for social sharing" });
+          score -= 10;
+        }
+
+        if (!metaTag.canonicalUrl) {
+          issues.push({ type: "canonical", severity: "info", message: "No canonical URL set", suggestion: "Set a canonical URL to prevent duplicate content issues" });
+          score -= 5;
+        }
+      }
+    }
+  } catch {
+    // DB not ready or table missing - skip meta check
   }
-  
-  if (Math.random() > 0.8) {
-    issues.push({
-      type: "description",
-      severity: "info" as const,
-      message: "Meta description is missing target keywords",
-      suggestion: "Include relevant keywords in your meta description"
-    });
-    score -= 5;
+
+  if (issues.length === 0) {
+    recommendations.push("All basic SEO checks passed. Consider adding structured data markup for rich snippets.");
   }
-  
-  if (Math.random() > 0.9) {
-    issues.push({
-      type: "performance",
-      severity: "error" as const,
-      message: "Page load time is too slow",
-      suggestion: "Optimize images and reduce server response time"
-    });
-    score -= 20;
-  }
-  
-  recommendations.push(
-    "Consider implementing schema markup for better rich snippets",
-    "Optimize images with descriptive alt text",
-    "Ensure mobile responsiveness"
-  );
-  
+  recommendations.push("Ensure all images have descriptive alt text");
+  recommendations.push("Verify page loads in under 3 seconds");
+
   return {
     auditType: "technical",
     pageUrl,

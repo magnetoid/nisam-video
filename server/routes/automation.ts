@@ -56,9 +56,24 @@ router.get("/jobs", requireAuth, async (req, res) => {
       query = query.where(sql`${scrapeJobs.startedAt} <= ${new Date(dateTo)}`);
     }
 
+    // Build matching count query with same filters
+    let countQuery = db.select({ count: sql<number>`count(*)` }).from(scrapeJobs).$dynamic();
+    if (search) {
+      countQuery = countQuery.where(sql`${scrapeJobs.type} ilike ${`%${search}%`} or ${scrapeJobs.currentChannelName} ilike ${`%${search}%`}`);
+    }
+    if (status && status !== 'all') {
+      countQuery = countQuery.where(eq(scrapeJobs.status, status));
+    }
+    if (dateFrom) {
+      countQuery = countQuery.where(sql`${scrapeJobs.startedAt} >= ${new Date(dateFrom)}`);
+    }
+    if (dateTo) {
+      countQuery = countQuery.where(sql`${scrapeJobs.startedAt} <= ${new Date(dateTo)}`);
+    }
+
     const [jobs, total] = await Promise.all([
       query.limit(limit).offset(offset),
-      db.select({ count: sql<number>`count(*)` }).from(scrapeJobs).where(sql`1=1`) // Simplified total; add filters if needed
+      countQuery,
     ]);
     res.json({ jobs, total: total[0]?.count || 0 });
   } catch (error: any) {
@@ -162,9 +177,17 @@ router.get("/jobs/:id/stream", requireAuth, async (req, res) => {
     writeSseEvent(res, "ping", {});
   }, 15000);
 
+  // Auto-close SSE after 30 minutes to prevent memory leaks
+  const maxDuration = setTimeout(() => {
+    clearInterval(interval);
+    clearInterval(ping);
+    res.end();
+  }, 30 * 60 * 1000);
+
   req.on("close", () => {
     clearInterval(interval);
     clearInterval(ping);
+    clearTimeout(maxDuration);
   });
 
   tick().catch((e) => {
@@ -260,9 +283,17 @@ router.get("/jobs/active/stream", requireAuth, async (req, res) => {
     writeSseEvent(res, "ping", {});
   }, 15000);
 
+  // Auto-close SSE after 30 minutes to prevent memory leaks
+  const maxDuration = setTimeout(() => {
+    clearInterval(interval);
+    clearInterval(ping);
+    res.end();
+  }, 30 * 60 * 1000);
+
   req.on("close", () => {
     clearInterval(interval);
     clearInterval(ping);
+    clearTimeout(maxDuration);
   });
 
   tick().catch((e) => {

@@ -113,7 +113,7 @@ export default function AdminDashboard() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => queryClient.invalidateQueries()}
+                onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/admin"] })}
               >
                 <RefreshCw className="h-4 w-4 mr-2" />
                 {t("common.refresh", "Refresh")}

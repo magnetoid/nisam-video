@@ -147,20 +147,25 @@ export default function AdminLogs() {
     setIsAnalyzing(true);
     setAiAnalysis(null);
     try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      setAiAnalysis(`
-        **AI Analysis:**
-        The error "${error.type}" appears to be originating from ${error.module || 'unknown module'}.
-        
-        **Potential Causes:**
-        1. Database connection timeout
-        2. Invalid input parameters in ${error.url}
-        
-        **Suggested Fix:**
-        Check the connection pool settings or validate input payload.
-      `);
+      const res = await apiRequest("POST", "/api/admin/analyze-error", {
+        type: error.type,
+        message: error.message,
+        url: error.url,
+        module: error.module,
+        statusCode: error.statusCode,
+      });
+      const data = await res.json();
+      setAiAnalysis(data.analysis || "No analysis available.");
     } catch (e) {
-      setAiAnalysis("Failed to generate analysis.");
+      // Fallback: show basic info if AI endpoint not available
+      setAiAnalysis(
+        `**Error Summary:**\n` +
+        `Type: ${error.type || "unknown"}\n` +
+        `Module: ${error.module || "unknown"}\n` +
+        `URL: ${error.url || "N/A"}\n` +
+        `Status: ${error.statusCode || "N/A"}\n\n` +
+        `*AI analysis unavailable. Check server logs for details.*`
+      );
     } finally {
       setIsAnalyzing(false);
     }

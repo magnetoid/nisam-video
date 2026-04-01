@@ -128,12 +128,12 @@ export default function AdminLanguages() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/translations", selectedLangCode] });
       
-      if (data.remaining > 0) {
-        toast({ 
-          title: t("admin.languages.batch_complete"), 
+      if (data.remaining > 0 && (data.translated || 0) > 0) {
+        toast({
+          title: t("admin.languages.batch_complete"),
           description: t("admin.languages.batch_desc", { translated: data.translated, remaining: data.remaining })
         });
-        // Recursively call to translate next batch
+        // Continue to next batch (stop if no progress was made to prevent infinite loop)
         setTimeout(() => autoTranslateMutation.mutate(), 1000);
       } else {
         toast({ 
