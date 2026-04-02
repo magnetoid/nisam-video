@@ -386,7 +386,7 @@ export default function AdminAutomation() {
   }, [displayedJob, processedItems]);
 
   const [activeTab, setActiveTab] = useState<'monitor' | 'analytics'>('monitor');
-  const { data: analyticsData } = useQuery({
+  const { data: analyticsData } = useQuery<{ data: any[] }>({
     queryKey: ['/api/automation/analytics?period=30'],
     refetchInterval: 30000, // 30s for analytics
   });
@@ -672,9 +672,9 @@ export default function AdminAutomation() {
                             mode="range"
                             selected={{ from: dateFrom, to: dateTo }}
                             defaultMonth={dateFrom}
-                            onSelect={({ from, to }) => {
-                              setDateFrom(from);
-                              setDateTo(to);
+                            onSelect={(range) => {
+                              setDateFrom(range?.from);
+                              setDateTo(range?.to);
                               setCurrentPage(1);
                             }}
                             numberOfMonths={2}
@@ -694,7 +694,7 @@ export default function AdminAutomation() {
                             setBulkAction('retry');
                             setShowBulkDialog(true);
                           }}
-                          disabled={selectedJobs.every(id => !jobs.find(j => j.id === id)?.status === 'failed')}
+                          disabled={selectedJobs.every(id => jobs.find(j => j.id === id)?.status !== 'failed')}
                           aria-label="Retry selected jobs"
                         >
                           <Play className="h-4 w-4 mr-1" />
@@ -719,7 +719,7 @@ export default function AdminAutomation() {
                             setBulkAction('pause');
                             setShowBulkDialog(true);
                           }}
-                          disabled={selectedJobs.every(id => !jobs.find(j => j.id === id)?.status === 'running')}
+                          disabled={selectedJobs.every(id => jobs.find(j => j.id === id)?.status !== 'running')}
                           aria-label="Pause selected jobs"
                         >
                           <Pause className="h-4 w-4 mr-1" />
@@ -870,27 +870,27 @@ export default function AdminAutomation() {
                   <div className="grid gap-6 md:grid-cols-2 h-[400px]">
                     <div className="space-y-4">
                       <h3 className="font-semibold">{t("automation.videosAddedOverTime", "Videos Added Over Time")}</h3>
-                      <ResponsiveContainer width="100%" height={300}>
+                      <ChartContainer config={chartConfig} className="h-[300px] w-full">
                         <LineChart data={analyticsData?.data || []}>
                           <XAxis dataKey="date" />
                           <YAxis />
                           <ChartTooltip content={<ChartTooltipContent />} />
-                          <Line type="monotone" dataKey="totalVideosAdded" stroke={chartConfig.videosAdded.color as string} />
+                          <Line type="monotone" dataKey="totalVideosAdded" stroke="var(--color-videosAdded)" strokeWidth={2} />
                         </LineChart>
-                      </ResponsiveContainer>
+                      </ChartContainer>
                     </div>
                     <div className="space-y-4">
                       <h3 className="font-semibold">{t("automation.jobStatusDistribution", "Job Status Distribution")}</h3>
-                      <ResponsiveContainer width="100%" height={300}>
+                      <ChartContainer config={chartConfig} className="h-[300px] w-full">
                         <BarChart data={analyticsData?.data || []}>
                           <XAxis dataKey="date" />
                           <YAxis />
                           <ChartTooltip content={<ChartTooltipContent />} />
                           <Legend />
-                          <Bar dataKey="completedJobs" fill={chartConfig.completed.color as string} name={t("automation.completed", "Completed")} />
-                          <Bar dataKey="failedJobs" fill={chartConfig.failed.color as string} name={t("automation.failed", "Failed")} />
+                          <Bar dataKey="completedJobs" fill="var(--color-completed)" name={t("automation.completed", "Completed")} />
+                          <Bar dataKey="failedJobs" fill="var(--color-failed)" name={t("automation.failed", "Failed")} />
                         </BarChart>
-                      </ResponsiveContainer>
+                      </ChartContainer>
                     </div>
                   </div>
                 </CardContent>

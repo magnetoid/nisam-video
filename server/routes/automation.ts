@@ -578,16 +578,16 @@ router.get("/analytics", requireAuth, async (req, res) => {
 
     const analytics = await db.execute(sql`
       SELECT 
-        date_trunc('day', started_at) as date,
-        COUNT(*) as jobCount,
-        SUM(videos_added) as totalVideosAdded,
-        SUM(failed_items) as totalErrors,
-        COUNT(CASE WHEN status = 'completed' THEN 1 END) as completedJobs,
-        COUNT(CASE WHEN status = 'failed' THEN 1 END) as failedJobs
+        date_trunc('day', started_at) as "date",
+        COUNT(*) as "jobCount",
+        SUM(videos_added) as "totalVideosAdded",
+        SUM(failed_items) as "totalErrors",
+        COUNT(CASE WHEN status = 'completed' THEN 1 END) as "completedJobs",
+        COUNT(CASE WHEN status = 'failed' THEN 1 END) as "failedJobs"
       FROM scrape_jobs 
-      WHERE started_at >= ${thirtyDaysAgo} AND deleted_at IS NULL
+      WHERE started_at >= ${thirtyDaysAgo}
       GROUP BY date_trunc('day', started_at)
-      ORDER BY date DESC
+      ORDER BY "date" DESC
     `);
 
     const data = (analytics.rows as any[]).map((row) => {
@@ -599,11 +599,11 @@ router.get("/analytics", requireAuth, async (req, res) => {
 
       return {
         date,
-        jobCount: parseInt(row.jobcount || 0),
-        totalVideosAdded: parseInt(row.totalvideosadded || 0),
-        totalErrors: parseInt(row.totalerrors || 0),
-        completedJobs: parseInt(row.completedjobs || 0),
-        failedJobs: parseInt(row.failedjobs || 0),
+        jobCount: Number(row.jobCount ?? row.jobcount ?? 0),
+        totalVideosAdded: Number(row.totalVideosAdded ?? row.totalvideosadded ?? 0),
+        totalErrors: Number(row.totalErrors ?? row.totalerrors ?? 0),
+        completedJobs: Number(row.completedJobs ?? row.completedjobs ?? 0),
+        failedJobs: Number(row.failedJobs ?? row.failedjobs ?? 0),
       };
     });
 
