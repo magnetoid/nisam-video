@@ -58,7 +58,7 @@ export function getHelmetConfig() {
         frameAncestors: ["'none'"],
         formAction: ["'self'"],
         objectSrc: ["'none'"],
-        upgradeInsecureRequests: isProduction ? [] : [],
+        upgradeInsecureRequests: [], // Enforce upgrade-insecure-requests
       },
     },
     crossOriginEmbedderPolicy: false,
@@ -163,9 +163,11 @@ export function validateCsrfToken(token: string, secret: string): boolean {
 export function csrfMiddleware(secret: string) {
   return (req: any, res: any, next: any) => {
     if (["GET", "HEAD", "OPTIONS"].includes(req.method)) {
-      const token = generateCsrfToken();
-      req.session.csrfToken = token;
-      res.setHeader("X-CSRF-Token", token);
+      // Fix: Only generate token if one doesn't exist to prevent race conditions
+      if (!req.session.csrfToken) {
+        req.session.csrfToken = generateCsrfToken();
+      }
+      res.setHeader("X-CSRF-Token", req.session.csrfToken);
       return next();
     }
 

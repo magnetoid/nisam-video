@@ -119,11 +119,12 @@ const sessionConfig: session.SessionOptions = {
   secret: getSessionSecret(),
   resave: false,
   saveUninitialized: false,
+  rolling: true, // Fix: Renew session cookie on every response to prevent sudden auto-logout
   cookie: {
     secure: process.env.NODE_ENV === "production",
     httpOnly: true,
     maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
-    sameSite: "lax",
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // Fix: 'none' for cross-origin deployments
   },
 };
 
@@ -151,8 +152,21 @@ if (process.env.NODE_ENV === "production" && pool) {
 
     get(sid: string, cb: (err: any, session?: any | null) => void) {
       this.store().get(sid, (err: any, sess: any) => {
-        if (!err) return cb(null, sess);
-        fallbackStore.get(sid, (_e: any, fallbackSess: any) => cb(null, fallbackSess));
+        if (!err) {
+          // If we queried primary and got nothing, maybe check fallback just in case
+          if (!sess && this.store() === primaryStore) {
+            fallbackStore.get(sid, (_e: any, fallbackSess: any) => cb(null, fallbackSess));
+            return;
+          }
+          return cb(null, sess);
+        }
+        // On error (e.g., DB down), log it but don't instantly wipe session by falling back to empty memory store
+        console.error(`[Session] Store get error for sid ${sid}:`, err?.message || err);
+        fallbackStore.get(sid, (_e: any, fallbackSess: any) => {
+          // If memory store doesn't have it, we return the error to prevent silent logout
+          if (!fallbackSess) return cb(err);
+          cb(null, fallbackSess);
+        });
       });
     }
 
