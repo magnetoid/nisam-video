@@ -96,9 +96,8 @@ process.on('uncaughtException', (error) => {
   }
 });
 
-// Trust proxy for Cloudflare and other reverse proxies
-// Cloudflare sets CF-Connecting-IP header
-app.set("trust proxy", true);
+// Trust proxy for Cloudflare, Coolify (Traefik/Caddy), and other reverse proxies
+app.set("trust proxy", 1); // Trust the first proxy (Coolify/Traefik) so secure cookies work
 
 const PgStore = connectPgSimple(session);
 
@@ -119,12 +118,13 @@ const sessionConfig: session.SessionOptions = {
   secret: getSessionSecret(),
   resave: false,
   saveUninitialized: false,
-  rolling: true, // Fix: Renew session cookie on every response to prevent sudden auto-logout
+  rolling: true, // Renew session cookie on every response
+  name: "nisam.sid", // Use a custom name to avoid generic sid conflicts
   cookie: {
-    secure: process.env.NODE_ENV === "production",
+    secure: process.env.NODE_ENV === "production" || process.env.COOLIFY_URL !== undefined,
     httpOnly: true,
     maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
-    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // Fix: 'none' for cross-origin deployments
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // 'none' for cross-origin deployments
   },
 };
 
