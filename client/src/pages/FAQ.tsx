@@ -4,7 +4,8 @@ import { Footer } from "@/components/Footer";
 import { SEO } from "@/components/SEO";
 import { ChevronDown } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { Link } from "wouter";
+import { SuggestFeatureDialog } from "@/components/SuggestFeatureDialog";
+import { RecommendChannelDialog } from "@/components/RecommendChannelDialog";
 
 interface FAQItem {
   question: string;
@@ -38,43 +39,63 @@ export default function FAQ() {
   const faqs: FAQItem[] = [
     {
       question: t("faq.q1", "What is nisam.video?"),
-      answer: t("faq.a1", "nisam.video is an AI-powered video aggregation platform. We discover, curate, and organize the best YouTube and TikTok content — automatically categorized, tagged, and sorted so you can find what you want to watch faster."),
+      answer: t("faq.a1", "nisam.video is an independent journalism video platform that aggregates content from diverse media sources, independent journalists, and citizen reporters into one accessible place. We use AI technology to organize and categorize content, making it easy to find and follow independent reporting."),
     },
     {
-      question: t("faq.q2", "Is nisam.video free to use?"),
-      answer: t("faq.a2", "Yes, nisam.video is completely free. We don't charge for access to any content. You can optionally support us through donations to help cover server costs."),
+      question: t("faq.q2", "Why does this platform exist?"),
+      answer: t("faq.a2", "We believe that freedom of press and freedom of expression are fundamental rights. In an environment where media can be pressured or restricted, nisam.video provides a single platform where independent voices from various sources can be heard — accessible to everyone regardless of their network provider."),
     },
     {
-      question: t("faq.q3", "Do you host videos?"),
-      answer: t("faq.a3", "No. All videos are embedded from their original platforms (YouTube and TikTok). We only aggregate and organize content — the videos always play from their original source."),
+      question: t("faq.q3", "Is nisam.video free to use?"),
+      answer: t("faq.a3", "Yes, nisam.video is completely free. We believe access to independent journalism should be available to everyone. You can optionally support us through donations to help cover server and development costs."),
     },
     {
-      question: t("faq.q4", "How does the AI categorization work?"),
-      answer: t("faq.a4", "Our AI analyzes video titles, descriptions, and metadata to automatically assign categories and tags. This helps organize content into browsable topics without manual intervention."),
+      question: t("faq.q4", "Do you host videos on your servers?"),
+      answer: t("faq.a4", "No. All videos are embedded from their original platforms (YouTube, TikTok, and other sources). We only aggregate, organize, and categorize content — the videos always play from their original source. This means content creators retain full control over their content."),
     },
     {
-      question: t("faq.q5", "Can I suggest a channel to add?"),
-      answer: t("faq.a5", "Yes! Use the 'Recommend Channel' option in the footer to suggest YouTube or TikTok channels you'd like to see on our platform."),
+      question: t("faq.q5", "Does it work on MTS and SBB?"),
+      answer: t("faq.a5", "Yes. nisam.video is a web platform accessible on all internet service providers in Serbia, including MTS (Mobilna Telefonija Srbije), SBB, and any other provider. You can also install it as a PWA (Progressive Web App) on your phone for an app-like experience."),
     },
     {
-      question: t("faq.q6", "How often is new content added?"),
-      answer: t("faq.a6", "Our system automatically checks all tracked channels every 2 hours for new videos. New content is categorized and available within minutes of being published."),
+      question: t("faq.q6", "How does the AI categorization work?"),
+      answer: t("faq.a6", "Our AI system analyzes video titles, descriptions, and metadata to automatically assign relevant categories and tags. This helps organize thousands of videos into browsable topics — politics, economy, society, culture, and more — without manual intervention. The system updates automatically as new content is published."),
     },
     {
-      question: t("faq.q7", "What languages are supported?"),
-      answer: t("faq.a7", "nisam.video currently supports English and Serbian (Latin script). Categories, tags, and the interface are available in both languages. You can switch languages using the language selector."),
+      question: t("faq.q7", "How often is new content added?"),
+      answer: t("faq.a7", "Our system automatically checks all tracked channels every few hours for new videos. New content is categorized by AI and made available on the platform within minutes of being published on the original source."),
     },
     {
-      question: t("faq.q8", "I'm a content creator. How can I remove my content?"),
-      answer: t("faq.a8", "If you want your content removed from nisam.video, please contact us at dmca@nisam.video with your channel details. We'll process removal requests promptly."),
+      question: t("faq.q8", "Can I suggest a channel or journalist to add?"),
+      answer: t("faq.a8", "Absolutely! We encourage it. Use the 'Recommend Channel' option in the footer to suggest independent journalists, media outlets, or citizen reporters. Every recommendation is reviewed and quality channels are added to the platform."),
     },
     {
-      question: t("faq.q9", "Can I create an account?"),
-      answer: t("faq.a9", "Yes. Creating an account lets you like videos and personalize your experience. Registration is free and requires only a username and password."),
+      question: t("faq.q9", "Can I suggest features or give feedback?"),
+      answer: t("faq.a9", "Yes! We welcome all suggestions and feedback. Use the 'Suggest Feature' or 'Contact Us' options in the footer. We read every submission and work to implement the best ideas. This platform is built for the community, and your input directly shapes its development."),
     },
     {
-      question: t("faq.q10", "How can I support nisam.video?"),
-      answer: t("faq.a10", "You can support us by donating on our donation page, recommending channels, or simply sharing nisam.video with others who might enjoy it."),
+      question: t("faq.q10", "What languages are supported?"),
+      answer: t("faq.a10", "nisam.video currently supports English and Serbian (Latin script). The entire interface, categories, and tags are available in both languages. You can switch languages using the language selector in the footer."),
+    },
+    {
+      question: t("faq.q11", "Do I need an account to use the platform?"),
+      answer: t("faq.a11", "No. You can browse, search, and watch all content without creating an account. An optional free account lets you like videos and personalize your experience, but it's not required."),
+    },
+    {
+      question: t("faq.q12", "I'm a content creator. How can I remove my content?"),
+      answer: t("faq.a12", "If you are a content creator and wish to have your content removed from nisam.video, please contact us at dmca@nisam.video with your channel details. We process removal requests within 48 hours."),
+    },
+    {
+      question: t("faq.q13", "How is this platform funded?"),
+      answer: t("faq.a13", "nisam.video is funded through community donations and volunteer work. We do not run advertisements or sell user data. If you'd like to help keep the platform running, you can donate through our donation page."),
+    },
+    {
+      question: t("faq.q14", "How can I support nisam.video?"),
+      answer: t("faq.a14", "There are several ways to support us: donate on our donation page, recommend channels of independent journalists, suggest features to improve the platform, and share nisam.video with friends, family, and anyone who values independent journalism."),
+    },
+    {
+      question: t("faq.q15", "Is my privacy protected?"),
+      answer: t("faq.a15", "Yes. We collect minimal data, we do not sell or share personal information with third parties, and we do not use advertising trackers. Read our Privacy Policy for full details on how we handle your data."),
     },
   ];
 
@@ -95,7 +116,7 @@ export default function FAQ() {
     <div className="min-h-screen bg-background flex flex-col">
       <SEO
         title={t("faq.title", "Frequently Asked Questions")}
-        description={t("faq.metaDescription", "Find answers to common questions about nisam.video. Learn how our AI-powered video platform works, how to use it, and more.")}
+        description={t("faq.metaDescription", "Find answers to common questions about nisam.video — the independent journalism video platform. Learn how it works, how to contribute, and more.")}
         canonical="https://nisam.video/faq"
         structuredData={faqStructuredData}
       />
@@ -112,16 +133,24 @@ export default function FAQ() {
           ))}
         </div>
 
-        <div className="mt-12 p-6 rounded-lg bg-muted/30 border border-border text-center">
-          <h2 className="text-lg font-semibold mb-2">{t("faq.stillHaveQuestions", "Still have questions?")}</h2>
-          <p className="text-muted-foreground mb-4">
-            {t("faq.contactUs", "Can't find what you're looking for? Get in touch.")}
+        <div className="mt-12 p-6 rounded-lg bg-muted/30 border border-border text-center space-y-4">
+          <h2 className="text-lg font-semibold">{t("faq.stillHaveQuestions", "Still have questions?")}</h2>
+          <p className="text-muted-foreground">
+            {t("faq.contactUs", "Can't find what you're looking for? Get in touch with us — we're happy to help.")}
           </p>
-          <Link href="/about">
-            <span className="text-primary hover:underline cursor-pointer">
-              {t("faq.visitAbout", "Visit our About page")}
-            </span>
-          </Link>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <SuggestFeatureDialog>
+              <span className="inline-flex items-center gap-2 text-primary hover:underline cursor-pointer font-medium">
+                {t("faq.contactButton", "Contact Us")}
+              </span>
+            </SuggestFeatureDialog>
+            <span className="hidden sm:block text-muted-foreground">|</span>
+            <RecommendChannelDialog>
+              <span className="inline-flex items-center gap-2 text-primary hover:underline cursor-pointer font-medium">
+                {t("faq.recommendButton", "Recommend a Channel")}
+              </span>
+            </RecommendChannelDialog>
+          </div>
         </div>
       </main>
       <Footer />
