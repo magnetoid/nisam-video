@@ -51,7 +51,10 @@ export const channels = pgTable("channels", {
   createdAt: timestamp("created_at")
     .notNull()
     .default(sql`now()`),
-});
+}, (table) => ({
+  lastScrapedIdx: index("channels_last_scraped_idx").on(table.lastScraped),
+  platformIdx: index("channels_platform_idx").on(table.platform),
+}));
 
 export const channelRecommendations = pgTable("channel_recommendations", {
   id: varchar("id")
@@ -125,6 +128,10 @@ export const videos = pgTable("videos", {
   publishDateIdx: index("videos_publish_date_idx").on(table.publishDate),
   channelIdIdx: index("videos_channel_id_idx").on(table.channelId),
   videoTypeIdx: index("videos_video_type_idx").on(table.videoType),
+  createdAtIdx: index("videos_created_at_idx").on(table.createdAt),
+  slugIdx: index("videos_slug_idx").on(table.slug),
+  internalViewsIdx: index("videos_internal_views_idx").on(table.internalViewsCount),
+  likesIdx: index("videos_likes_count_idx").on(table.likesCount),
 }));
 
 // Base Categories table (multilingual support)
@@ -191,7 +198,9 @@ export const tags = pgTable("tags", {
   createdAt: timestamp("created_at")
     .notNull()
     .default(sql`now()`),
-});
+}, (table) => ({
+  videoIdIdx: index("tags_video_id_idx").on(table.videoId),
+}));
 
 // Tags translations table
 export const tagTranslations = pgTable("tag_translations", {
@@ -256,7 +265,10 @@ export const scrapeJobs = pgTable("scrape_jobs", {
     .default(sql`now()`),
   completedAt: timestamp("completed_at"),
   errorMessage: text("error_message"),
-});
+}, (table) => ({
+  statusIdx: index("scrape_jobs_status_idx").on(table.status),
+  startedAtIdx: index("scrape_jobs_started_at_idx").on(table.startedAt),
+}));
 
 // Playlists table - User-created video playlists
 export const playlists = pgTable("playlists", {
@@ -502,7 +514,10 @@ export const videoViews = pgTable("video_views", {
   createdAt: timestamp("created_at")
     .notNull()
     .default(sql`now()`),
-});
+}, (table) => ({
+  videoIdIdx: index("video_views_video_id_idx").on(table.videoId),
+  createdAtIdx: index("video_views_created_at_idx").on(table.createdAt),
+}));
 
 export const heroVideos = pgTable("hero_videos", {
   id: varchar("id")
@@ -957,7 +972,10 @@ export const activityLogs = pgTable("activity_logs", {
   createdAt: timestamp("created_at")
     .notNull()
     .default(sql`now()`),
-});
+}, (table) => ({
+  createdAtIdx: index("activity_logs_created_at_idx").on(table.createdAt),
+  entityTypeIdx: index("activity_logs_entity_type_idx").on(table.entityType),
+}));
 
 export const insertSystemSettingsSchema = createInsertSchemaAny(
   systemSettings,

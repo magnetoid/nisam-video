@@ -6,41 +6,66 @@
     "title": "Page Not Found"
   },
   "about": {
-    "exploreCategories": "Explore Categories",
+    "tagline": "Independent Journalism • Free Press • One Platform",
+    "heroDescription": "One platform for independent journalism. We aggregate diverse video sources so you can access free, uncensored reporting — on any network, any device.",
+    "startWatching": "Start Watching",
+    "supportUs": "Support Us",
+    "whyTitle": "Why This Platform Exists",
+    "whyDescription": "In a media landscape where information can be filtered, blocked, or controlled, we believe every citizen deserves access to diverse, independent voices.",
     "features": {
-      "aiCuration": {
-        "description": "Our advanced algorithms analyze and categorize content automatically, ensuring you find exactly what you're looking for without the noise.",
-        "title": "AI-Powered Curation"
+      "pressFreedom": {
+        "title": "Freedom of Press",
+        "description": "We stand for the fundamental right to free press. Our platform ensures independent journalism remains accessible to everyone, without censorship or interference."
       },
-      "mobileFirst": {
-        "description": "Experience seamless viewing on any device. Install as a PWA for a native app-like experience on your phone or tablet.",
-        "title": "Mobile First"
+      "civilJournalism": {
+        "title": "Civil Journalism",
+        "description": "Citizen reporters, independent outlets, and grassroots media — all aggregated into one platform. Every voice matters when it comes to truth and transparency."
       },
-      "smartDiscovery": {
-        "description": "Intelligent search and recommendation engines help you uncover hidden gems and trending videos tailored to your interests.",
-        "title": "Smart Discovery"
+      "universalAccess": {
+        "title": "Universal Access",
+        "description": "Available on both MTS and SBB networks, on any device. No matter your provider, you have equal access to independent media and free expression."
       }
     },
-    "heroDescription": "Your intelligent hub for curated video content. Powered by AI to bring you the best of the web, organized and personalized.",
     "mission": {
-      "p1": "We believe that finding great content shouldn't be a chore. In an ocean of infinite uploads, nisam.video acts as your lighthouse, guiding you to quality videos that matter.",
-      "p2": "By leveraging cutting-edge Artificial Intelligence (GPT-5) and modern web technologies, we're building the future of video aggregation—privacy-focused, ad-free, and community-driven.",
-      "title": "Our Mission"
+      "title": "Our Mission",
+      "p1": "We believe that access to independent journalism is a fundamental right, not a privilege. In an environment where media can be pressured, restricted, or silenced, nisam.video serves as a digital safeguard — aggregating independent sources into one platform that anyone can access.",
+      "p2": "Freedom of press and freedom of expression must be preserved. We pull sources from independent journalists, civil reporters, and diverse media outlets — so you always have access to the full picture, not just one narrative.",
+      "p3": "Whether you use MTS (Mobilna Telefonija Srbije), SBB, or any other provider — this platform works for you. Because independent information should never depend on which network you subscribe to."
     },
-    "startWatching": "Start Watching",
+    "principles": {
+      "truth": "Truth",
+      "transparency": "Transparency",
+      "freeExpression": "Free Expression",
+      "independence": "Independence"
+    },
     "stats": {
-      "autoUpdates": "Auto-Updates",
       "curatedVideos": "Curated Videos",
-      "smartCategories": "Smart Categories"
+      "independentSources": "Independent Sources",
+      "autoUpdates": "Auto-Updates"
     },
-    "tagline": "Discover • Watch • Enjoy",
-    "tech": {
-      "ai": "AI",
-      "curated": "Curated",
-      "fast": "Fast",
-      "global": "Global"
+    "support": {
+      "title": "We Need Your Support",
+      "p1": "This platform is built by people who believe in free press and independent journalism. But to keep it running, growing, and improving — we need your help.",
+      "p2": "Every donation, every shared link, every recommended channel helps us expand our reach and bring more independent voices to light. Together, we can make sure that free journalism stays free.",
+      "donate": "Donate Now",
+      "suggestFeature": "Suggest a Feature"
     },
-    "techStack": "Built with Modern Tech"
+    "community": {
+      "title": "Your Voice Matters",
+      "description": "This is a community-driven platform. Any recommendation or suggestion you have is free to provide — and we will implement it. Whether it's a new feature, a channel to add, or an improvement idea, we want to hear from you.",
+      "recommendChannel": "Recommend a Channel",
+      "recommendChannelDesc": "Know an independent journalist or outlet? Suggest their channel and help us broaden our coverage.",
+      "suggestFeature": "Suggest a Feature",
+      "suggestFeatureDesc": "Have an idea to make the platform better? We read every suggestion and work to implement the best ones.",
+      "spreadTheWord": "Spread the Word",
+      "spreadTheWordDesc": "Share nisam.video with friends and family. The more people know about us, the stronger independent journalism becomes."
+    },
+    "access": {
+      "title": "Available on All Networks",
+      "description": "Accessible on MTS, SBB, and all other providers. Install as an app on your phone or simply open it in your browser.",
+      "pwa": "PWA App",
+      "web": "Web Browser"
+    }
   },
   "actions": {
     "play": "Play"
@@ -1022,7 +1047,13 @@
     "unauthorized": "You do not have permission to access this page"
   },
   "footer": {
+    "tagline": "Independent journalism platform. Diverse sources, one platform — supporting freedom of press.",
+    "explore": "Explore",
+    "topCategories": "Top Categories",
+    "info": "Info",
     "recommendChannel": "Recommend Channel",
+    "suggestFeature": "Suggest Feature",
+    "contactUs": "Contact Us",
     "rights": "All rights reserved."
   },
   "home": {
@@ -1122,6 +1153,25 @@
     "type": "Type",
     "url": "URL",
     "userId": "User ID"
+  },
+  "suggest": {
+    "title": "Suggest a Feature or Contact Us",
+    "description": "Have an idea, feedback, or question? We read every message and work to implement your suggestions.",
+    "type": "Type",
+    "typeFeature": "Feature Suggestion",
+    "typeBug": "Bug Report",
+    "typeChannel": "Channel Recommendation",
+    "typeContact": "General Contact",
+    "subject": "Subject",
+    "subjectPlaceholder": "Brief summary of your suggestion...",
+    "message": "Message",
+    "messagePlaceholder": "Describe your idea, feedback, or question in detail...",
+    "email": "Email (optional)",
+    "emailPlaceholder": "your@email.com — if you'd like us to respond",
+    "thanksTitle": "Thank you!",
+    "thanksDesc": "Your suggestion has been submitted. We review every submission and work to make this platform better.",
+    "errorTitle": "Could not submit",
+    "errorDesc": "Please try again later."
   },
   "recommend": {
     "channelUrl": "Channel URL",

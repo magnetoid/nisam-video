@@ -71,8 +71,12 @@ router.post("/register", async (req, res) => {
       return res.status(400).json({ error: "Username must be at least 3 characters" });
     }
 
-    if (password.length < 6) {
-      return res.status(400).json({ error: "Password must be at least 6 characters" });
+    if (password.length < 8) {
+      return res.status(400).json({ error: "Password must be at least 8 characters" });
+    }
+
+    if (!/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/[0-9]/.test(password)) {
+      return res.status(400).json({ error: "Password must contain uppercase, lowercase, and a number" });
     }
 
     const existingUser = await storage.getUserByUsername(username);

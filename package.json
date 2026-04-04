@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "NODE_ENV=development tsx -r dotenv/config server/index.ts",
     "build": "vite build && npm run build:server && npm run build:locales",
-    "build:server": "esbuild server/index.ts --bundle --platform=node --outfile=dist/index.js --format=esm --packages=external",
+    "build:server": "esbuild server/index.ts --bundle --platform=node --outfile=dist/index.js --format=esm --packages=external && esbuild server/worker/scrape-worker.ts --bundle --platform=node --outfile=dist/worker/scrape-worker.js --format=esm --packages=external",
     "build:locales": "tsx scripts/copy-locales.ts",
     "start": "NODE_ENV=production node dist/index.js",
     "check": "tsc",

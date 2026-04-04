@@ -26,6 +26,7 @@ import usersRouter from "./users.js";
 import channelRecommendationsRouter from "./channel-recommendations.js";
 import adminChannelRecommendationsRouter from "./admin-channel-recommendations.js";
 import emailSettingsRouter from "./email-settings.js";
+import suggestionsRouter from "./suggestions.js";
 import { createRateLimiters } from "../middleware/security.js";
 
 export function registerFeatureRoutes(app: Express): void {
@@ -58,6 +59,7 @@ export function registerFeatureRoutes(app: Express): void {
   app.use("/api/shorts", shortsRouter);
   app.use("/api/user", userRouter);
   app.use("/api", logsRouter); // Mounts /client-logs and /activity-logs
+  app.use("/api/suggestions", api, suggestionsRouter);
   app.use("/api/export", exportsRouter);
   app.use("/api/ai", aiSettingsRouter);
   app.use("/api/cron", cronRouter);

@@ -38,9 +38,13 @@ router.post("/public/error-logs", async (req, res) => {
 });
 
 router.get("/public/error-logs", async (req, res) => {
+  // Require either a valid token OR admin authentication
   const token = process.env.PUBLIC_ERROR_LOGS_TOKEN;
   const requestToken = typeof req.query.token === "string" ? req.query.token : "";
-  if (!token || requestToken !== token) {
+  const isAdmin = req.session?.isAuthenticated && req.session?.role === "admin";
+  const hasValidToken = token && token.length >= 32 && requestToken === token;
+
+  if (!isAdmin && !hasValidToken) {
     return res.status(404).send("Not Found");
   }
 
@@ -88,7 +92,8 @@ router.get("/public/error-logs", async (req, res) => {
       level: e.level,
       type: e.type,
       message: e.message,
-      stack: e.stack,
+      // Only include stack traces for admin sessions — never expose to token-only access
+      ...(isAdmin ? { stack: e.stack } : {}),
       module: e.module,
       url: e.url,
       method: e.method,

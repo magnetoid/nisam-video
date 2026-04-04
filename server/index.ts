@@ -387,7 +387,7 @@ async function startServer() {
     const degraded =
       (deps.database.configured && !deps.database.ok) ||
       (deps.redis.configured && !deps.redis.ok);
-    
+
     res.status(200).json({
       status: degraded ? "degraded" : healthStatus.status,
       timestamp: new Date().toISOString(),
@@ -396,6 +396,46 @@ async function startServer() {
       errorMonitor: healthStatus,
       uptime: process.uptime(),
       memory: process.memoryUsage(),
+    });
+  });
+
+  // Deep health check — verifies actual DB and Redis connectivity
+  app.get("/health/deep", async (req, res) => {
+    const results: Record<string, { ok: boolean; latencyMs?: number; error?: string }> = {};
+
+    // Check database
+    if (pool) {
+      const start = Date.now();
+      try {
+        await pool.query("SELECT 1 AS ok");
+        results.database = { ok: true, latencyMs: Date.now() - start };
+      } catch (err: any) {
+        results.database = { ok: false, latencyMs: Date.now() - start, error: err.message };
+      }
+    } else {
+      results.database = { ok: false, error: "Pool not initialized" };
+    }
+
+    // Check Redis
+    try {
+      const { getRedisClient } = await import("./services/redis.js");
+      const redis = getRedisClient();
+      if (redis) {
+        const start = Date.now();
+        await redis.ping();
+        results.redis = { ok: true, latencyMs: Date.now() - start };
+      } else {
+        results.redis = { ok: true, latencyMs: 0 }; // Not configured = not a failure
+      }
+    } catch (err: any) {
+      results.redis = { ok: false, error: err.message };
+    }
+
+    const allOk = Object.values(results).every((r) => r.ok);
+    res.status(allOk ? 200 : 503).json({
+      status: allOk ? "healthy" : "unhealthy",
+      timestamp: new Date().toISOString(),
+      checks: results,
     });
   });
 

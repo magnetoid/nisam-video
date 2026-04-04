@@ -4,19 +4,23 @@ import { Footer } from "@/components/Footer";
 import { SEO } from "@/components/SEO";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Play, 
-  Search, 
-  Cpu, 
-  Globe, 
-  Smartphone, 
-  Zap,
-  Github,
-  Twitter,
-  Heart
+import {
+  Play,
+  Shield,
+  Newspaper,
+  Users,
+  Globe,
+  Smartphone,
+  Heart,
+  MessageSquare,
+  Megaphone,
+  Scale,
+  Eye,
+  Radio,
 } from "lucide-react";
 import { Link } from "wouter";
 import { useTranslation } from "react-i18next";
+import { SuggestFeatureDialog } from "@/components/SuggestFeatureDialog";
 import type { SystemSettings } from "@shared/schema";
 
 export default function About() {
@@ -39,14 +43,14 @@ export default function About() {
           width: 512,
           height: 512,
         },
-        description: "AI-powered video aggregation hub with curated YouTube and TikTok content, automatically categorized and tagged for your viewing pleasure.",
+        description: "Independent journalism video platform aggregating diverse news sources. Supporting freedom of press and civil journalism across all networks in Serbia.",
         sameAs: [],
       },
       {
         "@type": "WebPage",
         "@id": "https://nisam.video/about",
         url: "https://nisam.video/about",
-        name: "About nisam.video - AI-Powered Video Hub",
+        name: "About nisam.video - Independent Journalism Platform",
         isPartOf: { "@id": "https://nisam.video/#website" },
         about: { "@id": "https://nisam.video/#organization" },
       },
@@ -58,15 +62,7 @@ export default function About() {
             name: "What is nisam.video?",
             acceptedAnswer: {
               "@type": "Answer",
-              text: "nisam.video is an AI-powered video aggregation platform that automatically discovers, categorizes, and curates the best YouTube and TikTok content. It works like Netflix but for free online videos.",
-            },
-          },
-          {
-            "@type": "Question",
-            name: "How does the AI curation work?",
-            acceptedAnswer: {
-              "@type": "Answer",
-              text: "Our system uses advanced AI (GPT-based models) to analyze video titles, descriptions, and metadata. It automatically assigns categories, generates relevant tags, and ranks content by quality and relevance — all without manual intervention.",
+              text: "nisam.video is an independent journalism video platform that aggregates diverse news and media sources into one accessible place. Available on all networks including MTS and SBB, it supports freedom of press and civil journalism in Serbia.",
             },
           },
           {
@@ -74,15 +70,23 @@ export default function About() {
             name: "Is nisam.video free to use?",
             acceptedAnswer: {
               "@type": "Answer",
-              text: "Yes, nisam.video is completely free to use. You can browse, search, and watch all curated videos without any subscription or registration.",
+              text: "Yes, nisam.video is completely free. We believe access to independent journalism should be available to everyone, regardless of their internet provider or platform.",
             },
           },
           {
             "@type": "Question",
-            name: "Can I suggest a YouTube channel?",
+            name: "How can I support this platform?",
             acceptedAnswer: {
               "@type": "Answer",
-              text: "Yes! You can recommend a channel through the 'Recommend Channel' option in the footer. Our team reviews suggestions and adds quality channels to the platform.",
+              text: "You can support us by donating, recommending channels, suggesting features, or simply sharing the platform with others who value independent journalism and press freedom.",
+            },
+          },
+          {
+            "@type": "Question",
+            name: "Can I suggest a channel or feature?",
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: "Absolutely! We welcome all recommendations and suggestions. Use the 'Suggest Feature' or 'Recommend Channel' options to share your ideas with us. Every suggestion is reviewed and considered for implementation.",
             },
           },
         ],
@@ -93,27 +97,27 @@ export default function About() {
   return (
     <div className="min-h-screen bg-background flex flex-col font-sans">
       <SEO
-        title="About - AI-Powered Video Hub"
-        description="nisam.video is an AI-powered video aggregation platform that discovers and curates the best YouTube and TikTok content — automatically categorized, tagged, and organized for you."
+        title="About - Independent Journalism Platform"
+        description="nisam.video is an independent journalism video platform aggregating diverse news sources. Supporting freedom of press and civil journalism across all networks in Serbia."
         canonical="https://nisam.video/about"
         structuredData={aboutStructuredData}
       />
       <Header />
-      
+
       {/* Hero Section */}
       <section className="relative pt-32 pb-20 md:pt-48 md:pb-32 overflow-hidden">
         <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:50px_50px]" />
         <div className="absolute inset-0 bg-gradient-to-b from-background via-background/90 to-background" />
-        
+
         <div className="container relative mx-auto px-4 text-center z-10">
           <Badge variant="outline" className="mb-6 py-1 px-4 text-primary border-primary/30 bg-primary/10 backdrop-blur-sm">
-            {t("about.tagline", "Discover • Watch • Enjoy")}
+            {t("about.tagline", "Independent Journalism • Free Press • One Platform")}
           </Badge>
           <h1 className="text-4xl md:text-7xl font-bold tracking-tight mb-6 bg-clip-text text-transparent bg-gradient-to-r from-white via-white/90 to-white/50">
             nisam.video
           </h1>
-          <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed">
-            {t("about.heroDescription", "Your intelligent hub for curated video content. Powered by AI to bring you the best of the web, organized and personalized.")}
+          <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto mb-10 leading-relaxed">
+            {t("about.heroDescription", "One platform for independent journalism. We aggregate diverse video sources so you can access free, uncensored reporting — on any network, any device.")}
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/">
@@ -121,33 +125,39 @@ export default function About() {
                 <Play className="fill-current w-4 h-4" /> {t("about.startWatching", "Start Watching")}
               </Button>
             </Link>
-            <Link href="/categories">
-              <Button size="lg" variant="outline" className="h-12 px-8 text-lg">
-                {t("about.exploreCategories", "Explore Categories")}
+            <Link href="/donate">
+              <Button size="lg" variant="outline" className="h-12 px-8 text-lg gap-2 border-primary/50 text-primary hover:bg-primary/10">
+                <Heart className="w-4 h-4" /> {t("about.supportUs", "Support Us")}
               </Button>
             </Link>
           </div>
         </div>
       </section>
 
-      {/* Features Grid */}
+      {/* Why We Exist */}
       <section className="py-20 bg-muted/30">
         <div className="container mx-auto px-4">
+          <div className="text-center mb-14">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">{t("about.whyTitle", "Why This Platform Exists")}</h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              {t("about.whyDescription", "In a media landscape where information can be filtered, blocked, or controlled, we believe every citizen deserves access to diverse, independent voices.")}
+            </p>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <FeatureCard 
-              icon={<Cpu className="w-10 h-10 text-primary" />}
-              title={t("about.features.aiCuration.title", "AI-Powered Curation")}
-              description={t("about.features.aiCuration.description", "Our advanced algorithms analyze and categorize content automatically, ensuring you find exactly what you're looking for without the noise.")}
+            <FeatureCard
+              icon={<Shield className="w-10 h-10 text-primary" />}
+              title={t("about.features.pressFreedom.title", "Freedom of Press")}
+              description={t("about.features.pressFreedom.description", "We stand for the fundamental right to free press. Our platform ensures independent journalism remains accessible to everyone, without censorship or interference.")}
             />
-            <FeatureCard 
-              icon={<Search className="w-10 h-10 text-blue-500" />}
-              title={t("about.features.smartDiscovery.title", "Smart Discovery")}
-              description={t("about.features.smartDiscovery.description", "Intelligent search and recommendation engines help you uncover hidden gems and trending videos tailored to your interests.")}
+            <FeatureCard
+              icon={<Newspaper className="w-10 h-10 text-blue-500" />}
+              title={t("about.features.civilJournalism.title", "Civil Journalism")}
+              description={t("about.features.civilJournalism.description", "Citizen reporters, independent outlets, and grassroots media — all aggregated into one platform. Every voice matters when it comes to truth and transparency.")}
             />
-            <FeatureCard 
-              icon={<Smartphone className="w-10 h-10 text-green-500" />}
-              title={t("about.features.mobileFirst.title", "Mobile First")}
-              description={t("about.features.mobileFirst.description", "Experience seamless viewing on any device. Install as a PWA for a native app-like experience on your phone or tablet.")}
+            <FeatureCard
+              icon={<Globe className="w-10 h-10 text-green-500" />}
+              title={t("about.features.universalAccess.title", "Universal Access")}
+              description={t("about.features.universalAccess.description", "Available on both MTS and SBB networks, on any device. No matter your provider, you have equal access to independent media and free expression.")}
             />
           </div>
         </div>
@@ -160,12 +170,15 @@ export default function About() {
             <div className="flex-1 space-y-6">
               <h2 className="text-3xl md:text-4xl font-bold">{t("about.mission.title", "Our Mission")}</h2>
               <p className="text-lg text-muted-foreground leading-relaxed">
-                {t("about.mission.p1", "We believe that finding great content shouldn't be a chore. In an ocean of infinite uploads, nisam.video acts as your lighthouse, guiding you to quality videos that matter.")}
+                {t("about.mission.p1", "We believe that access to independent journalism is a fundamental right, not a privilege. In an environment where media can be pressured, restricted, or silenced, nisam.video serves as a digital safeguard — aggregating independent sources into one platform that anyone can access.")}
               </p>
               <p className="text-lg text-muted-foreground leading-relaxed">
-                {t("about.mission.p2", "By leveraging cutting-edge Artificial Intelligence (GPT-5) and modern web technologies, we're building the future of video aggregation—privacy-focused, ad-free, and community-driven.")}
+                {t("about.mission.p2", "Freedom of press and freedom of expression must be preserved. We pull sources from independent journalists, civil reporters, and diverse media outlets — so you always have access to the full picture, not just one narrative.")}
               </p>
-              
+              <p className="text-lg text-muted-foreground leading-relaxed">
+                {t("about.mission.p3", "Whether you use MTS (Mobilna Telefonija Srbije), SBB, or any other provider — this platform works for you. Because independent information should never depend on which network you subscribe to.")}
+              </p>
+
               <div className="pt-4 flex gap-4">
                  <div className="flex flex-col gap-1">
                     <span className="text-3xl font-bold">10k+</span>
@@ -174,7 +187,7 @@ export default function About() {
                  <div className="w-px bg-border h-12" />
                  <div className="flex flex-col gap-1">
                     <span className="text-3xl font-bold">50+</span>
-                    <span className="text-sm text-muted-foreground">{t("about.stats.smartCategories", "Smart Categories")}</span>
+                    <span className="text-sm text-muted-foreground">{t("about.stats.independentSources", "Independent Sources")}</span>
                  </div>
                  <div className="w-px bg-border h-12" />
                  <div className="flex flex-col gap-1">
@@ -183,15 +196,15 @@ export default function About() {
                  </div>
               </div>
             </div>
-            
+
             <div className="flex-1 w-full relative">
                 <div className="absolute -inset-4 bg-gradient-to-r from-primary/20 to-blue-500/20 rounded-3xl blur-3xl opacity-50" />
                 <div className="relative bg-card border border-border/50 rounded-2xl p-8 shadow-2xl">
                     <div className="grid grid-cols-2 gap-4">
-                        <TechItem icon={<Zap />} label={t("about.tech.fast", "Fast")} />
-                        <TechItem icon={<Globe />} label={t("about.tech.global", "Global")} />
-                        <TechItem icon={<Heart />} label={t("about.tech.curated", "Curated")} />
-                        <TechItem icon={<Cpu />} label={t("about.tech.ai", "AI")} />
+                        <PrincipleItem icon={<Scale />} label={t("about.principles.truth", "Truth")} />
+                        <PrincipleItem icon={<Eye />} label={t("about.principles.transparency", "Transparency")} />
+                        <PrincipleItem icon={<Megaphone />} label={t("about.principles.freeExpression", "Free Expression")} />
+                        <PrincipleItem icon={<Radio />} label={t("about.principles.independence", "Independence")} />
                     </div>
                 </div>
             </div>
@@ -199,27 +212,75 @@ export default function About() {
         </div>
       </section>
 
-      {/* Tech Stack / Footer Note */}
-      <section className="py-20 border-t border-border/50">
-        <div className="container mx-auto px-4 text-center">
-            <h3 className="text-2xl font-semibold mb-8">{t("about.techStack", "Built with Modern Tech")}</h3>
-            <div className="flex flex-wrap justify-center gap-4 md:gap-8 opacity-70">
-                <span className="px-4 py-2 bg-muted rounded-full text-sm font-medium">React 18</span>
-                <span className="px-4 py-2 bg-muted rounded-full text-sm font-medium">TypeScript</span>
-                <span className="px-4 py-2 bg-muted rounded-full text-sm font-medium">Tailwind CSS</span>
-                <span className="px-4 py-2 bg-muted rounded-full text-sm font-medium">PostgreSQL</span>
-                <span className="px-4 py-2 bg-muted rounded-full text-sm font-medium">OpenAI</span>
-                <span className="px-4 py-2 bg-muted rounded-full text-sm font-medium">Drizzle ORM</span>
+      {/* Support Section */}
+      <section className="py-20 bg-muted/30">
+        <div className="container mx-auto px-4">
+          <div className="max-w-3xl mx-auto text-center space-y-6">
+            <Heart className="w-12 h-12 text-primary mx-auto" />
+            <h2 className="text-3xl md:text-4xl font-bold">{t("about.support.title", "We Need Your Support")}</h2>
+            <p className="text-lg text-muted-foreground leading-relaxed">
+              {t("about.support.p1", "This platform is built by people who believe in free press and independent journalism. But to keep it running, growing, and improving — we need your help.")}
+            </p>
+            <p className="text-lg text-muted-foreground leading-relaxed">
+              {t("about.support.p2", "Every donation, every shared link, every recommended channel helps us expand our reach and bring more independent voices to light. Together, we can make sure that free journalism stays free.")}
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
+              <Link href="/donate">
+                <Button size="lg" className="h-12 px-8 text-lg gap-2">
+                  <Heart className="w-4 h-4" /> {t("about.support.donate", "Donate Now")}
+                </Button>
+              </Link>
+              <SuggestFeatureDialog>
+                <Button size="lg" variant="outline" className="h-12 px-8 text-lg gap-2">
+                  <MessageSquare className="w-4 h-4" /> {t("about.support.suggestFeature", "Suggest a Feature")}
+                </Button>
+              </SuggestFeatureDialog>
             </div>
+          </div>
+        </div>
+      </section>
 
-            <div className="mt-16 flex justify-center gap-6">
-                <Button variant="ghost" size="icon" className="rounded-full hover:bg-primary/10 hover:text-primary">
-                    <Twitter className="w-5 h-5" />
-                </Button>
-                <Button variant="ghost" size="icon" className="rounded-full hover:bg-primary/10 hover:text-primary">
-                    <Github className="w-5 h-5" />
-                </Button>
+      {/* Community / Suggestions Section */}
+      <section className="py-20 border-t border-border/50">
+        <div className="container mx-auto px-4">
+          <div className="max-w-3xl mx-auto text-center space-y-6">
+            <Users className="w-12 h-12 text-blue-500 mx-auto" />
+            <h2 className="text-3xl md:text-4xl font-bold">{t("about.community.title", "Your Voice Matters")}</h2>
+            <p className="text-lg text-muted-foreground leading-relaxed">
+              {t("about.community.description", "This is a community-driven platform. Any recommendation or suggestion you have is free to provide — and we will implement it. Whether it's a new feature, a channel to add, or an improvement idea, we want to hear from you.")}
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-6 text-left">
+              <div className="bg-card border border-border/50 rounded-xl p-6 space-y-3">
+                <Newspaper className="w-8 h-8 text-primary" />
+                <h3 className="font-semibold">{t("about.community.recommendChannel", "Recommend a Channel")}</h3>
+                <p className="text-sm text-muted-foreground">{t("about.community.recommendChannelDesc", "Know an independent journalist or outlet? Suggest their channel and help us broaden our coverage.")}</p>
+              </div>
+              <div className="bg-card border border-border/50 rounded-xl p-6 space-y-3">
+                <MessageSquare className="w-8 h-8 text-blue-500" />
+                <h3 className="font-semibold">{t("about.community.suggestFeature", "Suggest a Feature")}</h3>
+                <p className="text-sm text-muted-foreground">{t("about.community.suggestFeatureDesc", "Have an idea to make the platform better? We read every suggestion and work to implement the best ones.")}</p>
+              </div>
+              <div className="bg-card border border-border/50 rounded-xl p-6 space-y-3">
+                <Megaphone className="w-8 h-8 text-green-500" />
+                <h3 className="font-semibold">{t("about.community.spreadTheWord", "Spread the Word")}</h3>
+                <p className="text-sm text-muted-foreground">{t("about.community.spreadTheWordDesc", "Share nisam.video with friends and family. The more people know about us, the stronger independent journalism becomes.")}</p>
+              </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Platform Access */}
+      <section className="py-16 bg-muted/30">
+        <div className="container mx-auto px-4 text-center">
+          <h3 className="text-2xl font-semibold mb-4">{t("about.access.title", "Available on All Networks")}</h3>
+          <p className="text-muted-foreground mb-8 max-w-xl mx-auto">{t("about.access.description", "Accessible on MTS, SBB, and all other providers. Install as an app on your phone or simply open it in your browser.")}</p>
+          <div className="flex flex-wrap justify-center gap-4 md:gap-8">
+            <span className="px-5 py-2.5 bg-card border border-border/50 rounded-full text-sm font-medium">MTS (Mobilna Telefonija Srbije)</span>
+            <span className="px-5 py-2.5 bg-card border border-border/50 rounded-full text-sm font-medium">SBB</span>
+            <span className="px-5 py-2.5 bg-card border border-border/50 rounded-full text-sm font-medium"><Smartphone className="w-4 h-4 inline mr-1" />{t("about.access.pwa", "PWA App")}</span>
+            <span className="px-5 py-2.5 bg-card border border-border/50 rounded-full text-sm font-medium"><Globe className="w-4 h-4 inline mr-1" />{t("about.access.web", "Web Browser")}</span>
+          </div>
         </div>
       </section>
 
@@ -242,7 +303,7 @@ function FeatureCard({ icon, title, description }: { icon: React.ReactNode, titl
   );
 }
 
-function TechItem({ icon, label }: { icon: React.ReactNode, label: string }) {
+function PrincipleItem({ icon, label }: { icon: React.ReactNode, label: string }) {
     return (
         <div className="flex flex-col items-center justify-center p-6 bg-background rounded-xl border border-border/50">
             <div className="mb-3 text-primary">{icon}</div>

@@ -3,7 +3,9 @@ import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { RecommendChannelDialog } from "@/components/RecommendChannelDialog";
+import { SuggestFeatureDialog } from "@/components/SuggestFeatureDialog";
 import { apiRequest } from "@/lib/queryClient";
+import { MessageSquare, Mail } from "lucide-react";
 import type { LocalizedCategory } from "@shared/schema";
 
 export function Footer() {
@@ -33,7 +35,7 @@ export function Footer() {
               </span>
             </Link>
             <p className="text-sm text-muted-foreground">
-              {t("footer.tagline", "AI-powered video aggregation platform. Discover the best content from YouTube and TikTok.")}
+              {t("footer.tagline", "Independent journalism platform. Diverse sources, one platform — supporting freedom of press.")}
             </p>
             <div className="flex items-center gap-3 pt-2">
               <a href="https://x.com/nisamvideo" target="_blank" rel="noopener noreferrer" aria-label="X (Twitter)" className="text-muted-foreground hover:text-foreground transition-colors">
@@ -87,6 +89,16 @@ export function Footer() {
               <Link href="/about"><span className="text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer">{t("nav.about", "About")}</span></Link>
               <Link href="/faq"><span className="text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer">{t("nav.faq", "FAQ")}</span></Link>
               <Link href="/donate"><span className="text-sm text-primary hover:text-primary/80 font-medium transition-colors cursor-pointer">❤️ {t("nav.donate", "Donate")}</span></Link>
+              <SuggestFeatureDialog>
+                <span className="text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer inline-flex items-center gap-1.5">
+                  <MessageSquare className="w-3.5 h-3.5" /> {t("footer.suggestFeature", "Suggest Feature")}
+                </span>
+              </SuggestFeatureDialog>
+              <SuggestFeatureDialog>
+                <span className="text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer inline-flex items-center gap-1.5">
+                  <Mail className="w-3.5 h-3.5" /> {t("footer.contactUs", "Contact Us")}
+                </span>
+              </SuggestFeatureDialog>
               <Link href="/privacy"><span className="text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer">{t("nav.privacy", "Privacy Policy")}</span></Link>
               <Link href="/terms"><span className="text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer">{t("nav.terms", "Terms of Service")}</span></Link>
             </nav>

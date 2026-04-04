@@ -31,7 +31,7 @@ function maskConnectionString(connectionString: string) {
 function createPoolAndDb(connectionString: string, sslEnabled: boolean) {
   const newPool = new Pool({
     connectionString,
-    ssl: sslEnabled ? { rejectUnauthorized: false } : undefined,
+    ssl: sslEnabled ? { rejectUnauthorized: parseBoolEnv(process.env.DB_SSL_REJECT_UNAUTHORIZED, true) } : undefined,
     max: process.env.DB_POOL_MAX ? parseInt(process.env.DB_POOL_MAX, 10) : (process.env.NODE_ENV === "production" ? 10 : 10),
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 10000,

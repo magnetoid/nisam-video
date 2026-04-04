@@ -1,14 +1,12 @@
 import { db } from "../db.js";
 import { scrapeJobs, channels, type ScrapeJob } from "../../shared/schema.js";
 import { eq, sql } from "drizzle-orm";
-import { scrapeYouTubeChannel } from "../youtube-scraper.js";
-import { scrapeTikTokProfile } from "../tiktok-scraper.js";
 import { recordError } from "../error-log-service.js";
 import { storage } from "../storage/index.js";
 import { invalidateChannelCaches, invalidateVideoContentCaches } from "../cache-invalidation.js";
 import { appendScrapeJobLog } from "../scrape-job-logs.js";
-import { processScrapedVideos } from "../video-ingestion.js";
 import { logger } from "../lib/logger.js";
+import { workerManager, type WorkerMessage } from "../worker/worker-manager.js";
 
 // Job States
 export type JobStatus = "pending" | "running" | "completed" | "failed" | "cancelled";
@@ -168,57 +166,39 @@ export class JobQueue {
   }
 
   private async scrapeChannel(channel: any, incremental: boolean, jobId?: string) {
-    // 1. Get existing video IDs to avoid duplicates
-    const existingVideoIdsList = await storage.getVideoIdsByChannel(channel.id);
-    const existingIds = new Set(existingVideoIdsList);
+    const effectiveJobId = jobId || channel.id;
 
-    // 2. Scrape
-    if (jobId) await this.log(jobId, `Fetching videos from ${channel.url}...`);
-    
-    const platform = channel.platform === "tiktok" ? "tiktok" : "youtube";
-    let scrapedVideos: any[] = [];
+    // Delegate to worker process (or inline fallback on Vercel)
+    const onMessage = (msg: WorkerMessage) => {
+      if (msg.type === "log" && jobId) {
+        this.log(jobId, msg.payload.message).catch(() => {});
+      }
+    };
 
-    // Add timeout to scraping
     const SCRAPE_TIMEOUT = 120000; // 2 minutes
-    const scrapePromise = (async () => {
-        if (platform === "tiktok") {
-            const result = await scrapeTikTokProfile(channel.url);
-            return result.videos;
-        } else {
-            const { videos: ytVideos } = await scrapeYouTubeChannel(channel.url, {
-                existingVideoIds: existingIds,
-                incremental,
-                maxItems: 60,
-            });
-            return ytVideos;
-        }
-    })();
+    let result: { savedCount: number; errors: string[]; existingVideoCount: number };
 
     try {
-        scrapedVideos = await Promise.race([
-            scrapePromise,
-            new Promise<any[]>((_, reject) => 
-                setTimeout(() => reject(new Error("Scraping timed out")), SCRAPE_TIMEOUT)
-            )
-        ]);
+      result = await Promise.race([
+        workerManager.scrapeChannel(
+          { id: channel.id, name: channel.name, url: channel.url, platform: channel.platform || "youtube", videoCount: channel.videoCount || 0 },
+          incremental,
+          effectiveJobId,
+          onMessage,
+        ),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error("Scraping timed out")), SCRAPE_TIMEOUT),
+        ),
+      ]);
     } catch (e: any) {
-        if (jobId) await this.log(jobId, `Scraping failed: ${e.message}`);
-        throw e;
+      if (jobId) await this.log(jobId, `Scraping failed: ${e.message}`);
+      throw e;
     }
-
-    if (jobId) await this.log(jobId, `Found ${scrapedVideos.length} new videos.`);
-
-    // 3. Save Videos & Process AI using shared logic
-    const result = await processScrapedVideos(scrapedVideos, {
-      channelId: channel.id,
-      platform,
-      runCategorization: true // Manual jobs typically want immediate categorization
-    });
 
     if (jobId) {
       await this.log(jobId, `Saved ${result.savedCount} videos. Errors: ${result.errors.length}`);
       if (result.errors.length > 0) {
-        for (const err of result.errors.slice(0, 5)) { // Log first 5 errors
+        for (const err of result.errors.slice(0, 5)) {
           await this.log(jobId, `Error: ${err}`);
         }
       }
@@ -227,7 +207,7 @@ export class JobQueue {
     // Update channel stats
     await db.update(channels).set({
       lastScraped: new Date(),
-      videoCount: (channel.videoCount || 0) + result.savedCount
+      videoCount: (result.existingVideoCount || 0) + result.savedCount,
     }).where(eq(channels.id, channel.id));
 
     if (result.savedCount > 0) {

@@ -130,7 +130,7 @@ export function createRateLimiters() {
 
   const sensitiveActionLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 200, // Admin panel makes many API calls per page
+    max: isProduction ? 100 : 200, // Tighter in production
     standardHeaders: true,
     legacyHeaders: false,
     message: { error: "Too many admin actions. Please try again in a few minutes." },

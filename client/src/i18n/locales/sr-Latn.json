@@ -303,7 +303,28 @@
     "success": "Uspeh!",
     "error": "Greška",
     "confirm": "Potvrdi",
-    "close": "Zatvori"
+    "close": "Zatvori",
+    "submit": "Pošalji",
+    "submitting": "Slanje..."
+  },
+  "suggest": {
+    "title": "Predložite funkciju ili nas kontaktirajte",
+    "description": "Imate ideju, povratnu informaciju ili pitanje? Čitamo svaku poruku i radimo na implementaciji vaših predloga.",
+    "type": "Tip",
+    "typeFeature": "Predlog funkcije",
+    "typeBug": "Prijava greške",
+    "typeChannel": "Preporuka kanala",
+    "typeContact": "Opšti kontakt",
+    "subject": "Naslov",
+    "subjectPlaceholder": "Kratak opis vašeg predloga...",
+    "message": "Poruka",
+    "messagePlaceholder": "Opišite vašu ideju, povratnu informaciju ili pitanje detaljno...",
+    "email": "Email (opcionalno)",
+    "emailPlaceholder": "vaš@email.com — ako želite da vam odgovorimo",
+    "thanksTitle": "Hvala!",
+    "thanksDesc": "Vaš predlog je primljen. Pregledamo svaki predlog i radimo na poboljšanju platforme.",
+    "errorTitle": "Nije moguće poslati",
+    "errorDesc": "Molimo pokušajte ponovo kasnije."
   },
   "404": {
     "title": "Stranica nije pronađena",
@@ -312,40 +333,65 @@
     "backHome": "Nazad na početnu"
   },
   "about": {
-    "tagline": "AI agregator video sadržaja",
-    "heroDescription": "nisam.video prikuplja i organizuje kvalitetan video sadržaj uz pomoć AI tehnologije.",
+    "tagline": "Nezavisno novinarstvo • Sloboda medija • Jedna platforma",
+    "heroDescription": "Jedna platforma za nezavisno novinarstvo. Agregiramo raznovrsne video izvore kako biste imali pristup slobodnom, necenzurisanom izveštavanju — na bilo kojoj mreži, na bilo kom uređaju.",
     "startWatching": "Počni da gledaš",
-    "exploreCategories": "Istraži kategorije",
-    "techStack": "Tehnologije",
-    "tech": {
-      "ai": "AI kategorizacija",
-      "curated": "Kurirani sadržaj",
-      "fast": "Brzo pretraživanje",
-      "global": "Više jezika"
+    "supportUs": "Podrži nas",
+    "whyTitle": "Zašto ova platforma postoji",
+    "whyDescription": "U medijskom okruženju gde informacije mogu biti filtrirane, blokirane ili kontrolisane, verujemo da svaki građanin zaslužuje pristup raznovrsnim, nezavisnim glasovima.",
+    "features": {
+      "pressFreedom": {
+        "title": "Sloboda medija",
+        "description": "Zalažemo se za osnovno pravo na slobodu štampe. Naša platforma osigurava da nezavisno novinarstvo ostane dostupno svima, bez cenzure ili mešanja."
+      },
+      "civilJournalism": {
+        "title": "Građansko novinarstvo",
+        "description": "Građanski reporteri, nezavisni mediji i lokalni novinari — svi agregirani na jednoj platformi. Svaki glas je važan kada je u pitanju istina i transparentnost."
+      },
+      "universalAccess": {
+        "title": "Univerzalan pristup",
+        "description": "Dostupno na MTS i SBB mrežama, na svakom uređaju. Bez obzira na provajdera, imate jednak pristup nezavisnim medijima i slobodi izražavanja."
+      }
     },
     "mission": {
       "title": "Naša misija",
-      "p1": "Da omogućimo brz pristup kvalitetnom video sadržaju.",
-      "p2": "Da organizujemo informacije tako da se lako pronalaze."
+      "p1": "Verujemo da je pristup nezavisnom novinarstvu osnovno pravo, a ne privilegija. U okruženju gde mediji mogu biti pod pritiskom, ograničeni ili ućutkani, nisam.video služi kao digitalni štit — agregira nezavisne izvore na jednu platformu kojoj svako može da pristupi.",
+      "p2": "Sloboda štampe i sloboda izražavanja moraju biti sačuvane. Prikupljamo izvore od nezavisnih novinara, građanskih reportera i raznovrsnih medijskih kuća — kako biste uvek imali pristup potpunoj slici, a ne samo jednom narativu.",
+      "p3": "Bilo da koristite MTS (Mobilna Telefonija Srbije), SBB ili bilo kog drugog provajdera — ova platforma radi za vas. Jer nezavisna informacija nikada ne bi trebalo da zavisi od mreže na koju ste pretplaćeni."
+    },
+    "principles": {
+      "truth": "Istina",
+      "transparency": "Transparentnost",
+      "freeExpression": "Sloboda izražavanja",
+      "independence": "Nezavisnost"
     },
     "stats": {
       "curatedVideos": "Kurirani videi",
-      "smartCategories": "Pametne kategorije",
+      "independentSources": "Nezavisni izvori",
       "autoUpdates": "Automatska ažuriranja"
     },
-    "features": {
-      "aiCuration": {
-        "title": "AI kuracija",
-        "description": "AI pomaže u organizaciji videa po temama."
-      },
-      "smartDiscovery": {
-        "title": "Pametno otkrivanje",
-        "description": "Lakše pronađite sadržaj koji vas zanima."
-      },
-      "mobileFirst": {
-        "title": "Optimizovano za mobilne",
-        "description": "Udobno gledanje na svim uređajima."
-      }
+    "support": {
+      "title": "Potrebna nam je vaša podrška",
+      "p1": "Ovu platformu grade ljudi koji veruju u slobodu medija i nezavisno novinarstvo. Ali da bismo je održali, razvijali i unapređivali — potrebna nam je vaša pomoć.",
+      "p2": "Svaka donacija, svaki deljeni link, svaki preporučeni kanal pomaže nam da proširimo doseg i donesemo više nezavisnih glasova na svetlo dana. Zajedno možemo da osiguramo da slobodno novinarstvo ostane slobodno.",
+      "donate": "Doniraj",
+      "suggestFeature": "Predloži funkciju"
+    },
+    "community": {
+      "title": "Vaš glas je važan",
+      "description": "Ovo je platforma vođena zajednicom. Svaka preporuka ili sugestija koju imate je dobrodošla — i mi ćemo je implementirati. Bilo da se radi o novoj funkciji, kanalu za dodavanje ili ideji za poboljšanje, želimo da vas čujemo.",
+      "recommendChannel": "Preporuči kanal",
+      "recommendChannelDesc": "Znate nezavisnog novinara ili medij? Predložite njihov kanal i pomozite nam da proširimo pokrivenost.",
+      "suggestFeature": "Predloži funkciju",
+      "suggestFeatureDesc": "Imate ideju da platforma bude bolja? Čitamo svaki predlog i radimo na implementaciji najboljih.",
+      "spreadTheWord": "Proširite vest",
+      "spreadTheWordDesc": "Podelite nisam.video sa prijateljima i porodicom. Što više ljudi zna za nas, nezavisno novinarstvo postaje jače."
+    },
+    "access": {
+      "title": "Dostupno na svim mrežama",
+      "description": "Pristupačno na MTS, SBB i svim drugim provajderima. Instalirajte kao aplikaciju na telefon ili jednostavno otvorite u pregledaču.",
+      "pwa": "PWA aplikacija",
+      "web": "Web pregledač"
     }
   },
   "errors": {
@@ -355,7 +401,13 @@
     "unauthorized": "Nemate dozvolu za pristup ovoj stranici"
   },
   "footer": {
+    "tagline": "Platforma za nezavisno novinarstvo. Raznovrsni izvori, jedna platforma — podrška slobodi medija.",
+    "explore": "Istraži",
+    "topCategories": "Najpopularnije kategorije",
+    "info": "Informacije",
     "recommendChannel": "Predloži kanal",
+    "suggestFeature": "Predloži funkciju",
+    "contactUs": "Kontaktirajte nas",
     "rights": "Sva prava zadržana."
   },
   "login": {
