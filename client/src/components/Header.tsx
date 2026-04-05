@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { Search, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,13 @@ interface HeaderProps {
 export function Header({ onSearchClick, onMenuClick }: HeaderProps) {
   const { t } = useTranslation();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 10);
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   const handleMenuClick = () => {
     if (onMenuClick) {
@@ -31,7 +38,7 @@ export function Header({ onSearchClick, onMenuClick }: HeaderProps) {
       <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[100] focus:bg-primary focus:text-primary-foreground focus:px-4 focus:py-2 focus:rounded-md">
         {t("a11y.skipToContent", "Skip to main content")}
       </a>
-      <header className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border transition-all duration-300">
+      <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${scrolled ? 'bg-background/95 backdrop-blur-md border-b border-border shadow-lg' : 'bg-gradient-to-b from-black/80 via-black/40 to-transparent border-b border-transparent'}`}>
         <div className="flex items-center justify-between px-4 sm:px-6 lg:px-12 h-16">
           <div className="flex items-center gap-3 sm:gap-4 md:gap-8">
             <Button

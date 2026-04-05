@@ -52,16 +52,17 @@ export const VideoCard = memo(function VideoCard({ video, onClick, variant = "ca
 
   const content = (
     <div
-      className={`group relative ${widthClass} cursor-pointer transition-shadow duration-200 ease-out`}
+      className={`group relative ${widthClass} cursor-pointer transition-all duration-300 ease-out ${isHovered ? 'scale-105 z-10' : 'scale-100 z-1'}`}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       onClick={onClick}
       data-testid={`card-video-${video.id}`}
       style={{
         zIndex: isHovered ? 10 : 1,
+        transformOrigin: 'center bottom',
       }}
     >
-      <div className="relative aspect-video rounded-md overflow-hidden bg-muted group-hover:shadow-lg transition-shadow duration-300">
+      <div className={`relative aspect-video rounded-md overflow-hidden bg-muted transition-shadow duration-300 ${isHovered ? 'shadow-xl shadow-black/60 ring-1 ring-white/10' : ''}`}>
         {/* Banner Background Layer - Only visible if banner exists */}
         {video.channel?.bannerUrl && (
            <div 

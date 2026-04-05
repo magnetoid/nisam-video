@@ -23,7 +23,7 @@ export function Footer() {
   const topCategories = categories.slice(0, 6);
 
   return (
-    <footer className="bg-card border-t border-border mt-auto" data-testid="footer">
+    <footer className="bg-background border-t border-border/50 mt-auto" data-testid="footer">
       <div className="px-4 md:px-12 py-10">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Brand */}

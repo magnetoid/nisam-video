@@ -48,11 +48,11 @@ export function CarouselRow({ title, videos }: CarouselRowProps) {
 
   return (
     <div
-      className="group/row relative py-8 bg-gradient-to-b from-background via-background to-background/95"
+      className="group/row relative py-5 md:py-6"
       data-testid={`carousel-${title.toLowerCase().replace(/\s+/g, "-")}`}
     >
       <h2
-        className="text-xl md:text-2xl lg:text-3xl font-bold mb-6 px-4 md:px-12 tracking-tight uppercase text-sm bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-transparent drop-shadow-sm"
+        className="text-lg md:text-xl lg:text-2xl font-bold mb-4 px-4 md:px-12 tracking-tight text-foreground"
         data-testid="text-carousel-title"
       >
         {title}
@@ -90,7 +90,7 @@ export function CarouselRow({ title, videos }: CarouselRowProps) {
         <div
           ref={scrollContainerRef}
           onScroll={handleScroll}
-          className="flex gap-3 sm:gap-4 md:gap-6 overflow-x-auto scrollbar-hide scroll-smooth px-4 md:px-12 snap-x snap-mandatory"
+          className="flex gap-2 sm:gap-3 md:gap-4 overflow-x-auto scrollbar-hide scroll-smooth px-4 md:px-12 snap-x snap-mandatory"
           style={{
             scrollbarWidth: "none",
             msOverflowStyle: "none",
