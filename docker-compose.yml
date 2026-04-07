@@ -111,6 +111,9 @@ services:
       HEALTH_PROBE_INTERVAL_MS: ${HEALTH_PROBE_INTERVAL_MS:-10000}
     ports:
       - "${APP_PORT:-3000}:3000"
+    labels:
+      - "coolify.managed=true"
+      - "coolify.expose=true"
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
       interval: 30s
