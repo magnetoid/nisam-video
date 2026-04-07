@@ -6,7 +6,7 @@ import { db } from "./db.js";
 import { aiSettings } from "../shared/schema.js";
 import { recordError } from "./error-log-service.js";
 
-async function getAiConfig() {
+export async function getAiConfig() {
   try {
     const settings = await db.select().from(aiSettings).limit(1);
     const config = settings[0];

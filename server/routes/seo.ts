@@ -8,7 +8,7 @@ import { seoSettings, seoRedirects, seoMetaTags, seoKeywords, seoAuditLogs, seoA
 import { eq, and, desc, asc, sql } from "drizzle-orm";
 import { db, isDbReady } from "../db.js";
 import { generateSlug } from "../utils.js";
-import { getAIConfig } from "../ai-service.js";
+import { getAiConfig } from "../ai-service.js";
 import { generateOpenAICompletion } from "../services/openai.js";
 import { generateOllamaCompletion } from "../services/ollama.js";
 
@@ -451,7 +451,7 @@ router.post("/enhanced/meta-tags/suggest", requireAuth, async (req, res) => {
       }
     }
 
-    const aiConfig = await getAIConfig();
+    const aiConfig = await getAiConfig();
     const systemPrompt = `You are an expert SEO specialist. Generate optimal meta title (max 60 chars), meta description (max 160 chars), and 5-10 comma-separated keywords based on the following page context. Output ONLY raw JSON format: {"title": "...", "description": "...", "keywords": "..."}`;
     
     let aiResponseText = "";
