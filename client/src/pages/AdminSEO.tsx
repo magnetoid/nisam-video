@@ -41,6 +41,7 @@ import {
   Globe,
 } from "lucide-react";
 import { SitemapAndRobotsPanel } from "@/pages/admin-seo/SitemapAndRobotsPanel";
+import { ImageUpload } from "@/components/ImageUpload";
 
 type Pagination = {
   page: number;
@@ -371,9 +372,18 @@ export default function AdminSEO() {
                             name="ogImage"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>{t("admin.ogImage", "Open Graph Image URL")}</FormLabel>
+                                <FormLabel>{t("admin.ogImage", "Open Graph / Social Image")}</FormLabel>
+                                <FormDescription>
+                                  {t("admin.ogImageDesc", "This image appears when your site is shared on social media (Facebook, Twitter/X, LinkedIn). Recommended size: 1200x630px.")}
+                                </FormDescription>
                                 <FormControl>
-                                  <Input {...field} value={field.value || ""} placeholder="https://…" />
+                                  <ImageUpload
+                                    value={field.value || ""}
+                                    onChange={field.onChange}
+                                    folder="seo"
+                                    placeholder={t("admin.ogImageUpload", "Upload or paste your social sharing image")}
+                                    previewHeight="h-48"
+                                  />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
