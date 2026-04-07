@@ -7,11 +7,12 @@ import { LazyCarouselRow } from "@/components/LazyCarouselRow";
 import { SearchOverlay } from "@/components/SearchOverlay";
 import { SEO } from "@/components/SEO";
 import { LikeStatusBatchProvider } from "@/components/LikeButton";
-import type { LocalizedCategory, VideoWithLocalizedRelations, SupportedLanguage } from "@shared/schema";
+import type { Channel, LocalizedCategory, VideoWithLocalizedRelations, SupportedLanguage } from "@shared/schema";
 import { useTranslation } from "react-i18next";
 import { apiRequest } from "@/lib/queryClient";
 import { getMaxResolutionThumbnail } from "@/lib/video";
 import HeroImageSlider from '@/components/HeroImageSlider';
+import { ChannelCarouselRow } from "@/components/ChannelCarouselRow";
 
 import { HeroSettings } from "@shared/schema";
 
@@ -196,6 +197,8 @@ export default function Home() {
             {trendingVideos.length > 0 && (
               <CarouselRow title={t("home.trending", "Trending")} videos={trendingVideos} />
             )}
+
+            <ChannelCarouselRow channelName="N1" lang={i18n.language} />
 
             {popularSegments.length > 0 ? (
               popularSegments.map(segment => (
