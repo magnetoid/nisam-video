@@ -55,17 +55,18 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import type { SystemSettings, AnalyticsEvent, EmailSettings } from "@shared/schema";
 import { insertSystemSettingsSchema, insertEmailSettingsSchema } from "@shared/schema";
-import { 
-  Settings, 
-  AlertTriangle, 
-  Sliders, 
-  Code, 
-  BarChart3, 
-  Plus, 
-  Edit, 
+import {
+  Settings,
+  AlertTriangle,
+  Sliders,
+  Code,
+  BarChart3,
+  Plus,
+  Edit,
   Trash2,
   Activity,
-  Smartphone
+  Smartphone,
+  Shield
 } from "lucide-react";
 import { Label } from "@/components/ui/label";
 
@@ -286,10 +287,14 @@ export default function AdminSystemSettings() {
             </div>
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-              <TabsList className="grid w-full grid-cols-5">
+              <TabsList className="grid w-full grid-cols-6">
                 <TabsTrigger value="general" className="flex items-center gap-2">
                   <Sliders className="h-4 w-4" />
                   {t("admin.general", "General")}
+                </TabsTrigger>
+                <TabsTrigger value="security" className="flex items-center gap-2">
+                  <Shield className="h-4 w-4" />
+                  {t("admin.security", "Security")}
                 </TabsTrigger>
                 <TabsTrigger value="pwa" className="flex items-center gap-2">
                   <Smartphone className="h-4 w-4" />
@@ -447,6 +452,88 @@ export default function AdminSystemSettings() {
                     </div>
                   </form>
                 </Form>
+              </TabsContent>
+
+              {/* --- Security Tab (Turnstile) --- */}
+              <TabsContent value="security">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Shield className="h-5 w-5" />
+                      {t("admin.turnstileTitle", "Cloudflare Turnstile")}
+                    </CardTitle>
+                    <CardDescription>
+                      {t("admin.turnstileDescription", "Protect login and registration forms from bots using Cloudflare Turnstile. Get your site key and secret key from the Cloudflare dashboard.")}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label className="text-base">{t("admin.turnstileEnable", "Enable Turnstile")}</Label>
+                        <p className="text-sm text-muted-foreground">
+                          {t("admin.turnstileEnableDesc", "When enabled, users must pass a Turnstile challenge to log in or register.")}
+                        </p>
+                      </div>
+                      <Switch
+                        checked={settings?.turnstileEnabled === 1}
+                        onCheckedChange={(checked) => {
+                          updateSettingsMutation.mutate({ turnstileEnabled: checked ? 1 : 0 });
+                        }}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="turnstile-site-key">{t("admin.turnstileSiteKey", "Site Key")}</Label>
+                      <Input
+                        id="turnstile-site-key"
+                        placeholder="0x4AAAAAAA..."
+                        defaultValue={settings?.turnstileSiteKey || ""}
+                        onBlur={(e) => {
+                          const val = e.target.value.trim();
+                          if (val !== (settings?.turnstileSiteKey || "")) {
+                            updateSettingsMutation.mutate({ turnstileSiteKey: val });
+                          }
+                        }}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        {t("admin.turnstileSiteKeyDesc", "The public site key from your Cloudflare Turnstile widget configuration.")}
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="turnstile-secret-key">{t("admin.turnstileSecretKey", "Secret Key")}</Label>
+                      <Input
+                        id="turnstile-secret-key"
+                        type="password"
+                        placeholder="0x4AAAAAAA..."
+                        defaultValue={settings?.turnstileSecretKey || ""}
+                        onBlur={(e) => {
+                          const val = e.target.value.trim();
+                          if (val !== (settings?.turnstileSecretKey || "")) {
+                            updateSettingsMutation.mutate({ turnstileSecretKey: val });
+                          }
+                        }}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        {t("admin.turnstileSecretKeyDesc", "The private secret key. This is used server-side to verify Turnstile tokens. Never exposed to the client.")}
+                      </p>
+                    </div>
+
+                    {settings?.turnstileEnabled === 1 && !settings?.turnstileSiteKey && (
+                      <div className="flex items-center gap-2 p-3 rounded-md bg-destructive/10 text-destructive text-sm">
+                        <AlertTriangle className="h-4 w-4 shrink-0" />
+                        {t("admin.turnstileWarning", "Turnstile is enabled but no site key is configured. The widget will not appear until both keys are set.")}
+                      </div>
+                    )}
+
+                    {settings?.turnstileEnabled === 1 && settings?.turnstileSiteKey && settings?.turnstileSecretKey && (
+                      <div className="flex items-center gap-2 p-3 rounded-md bg-green-500/10 text-green-500 text-sm">
+                        <Shield className="h-4 w-4 shrink-0" />
+                        {t("admin.turnstileActive", "Turnstile is active. Login and registration forms are protected.")}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
               </TabsContent>
 
               {/* --- PWA Tab --- */}

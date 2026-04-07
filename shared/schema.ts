@@ -878,6 +878,10 @@ export const systemSettings = pgTable("system_settings", {
   pwaIcon192: text("pwa_icon_192").default("/icon-192.png"),
   pwaIcon512: text("pwa_icon_512").default("/icon-512.png"),
   clientErrorLogging: integer("client_error_logging").notNull().default(1), // 0 = disabled, 1 = enabled
+  // Cloudflare Turnstile
+  turnstileEnabled: integer("turnstile_enabled").notNull().default(0), // 0 = disabled, 1 = enabled
+  turnstileSiteKey: text("turnstile_site_key"),
+  turnstileSecretKey: text("turnstile_secret_key"),
   // About page
   aboutPageContent: text("about_page_content"),
   // Custom code injection for GTM, analytics, etc.

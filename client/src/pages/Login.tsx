@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,6 +14,7 @@ import {
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
+import { TurnstileWidget } from "@/components/TurnstileWidget";
 import { Lock, User } from "lucide-react";
 
 export default function Login() {
@@ -22,36 +24,57 @@ export default function Login() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+
+  const { data: turnstileConfig } = useQuery<{ enabled: boolean; siteKey?: string }>({
+    queryKey: ["/api/system/turnstile"],
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const handleTurnstileVerify = useCallback((token: string) => {
+    setTurnstileToken(token);
+  }, []);
+
+  const handleTurnstileExpire = useCallback(() => {
+    setTurnstileToken(null);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (turnstileConfig?.enabled && !turnstileToken) {
+      toast({
+        title: t("common.error", "Error"),
+        description: t("auth.turnstileRequired", "Please complete the security verification"),
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      // Auto-fill credentials for easy login
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ 
-          username, 
-          password 
+        body: JSON.stringify({
+          username,
+          password,
+          turnstileToken: turnstileToken || undefined,
         }),
       });
 
       if (response.ok) {
-        // Force session query invalidation
         await queryClient.resetQueries({ queryKey: ["/api/auth/session"] });
-        
-        // Show success toast
+
         toast({
           title: t("common.success", "Success"),
           description: t("login.success", "Successfully logged in!"),
         });
-        
-        // Small delay to ensure cookie is set and state propagates
+
         setTimeout(() => {
-            window.location.href = "/admin/dashboard";
+          window.location.href = "/admin/dashboard";
         }, 100);
       } else {
         const data = await response.json();
@@ -124,10 +147,20 @@ export default function Login() {
                 />
               </div>
             </div>
+
+            {turnstileConfig?.enabled && turnstileConfig.siteKey && (
+              <TurnstileWidget
+                siteKey={turnstileConfig.siteKey}
+                onVerify={handleTurnstileVerify}
+                onExpire={handleTurnstileExpire}
+                theme="dark"
+              />
+            )}
+
             <Button
               type="submit"
               className="w-full"
-              disabled={isLoading}
+              disabled={isLoading || (turnstileConfig?.enabled && !turnstileToken)}
               data-testid="button-login"
             >
               {isLoading ? t("login.loggingIn") : t("login.loginButton")}

@@ -94,7 +94,7 @@ export function createRateLimiters() {
 
   const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: isProduction ? 5 : 20,
+    max: isProduction ? 15 : 20,
     standardHeaders: true,
     legacyHeaders: false,
     skipSuccessfulRequests: false,

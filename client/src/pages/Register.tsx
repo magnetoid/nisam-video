@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useLocation, Link } from "wouter";
 import { useTranslation } from "react-i18next";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,6 +15,7 @@ import {
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
+import { TurnstileWidget } from "@/components/TurnstileWidget";
 import { Lock, User, UserPlus, Mail } from "lucide-react";
 
 export default function Register() {
@@ -25,14 +27,37 @@ export default function Register() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+
+  const { data: turnstileConfig } = useQuery<{ enabled: boolean; siteKey?: string }>({
+    queryKey: ["/api/system/turnstile"],
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const handleTurnstileVerify = useCallback((token: string) => {
+    setTurnstileToken(token);
+  }, []);
+
+  const handleTurnstileExpire = useCallback(() => {
+    setTurnstileToken(null);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (password !== confirmPassword) {
       toast({
         title: t("common.error", "Error"),
         description: t("register.passwordMismatch", "Passwords do not match"),
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (turnstileConfig?.enabled && !turnstileToken) {
+      toast({
+        title: t("common.error", "Error"),
+        description: t("auth.turnstileRequired", "Please complete the security verification"),
         variant: "destructive",
       });
       return;
@@ -45,21 +70,22 @@ export default function Register() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ 
-          username, 
+        body: JSON.stringify({
+          username,
           password,
-          email 
+          email,
+          turnstileToken: turnstileToken || undefined,
         }),
       });
 
       if (response.ok) {
         await queryClient.resetQueries({ queryKey: ["/api/auth/session"] });
-        
+
         toast({
           title: t("common.success", "Success"),
           description: t("register.success", "Registration successful!"),
         });
-        
+
         setTimeout(() => {
           setLocation("/");
         }, 500);
@@ -116,7 +142,7 @@ export default function Register() {
                 />
               </div>
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="email">{t("auth.email", "Email")} ({t("common.optional", "Optional")})</Label>
               <div className="relative">
@@ -143,7 +169,7 @@ export default function Register() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  minLength={6}
+                  minLength={8}
                   className="pl-10"
                 />
               </div>
@@ -160,16 +186,25 @@ export default function Register() {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required
-                  minLength={6}
+                  minLength={8}
                   className="pl-10"
                 />
               </div>
             </div>
 
+            {turnstileConfig?.enabled && turnstileConfig.siteKey && (
+              <TurnstileWidget
+                siteKey={turnstileConfig.siteKey}
+                onVerify={handleTurnstileVerify}
+                onExpire={handleTurnstileExpire}
+                theme="dark"
+              />
+            )}
+
             <Button
               type="submit"
               className="w-full"
-              disabled={isLoading}
+              disabled={isLoading || (turnstileConfig?.enabled && !turnstileToken)}
             >
               {isLoading ? t("common.loading", "Loading...") : t("register.submit", "Create Account")}
             </Button>

@@ -2,6 +2,7 @@ import { Router } from "express";
 import bcrypt from "bcrypt";
 import { storage } from "../storage/index.js";
 import { recordAuditLog } from "../error-log-service.js";
+import { verifyTurnstile } from "../middleware/turnstile.js";
 import crypto from "crypto";
 
 function normalizeCredential(value: unknown) {
@@ -58,7 +59,7 @@ function getConfiguredAdmin() {
 
 const router = Router();
 
-router.post("/register", async (req, res) => {
+router.post("/register", verifyTurnstile, async (req, res) => {
   try {
     const username = normalizeCredential(req.body?.username);
     const password = normalizeCredential(req.body?.password);
@@ -128,7 +129,7 @@ router.post("/register", async (req, res) => {
   }
 });
 
-router.post("/login", async (req, res) => {
+router.post("/login", verifyTurnstile, async (req, res) => {
   const requestId = generateRequestId();
   
   try {

@@ -28,6 +28,19 @@ router.get("/settings", async (req, res) => {
   }
 });
 
+// Public endpoint: returns only the Turnstile site key (no secrets)
+router.get("/turnstile", async (req, res) => {
+  try {
+    const settings = await storage.getSystemSettings();
+    if (settings?.turnstileEnabled && settings.turnstileSiteKey) {
+      return res.json({ enabled: true, siteKey: settings.turnstileSiteKey });
+    }
+    res.json({ enabled: false });
+  } catch {
+    res.json({ enabled: false });
+  }
+});
+
 router.patch("/settings", requireAuth, async (req, res) => {
   try {
     const updated = await storage.updateSystemSettings(req.body);
