@@ -24,6 +24,7 @@ import {
   Bot,
   Users,
   Globe,
+  Inbox,
 } from "lucide-react";
 import { SiTiktok } from "react-icons/si";
 import { useTranslation } from "react-i18next";
@@ -103,6 +104,12 @@ export function AdminSidebar({ open = false, onClose, className }: AdminSidebarP
           label: t("admin.dashboard", "Dashboard"),
           path: "/admin/dashboard",
           testId: "link-dashboard",
+        },
+        {
+          icon: Inbox,
+          label: t("admin.inbox", "Inbox"),
+          path: "/admin/inbox",
+          testId: "link-inbox",
         },
         {
           icon: Star,

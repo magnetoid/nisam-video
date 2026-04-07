@@ -55,6 +55,7 @@ const adminPages = {
   aiSettings: lazy(() => import("@/pages/AdminAISettings")),
   users: lazy(() => import("@/pages/AdminUsers")),
   languages: lazy(() => import("@/pages/AdminLanguages")),
+  inbox: lazy(() => import("@/pages/AdminInbox")),
 };
 
 type AdminPageKey = keyof typeof adminPages;
@@ -83,6 +84,7 @@ const adminRoutes: AdminRouteConfig[] = [
   { path: "/admin/about", page: "about" },
   { path: "/admin/tiktok", page: "tiktok" },
   { path: "/admin/ai-settings", page: "aiSettings" },
+  { path: "/admin/inbox", page: "inbox" },
   { path: "/admin/debug", page: "logs" },
   { path: "/admin/users", page: "users" },
   { path: "/admin/languages", page: "languages" },
