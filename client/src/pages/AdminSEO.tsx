@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Card,
   CardContent,
@@ -13,6 +14,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import {
   Form,
   FormControl,
@@ -31,7 +40,7 @@ import {
 } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest } from "@/lib/queryClient";
 import {
   ArrowUpRight,
   FileText,
@@ -39,6 +48,13 @@ import {
   Share2,
   Tag,
   Globe,
+  Plus,
+  Trash2,
+  Wand2,
+  CheckCircle2,
+  XCircle,
+  Download,
+  Upload,
 } from "lucide-react";
 import { SitemapAndRobotsPanel } from "@/pages/admin-seo/SitemapAndRobotsPanel";
 import { ImageUpload } from "@/components/ImageUpload";
@@ -56,6 +72,11 @@ type MetaTag = {
   pageType?: string;
   title: string;
   description: string;
+  keywords?: string | null;
+  ogTitle?: string | null;
+  ogDescription?: string | null;
+  ogImage?: string | null;
+  canonicalUrl?: string | null;
   seoScore?: number | null;
   isActive?: boolean | null;
 };
@@ -142,9 +163,25 @@ function setTabOnUrl(tab: string) {
   window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
 }
 
+const metaTagEditSchema = z.object({
+  pageUrl: z.string().min(1),
+  pageType: z.enum(["home", "video", "category", "tag", "custom"]),
+  title: z.string().min(1).max(200), // Lenient max
+  description: z.string().min(10).max(1000), // Lenient constraints
+  keywords: z.string().optional(),
+  ogTitle: z.string().optional(),
+  ogDescription: z.string().optional(),
+  ogImage: z.string().url().optional().or(z.literal('')),
+  canonicalUrl: z.string().url().optional().or(z.literal('')),
+  isActive: z.boolean().optional(),
+});
+
+type MetaTagEditValues = z.infer<typeof metaTagEditSchema>;
+
 export default function AdminSEO() {
   const { t } = useTranslation();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState(() => getTabFromWindow());
 
   useEffect(() => {
@@ -236,6 +273,171 @@ export default function AdminSEO() {
     queryKey: ["/api/seo/enhanced/audits", { page: 1, limit: 50, pageUrl: auditSearch || undefined }],
   });
   const audits = auditsResp?.audits ?? [];
+
+  // Meta Tags Management State
+  const [selectedMetaTags, setSelectedMetaTags] = useState<string[]>([]);
+  const [editingMetaTag, setEditingMetaTag] = useState<MetaTag | null>(null);
+  const [isMetaDialogOpen, setIsMetaDialogOpen] = useState(false);
+
+  const metaForm = useForm<MetaTagEditValues>({
+    resolver: zodResolver(metaTagEditSchema),
+    defaultValues: {
+      pageUrl: "",
+      pageType: "custom",
+      title: "",
+      description: "",
+      keywords: "",
+      ogTitle: "",
+      ogDescription: "",
+      ogImage: "",
+      canonicalUrl: "",
+      isActive: true,
+    }
+  });
+
+  const saveMetaTagMutation = useMutation({
+    mutationFn: async (data: MetaTagEditValues) => {
+      if (editingMetaTag?.id) {
+        return apiRequest("PATCH", `/api/seo/enhanced/meta-tags/${editingMetaTag.id}`, data);
+      } else {
+        return apiRequest("POST", "/api/seo/enhanced/meta-tags", data);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/seo/enhanced/meta-tags"] });
+      toast({ title: t("admin.saved", "Saved"), description: t("admin.metaTagSaved", "Meta tag saved successfully.") });
+      setIsMetaDialogOpen(false);
+      setEditingMetaTag(null);
+    },
+    onError: (err) => toast({ title: t("common.error", "Error"), description: err.message, variant: "destructive" }),
+  });
+
+  const deleteMetaTagMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest("DELETE", `/api/seo/enhanced/meta-tags/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/seo/enhanced/meta-tags"] });
+      toast({ title: t("admin.deleted", "Deleted"), description: t("admin.metaTagDeleted", "Meta tag deleted.") });
+      setSelectedMetaTags([]);
+    },
+    onError: (err) => toast({ title: t("common.error", "Error"), description: err.message, variant: "destructive" }),
+  });
+
+  const bulkUpdateMutation = useMutation({
+    mutationFn: async (updates: Partial<MetaTagEditValues>) => {
+      return apiRequest("PATCH", "/api/seo/enhanced/meta-tags/bulk/update", { ids: selectedMetaTags, updates });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/seo/enhanced/meta-tags"] });
+      toast({ title: t("admin.bulkUpdated", "Bulk Updated"), description: t("admin.metaTagsBulkUpdated", "Selected meta tags have been updated.") });
+      setSelectedMetaTags([]);
+    },
+    onError: (err) => toast({ title: t("common.error", "Error"), description: err.message, variant: "destructive" }),
+  });
+
+  const openMetaDialog = (tag?: MetaTag) => {
+    if (tag) {
+      setEditingMetaTag(tag);
+      metaForm.reset({
+        pageUrl: tag.pageUrl,
+        pageType: (tag.pageType as any) || "custom",
+        title: tag.title,
+        description: tag.description,
+        keywords: tag.keywords || "",
+        ogTitle: tag.ogTitle || "",
+        ogDescription: tag.ogDescription || "",
+        ogImage: tag.ogImage || "",
+        canonicalUrl: tag.canonicalUrl || "",
+        isActive: tag.isActive ?? true,
+      });
+    } else {
+      setEditingMetaTag(null);
+      metaForm.reset({
+        pageUrl: "",
+        pageType: "custom",
+        title: "",
+        description: "",
+        keywords: "",
+        ogTitle: "",
+        ogDescription: "",
+        ogImage: "",
+        canonicalUrl: "",
+        isActive: true,
+      });
+    }
+    setIsMetaDialogOpen(true);
+  };
+
+  const handleGenerateSuggestions = async () => {
+    try {
+      const url = metaForm.getValues("pageUrl");
+      if (!url) return toast({ title: "Error", description: "Please enter a Page URL first", variant: "destructive" });
+      toast({ title: "Generating...", description: "Analyzing page content for SEO suggestions..." });
+      
+      const res = await fetch("/api/seo/enhanced/meta-tags/suggest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url })
+      });
+      if (!res.ok) throw new Error("Failed to generate suggestions");
+      const data = await res.json();
+      
+      metaForm.setValue("title", data.title || metaForm.getValues("title"));
+      metaForm.setValue("description", data.description || metaForm.getValues("description"));
+      metaForm.setValue("keywords", data.keywords || metaForm.getValues("keywords"));
+      toast({ title: "Success", description: "Applied AI SEO suggestions" });
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    }
+  };
+
+  const handleExport = () => {
+    const data = JSON.stringify(metaTags, null, 2);
+    const blob = new Blob([data], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "meta-tags-export.json";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast({ title: "Exported", description: "Meta tags exported to JSON." });
+  };
+
+  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const importedData = JSON.parse(event.target?.result as string);
+        if (!Array.isArray(importedData)) throw new Error("Invalid format");
+        
+        // Use bulk update or individual creates
+        for (const tag of importedData) {
+           await apiRequest("POST", "/api/seo/enhanced/meta-tags", {
+             pageUrl: tag.pageUrl,
+             pageType: tag.pageType || "custom",
+             title: tag.title,
+             description: tag.description,
+             keywords: tag.keywords,
+             ogTitle: tag.ogTitle,
+             ogDescription: tag.ogDescription,
+             ogImage: tag.ogImage,
+             canonicalUrl: tag.canonicalUrl,
+             isActive: tag.isActive,
+           });
+        }
+        queryClient.invalidateQueries({ queryKey: ["/api/seo/enhanced/meta-tags"] });
+        toast({ title: "Imported", description: `Successfully imported ${importedData.length} meta tags.` });
+      } catch (err: any) {
+        toast({ title: "Import Failed", description: err.message, variant: "destructive" });
+      }
+    };
+    reader.readAsText(file);
+  };
 
   const avgScore = useMemo(() => {
     const scores = metaTags.map((t) => (typeof t.seoScore === "number" ? t.seoScore : 0));
@@ -518,9 +720,38 @@ export default function AdminSEO() {
 
             <TabsContent value="meta-tags" className="space-y-4">
               <Card>
-                <CardHeader>
-                  <CardTitle>{t("admin.metaTags", "Meta Tags")}</CardTitle>
-                  <CardDescription>{t("admin.metaTagsDesc", "Server-backed meta tags with SEO scores when available.")}</CardDescription>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <div>
+                    <CardTitle>{t("admin.metaTags", "Meta Tags")}</CardTitle>
+                    <CardDescription>{t("admin.metaTagsDesc", "Server-backed meta tags with SEO scores when available.")}</CardDescription>
+                  </div>
+                  <div className="flex gap-2">
+                    {selectedMetaTags.length > 0 && (
+                      <Button variant="destructive" onClick={() => {
+                        if (confirm("Are you sure you want to delete selected tags?")) {
+                          selectedMetaTags.forEach(id => deleteMetaTagMutation.mutate(id));
+                        }
+                      }}>
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Delete ({selectedMetaTags.length})
+                      </Button>
+                    )}
+                    <Button variant="outline" onClick={handleExport}>
+                      <Download className="w-4 h-4 mr-2" /> Export
+                    </Button>
+                    <div>
+                      <input type="file" accept=".json" id="import-meta" className="hidden" onChange={handleImport} />
+                      <Button variant="outline" asChild>
+                        <label htmlFor="import-meta" className="cursor-pointer">
+                          <Upload className="w-4 h-4 mr-2" /> Import
+                        </label>
+                      </Button>
+                    </div>
+                    <Button onClick={() => openMetaDialog()}>
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add New Tag
+                    </Button>
+                  </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex items-center gap-2">
@@ -533,15 +764,27 @@ export default function AdminSEO() {
                     <div className="py-8 text-center text-muted-foreground">{t("admin.noMetaTags", "No meta tags found.")}</div>
                   ) : (
                     <div className="space-y-3">
-                      {metaTags.map((t) => (
-                        <div key={t.id} className="flex items-center justify-between gap-4 border rounded-lg p-3">
-                          <div className="min-w-0">
-                            <div className="font-medium truncate">{t.title}</div>
-                            <div className="text-sm text-muted-foreground truncate">{t.pageUrl}</div>
+                      {metaTags.map((tag) => (
+                        <div key={tag.id} className="flex items-center justify-between gap-4 border rounded-lg p-3 hover:bg-muted/50 transition-colors">
+                          <div className="flex items-center gap-4 min-w-0 flex-1">
+                            <Checkbox
+                              checked={selectedMetaTags.includes(tag.id)}
+                              onCheckedChange={(c) => {
+                                if (c) setSelectedMetaTags(prev => [...prev, tag.id]);
+                                else setSelectedMetaTags(prev => prev.filter(id => id !== tag.id));
+                              }}
+                            />
+                            <div className="min-w-0 cursor-pointer flex-1" onClick={() => openMetaDialog(tag)}>
+                              <div className="font-medium truncate text-primary hover:underline">{tag.title}</div>
+                              <div className="text-sm text-muted-foreground truncate">{tag.pageUrl}</div>
+                            </div>
                           </div>
                           <div className="flex items-center gap-2">
-                            {typeof t.seoScore === "number" && <Badge variant="secondary">{t.seoScore}</Badge>}
-                            {t.isActive === false && <Badge variant="outline">{t("common.inactive", "Inactive")}</Badge>}
+                            {typeof tag.seoScore === "number" && <Badge variant="secondary">Score: {tag.seoScore}</Badge>}
+                            {tag.isActive === false && <Badge variant="outline">{t("common.inactive", "Inactive")}</Badge>}
+                            <Button variant="ghost" size="sm" onClick={() => deleteMetaTagMutation.mutate(tag.id)}>
+                              <Trash2 className="w-4 h-4 text-destructive" />
+                            </Button>
                           </div>
                         </div>
                       ))}
@@ -549,6 +792,123 @@ export default function AdminSEO() {
                   )}
                 </CardContent>
               </Card>
+
+              {/* Meta Tag Editor Dialog */}
+              <Dialog open={isMetaDialogOpen} onOpenChange={setIsMetaDialogOpen}>
+                <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>{editingMetaTag ? "Edit Meta Tag" : "Create Meta Tag"}</DialogTitle>
+                    <DialogDescription>Configure specific meta tags for any URL path to override global settings.</DialogDescription>
+                  </DialogHeader>
+                  <Form {...metaForm}>
+                    <form onSubmit={metaForm.handleSubmit((data) => saveMetaTagMutation.mutate(data))} className="space-y-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField control={metaForm.control} name="pageUrl" render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Target URL Path (e.g. /about)</FormLabel>
+                            <FormControl><Input {...field} placeholder="/path" /></FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )} />
+                        <FormField control={metaForm.control} name="pageType" render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Page Type</FormLabel>
+                            <FormControl>
+                              <select className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background" {...field}>
+                                <option value="custom">Custom</option>
+                                <option value="home">Home</option>
+                                <option value="video">Video</option>
+                                <option value="category">Category</option>
+                              </select>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )} />
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-lg font-medium">Content SEO</h3>
+                        <Button type="button" variant="secondary" size="sm" onClick={handleGenerateSuggestions}>
+                          <Wand2 className="w-4 h-4 mr-2" /> Auto-Generate via AI
+                        </Button>
+                      </div>
+
+                      <FormField control={metaForm.control} name="title" render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Meta Title (Max 60 chars)</FormLabel>
+                          <FormControl><Input {...field} /></FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )} />
+                      <FormField control={metaForm.control} name="description" render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Meta Description (Max 160 chars)</FormLabel>
+                          <FormControl><Textarea {...field} /></FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )} />
+                      <FormField control={metaForm.control} name="keywords" render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Keywords (comma separated)</FormLabel>
+                          <FormControl><Input {...field} value={field.value || ""} /></FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )} />
+
+                      <h3 className="text-lg font-medium mt-6">Open Graph / Social</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField control={metaForm.control} name="ogTitle" render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>OG Title (Override)</FormLabel>
+                            <FormControl><Input {...field} value={field.value || ""} /></FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )} />
+                        <FormField control={metaForm.control} name="ogDescription" render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>OG Description</FormLabel>
+                            <FormControl><Input {...field} value={field.value || ""} /></FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )} />
+                        <FormField control={metaForm.control} name="canonicalUrl" render={({ field }) => (
+                          <FormItem className="md:col-span-2">
+                            <FormLabel>Canonical URL (Optional)</FormLabel>
+                            <FormControl><Input {...field} value={field.value || ""} placeholder="https://nisam.video/..." /></FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )} />
+                        <FormField control={metaForm.control} name="ogImage" render={({ field }) => (
+                          <FormItem className="md:col-span-2">
+                            <FormLabel>OG Image URL</FormLabel>
+                            <FormControl><Input {...field} value={field.value || ""} placeholder="https://..." /></FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )} />
+                      </div>
+
+                      <FormField control={metaForm.control} name="isActive" render={({ field }) => (
+                        <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                          <FormControl>
+                            <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                          </FormControl>
+                          <div className="space-y-1 leading-none">
+                            <FormLabel>Active</FormLabel>
+                            <FormDescription>Enable this meta tag on the frontend.</FormDescription>
+                          </div>
+                        </FormItem>
+                      )} />
+
+                      <div className="flex justify-end gap-2 pt-4">
+                        <Button type="button" variant="outline" onClick={() => setIsMetaDialogOpen(false)}>Cancel</Button>
+                        <Button type="submit" disabled={saveMetaTagMutation.isPending}>
+                          {saveMetaTagMutation.isPending ? "Saving..." : "Save Meta Tag"}
+                        </Button>
+                      </div>
+                    </form>
+                  </Form>
+                </DialogContent>
+              </Dialog>
             </TabsContent>
 
             <TabsContent value="redirects" className="space-y-4">

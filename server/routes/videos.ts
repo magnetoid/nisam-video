@@ -1,5 +1,6 @@
 import { Router, Request } from "express";
 import { storage } from "../storage/index.js";
+import { generateSlug } from "../utils.js";
 import { db } from "../db.js";
 import { videos, videoLikes, videoViews, tags, videoCategories } from "../../shared/schema.js";
 import { categorizeVideo } from "../ai-service.js";
@@ -287,7 +288,7 @@ router.post("/:id/categorize", requireAuth, async (req, res) => {
       
       if (!nameEn) continue;
 
-      const slug = nameEn.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+      const slug = generateSlug(nameEn);
       let category = await storage.getLocalizedCategoryBySlug(slug, "en");
 
       if (!category) {
@@ -409,7 +410,7 @@ router.post("/bulk/categorize-missing", requireAuth, async (req, res) => {
           const nameSr = categoriesSr[i];
 
           if (!nameEn) continue;
-          const slug = nameEn.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+          const slug = generateSlug(nameEn);
           let category = await storage.getLocalizedCategoryBySlug(slug, "en");
 
           if (!category) {
@@ -514,7 +515,7 @@ router.post("/bulk/categorize", requireAuth, async (req, res) => {
 
             if (!nameEn) continue;
 
-            const slug = nameEn.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+            const slug = generateSlug(nameEn);
             let category = await storage.getLocalizedCategoryBySlug(slug, "en");
 
             if (!category) {
@@ -925,7 +926,7 @@ router.post("/scrape-batch", requireAuth, async (req, res) => {
           }
           response.videos.push({ id: existing.id, videoId: video.videoId, action: "updated" });
         } else if (channel) {
-          const slug = video.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").substring(0, 80);
+          const slug = generateSlug(video.title, 80);
           const newVideo = await storage.createVideo({
             channelId: channel.id,
             videoId: video.videoId,

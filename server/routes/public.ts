@@ -1,8 +1,91 @@
 import { Router } from "express";
 import { storage } from "../storage/index.js";
 import { cache } from "../cache.js";
+import { db } from "../db.js";
+import { videos, categories, channels, tags, seoSettings } from "../../shared/schema.js";
+import { eq, isNull } from "drizzle-orm";
 
 const router = Router();
+
+export const robotsHandler = async (_req: any, res: any) => {
+  try {
+    const settings = await db.select().from(seoSettings).limit(1);
+    const customRobots = settings[0]?.robotsTxt;
+    
+    res.setHeader("Content-Type", "text/plain");
+    res.setHeader("Cache-Control", "public, max-age=3600");
+    
+    if (customRobots && customRobots.trim().length > 0) {
+      return res.send(customRobots);
+    }
+    
+    const defaultRobots = `User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /api/admin/
+
+Sitemap: ${process.env.APP_URL || "https://nisam.video"}/sitemap.xml
+`;
+    res.send(defaultRobots);
+  } catch (error) {
+    console.error("Error serving robots.txt:", error);
+    res.status(500).send("User-agent: *\nAllow: /");
+  }
+};
+
+export const sitemapHandler = async (_req: any, res: any) => {
+  try {
+    const baseUrl = process.env.APP_URL || "https://nisam.video";
+    
+    // Fetch all public URLs
+    const [allVideos, allCategories, allChannels, allTags] = await Promise.all([
+      db.select({ slug: videos.slug, updatedAt: videos.updatedAt }).from(videos).where(isNull(videos.deletedAt)),
+      db.select({ slug: categories.slug }).from(categories),
+      db.select({ slug: channels.slug }).from(channels),
+      db.select({ slug: tags.slug }).from(tags),
+    ]);
+
+    let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
+    xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
+
+    // Add homepage
+    xml += `  <url>\n    <loc>${baseUrl}/</loc>\n    <changefreq>daily</changefreq>\n    <priority>1.0</priority>\n  </url>\n`;
+
+    // Add videos
+    for (const v of allVideos) {
+      if (!v.slug) continue;
+      const date = v.updatedAt ? new Date(v.updatedAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+      xml += `  <url>\n    <loc>${baseUrl}/video/${v.slug}</loc>\n    <lastmod>${date}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.8</priority>\n  </url>\n`;
+    }
+
+    // Add categories
+    for (const c of allCategories) {
+      if (!c.slug) continue;
+      xml += `  <url>\n    <loc>${baseUrl}/category/${c.slug}</loc>\n    <changefreq>weekly</changefreq>\n    <priority>0.7</priority>\n  </url>\n`;
+    }
+
+    // Add channels
+    for (const ch of allChannels) {
+      if (!ch.slug) continue;
+      xml += `  <url>\n    <loc>${baseUrl}/channels/${ch.slug}</loc>\n    <changefreq>weekly</changefreq>\n    <priority>0.6</priority>\n  </url>\n`;
+    }
+
+    // Add tags
+    for (const t of allTags) {
+      if (!t.slug) continue;
+      xml += `  <url>\n    <loc>${baseUrl}/tag/${t.slug}</loc>\n    <changefreq>monthly</changefreq>\n    <priority>0.5</priority>\n  </url>\n`;
+    }
+
+    xml += `</urlset>`;
+
+    res.setHeader("Content-Type", "application/xml");
+    res.setHeader("Cache-Control", "public, max-age=3600"); // Cache for 1 hour
+    res.send(xml);
+  } catch (error) {
+    console.error("Error serving sitemap.xml:", error);
+    res.status(500).send("<?xml version=\"1.0\" encoding=\"UTF-8\"?><urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\"></urlset>");
+  }
+};
 
 // Public Hero Config
 router.get("/hero/config", async (_req, res) => {

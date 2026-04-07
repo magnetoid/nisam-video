@@ -20,6 +20,7 @@ import { recordRequestMetric } from "./performance-metrics.js";
 import { runMigrations } from "./migrate.js";
 import { startCronJobs } from "./services/cron.js";
 import { getHealthSnapshot, startHealthProbes } from "./health.js";
+import { sitemapHandler, robotsHandler } from "./routes/public.js";
 
 const app = express();
 
@@ -341,7 +342,9 @@ app.use((req, res, next) => {
   next();
 });
 
-
+// Global static SEO files
+app.get("/sitemap.xml", sitemapHandler);
+app.get("/robots.txt", robotsHandler);
 
 // Create startup function
 async function startServer() {

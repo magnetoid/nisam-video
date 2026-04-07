@@ -266,6 +266,9 @@ importers:
       recharts:
         specifier: ^2.15.2
         version: 2.15.4(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      slugify:
+        specifier: ^1.6.9
+        version: 1.6.9
       sonner:
         specifier: ^2.0.7
         version: 2.0.7(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -5049,6 +5052,10 @@ packages:
   simple-xml-to-json@1.2.4:
     resolution: {integrity: sha512-3MY16e0ocMHL7N1ufpdObURGyX+lCo0T/A+y6VCwosLdH1HSda4QZl1Sdt/O+2qWp48WFi26XEp5rF0LoaL0Dg==}
     engines: {node: '>=20.12.2'}
+
+  slugify@1.6.9:
+    resolution: {integrity: sha512-vZ7rfeehZui7wQs438JXBckYLkIIdfHOXsaVEUMyS5fHo1483l1bMdo0EDSWYclY0yZKFOipDy4KHuKs6ssvdg==}
+    engines: {node: '>=8.0.0'}
 
   smart-buffer@4.2.0:
     resolution: {integrity: sha512-94hK0Hh8rPqQl2xXc3HsaBoOXKV20MToPkcXvwbISWLEs+64sBq5kFgn2kJDHb1Pry9yrP0dxrCI9RRci7RXKg==}
@@ -10307,6 +10314,8 @@ snapshots:
   signal-exit@4.1.0: {}
 
   simple-xml-to-json@1.2.4: {}
+
+  slugify@1.6.9: {}
 
   smart-buffer@4.2.0: {}
 

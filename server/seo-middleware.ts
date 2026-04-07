@@ -2,6 +2,9 @@ import { Request, Response, NextFunction } from "express";
 import fs from "fs";
 import { storage } from "./storage/index.js";
 import { generateSlug } from "./utils.js";
+import { db } from "./db.js";
+import { seoMetaTags } from "../shared/schema.js";
+import { eq, and } from "drizzle-orm";
 
 // Cache template in memory to avoid reading disk on every request
 let cachedTemplate: string | null = null;
@@ -33,6 +36,8 @@ export async function seoMiddleware(req: Request, res: Response, next: NextFunct
     let type = "website";
     let structuredData = "";
     let canonicalUrl = url;
+
+    let keywords = settings?.metaKeywords || "";
 
     // ── Video Pages: /video/:slug ──────────────────────────────────────────
     const videoMatch = req.path.match(/^\/video\/([^\/]+)$/);
@@ -287,12 +292,35 @@ export async function seoMiddleware(req: Request, res: Response, next: NextFunct
       });
     }
 
+    // ── Check Database Overrides ──────────────────────────────────────────
+    try {
+      const [customMeta] = await db.select().from(seoMetaTags).where(
+        and(
+          eq(seoMetaTags.pageUrl, req.path),
+          eq(seoMetaTags.isActive, true)
+        )
+      ).limit(1);
+
+      if (customMeta) {
+        if (customMeta.title) title = customMeta.title;
+        if (customMeta.description) description = customMeta.description;
+        if (customMeta.keywords) keywords = customMeta.keywords;
+        if (customMeta.ogTitle) title = customMeta.ogTitle; // Or keep separate if you want to use ogTitle specifically for OG
+        if (customMeta.ogImage) image = customMeta.ogImage;
+        if (customMeta.canonicalUrl) canonicalUrl = customMeta.canonicalUrl;
+        if (customMeta.schemaMarkup) structuredData = JSON.stringify(customMeta.schemaMarkup);
+      }
+    } catch (e) {
+      // Ignore if table doesn't exist
+    }
+
     // ── Build meta tag HTML ────────────────────────────────────────────────
-    const e = (val: string) => val.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    const e = (val: string) => val ? val.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;") : "";
 
     const metaTags = `
       <title>${e(title)}</title>
       <meta name="description" content="${e(description)}">
+      ${keywords ? `<meta name="keywords" content="${e(keywords)}">` : ''}
       <link rel="canonical" href="${e(canonicalUrl)}">
 
       <!-- Open Graph -->

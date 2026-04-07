@@ -4,10 +4,13 @@ import { storage } from "../storage/index.js";
 import { requireAuth } from "../middleware/auth.js";
 import { insertSeoSettingsSchema } from "../../shared/schema.js";
 import { z } from "zod";
-import { seoSettings, seoRedirects, seoMetaTags, seoKeywords, seoAuditLogs, seoABTests, seoCompetitors } from "../../shared/schema.js";
+import { seoSettings, seoRedirects, seoMetaTags, seoKeywords, seoAuditLogs, seoABTests, seoCompetitors, videos } from "../../shared/schema.js";
 import { eq, and, desc, asc, sql } from "drizzle-orm";
 import { db, isDbReady } from "../db.js";
 import { generateSlug } from "../utils.js";
+import { getAIConfig } from "../ai-service.js";
+import { generateOpenAICompletion } from "../services/openai.js";
+import { generateOllamaCompletion } from "../services/ollama.js";
 
 const router = Router();
 
@@ -79,18 +82,18 @@ const seoSettingsSchema = z.object({
 const metaTagSchema = z.object({
   pageUrl: z.string().min(1),
   pageType: z.enum(["home", "video", "category", "tag", "custom"]),
-  title: z.string().min(1).max(60),
-  description: z.string().min(50).max(160),
-  keywords: z.string().optional(),
-  ogTitle: z.string().optional(),
-  ogDescription: z.string().optional(),
-  ogImage: z.string().url().optional(),
-  twitterTitle: z.string().optional(),
-  twitterDescription: z.string().optional(),
-  twitterImage: z.string().url().optional(),
-  canonicalUrl: z.string().url().optional(),
-  schemaMarkup: z.any().optional(),
-  isActive: z.boolean().optional(),
+  title: z.string().min(1).max(200),
+  description: z.string().min(10).max(1000),
+  keywords: z.string().optional().nullable(),
+  ogTitle: z.string().optional().nullable(),
+  ogDescription: z.string().optional().nullable(),
+  ogImage: z.string().optional().nullable(),
+  twitterTitle: z.string().optional().nullable(),
+  twitterDescription: z.string().optional().nullable(),
+  twitterImage: z.string().optional().nullable(),
+  canonicalUrl: z.string().optional().nullable(),
+  schemaMarkup: z.any().optional().nullable(),
+  isActive: z.boolean().optional().nullable(),
 });
 
 // Redirect schema
@@ -429,6 +432,55 @@ router.patch("/enhanced/meta-tags/bulk/update", requireAuth, async (req, res) =>
     } else {
       res.status(500).json({ error: "Failed to bulk update meta tags" });
     }
+  }
+});
+
+// Generate AI SEO suggestions
+router.post("/enhanced/meta-tags/suggest", requireAuth, async (req, res) => {
+  try {
+    const { url } = req.body;
+    if (!url) return res.status(400).json({ error: "URL is required" });
+
+    // Gather context from DB if possible
+    let context = "Page URL: " + url;
+    if (url.startsWith("/video/")) {
+      const slug = url.split("/video/")[1];
+      const [video] = await db.select().from(videos).where(eq(videos.slug, slug)).limit(1);
+      if (video) {
+        context += `\nVideo Title: ${video.title}\nVideo Description: ${video.description}`;
+      }
+    }
+
+    const aiConfig = await getAIConfig();
+    const systemPrompt = `You are an expert SEO specialist. Generate optimal meta title (max 60 chars), meta description (max 160 chars), and 5-10 comma-separated keywords based on the following page context. Output ONLY raw JSON format: {"title": "...", "description": "...", "keywords": "..."}`;
+    
+    let aiResponseText = "";
+    if (aiConfig.provider === "openai" && aiConfig.openai.apiKey) {
+      aiResponseText = await generateOpenAICompletion(
+        aiConfig.openai.baseUrl!,
+        aiConfig.openai.apiKey,
+        aiConfig.openai.model,
+        systemPrompt,
+        context
+      );
+    } else if (aiConfig.provider === "ollama") {
+      aiResponseText = await generateOllamaCompletion(
+        aiConfig.ollama.url,
+        aiConfig.ollama.model,
+        systemPrompt,
+        context
+      );
+    } else {
+      return res.status(400).json({ error: "AI provider not configured properly." });
+    }
+
+    // Clean markdown formatting if present
+    const cleanJson = aiResponseText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+    const parsed = JSON.parse(cleanJson);
+    res.json(parsed);
+  } catch (error: any) {
+    console.error("Generate SEO suggestions error:", error);
+    res.status(500).json({ error: "Failed to generate AI suggestions" });
   }
 });
 
