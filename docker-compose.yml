@@ -22,7 +22,7 @@ services:
 
   # ── PgBouncer (connection pooling) ──────────────────────
   pgbouncer:
-    image: edoburu/pgbouncer:1.23.1-p2
+    image: edoburu/pgbouncer:latest
     restart: unless-stopped
     depends_on:
       postgres:
