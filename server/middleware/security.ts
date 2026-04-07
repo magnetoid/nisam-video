@@ -94,18 +94,19 @@ export function createRateLimiters() {
 
   const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: isProduction ? 15 : 20,
+    max: isProduction ? 20 : 50,
     standardHeaders: true,
     legacyHeaders: false,
-    skipSuccessfulRequests: false,
-    message: { 
+    skipSuccessfulRequests: true, // Don't count successful logins against the limit
+    skip: (req) => req.method === "GET", // Skip GET requests (session checks)
+    message: {
       error: "Too many authentication attempts, please try again later.",
-      retryAfter: 900 
+      retryAfter: 900
     },
     keyGenerator: (req) => {
       const forwarded = req.headers["x-forwarded-for"];
-      const ip = typeof forwarded === "string" 
-        ? forwarded.split(",")[0].trim() 
+      const ip = typeof forwarded === "string"
+        ? forwarded.split(",")[0].trim()
         : req.ip;
       return `auth:${ip}`;
     },
