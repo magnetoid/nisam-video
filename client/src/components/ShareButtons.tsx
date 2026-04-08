@@ -69,7 +69,7 @@ export function ShareButtons({ url, title, description }: ShareButtonsProps) {
 
   return (
     <div className="flex items-center gap-2 flex-wrap">
-      {navigator.share && (
+      {typeof navigator.share === "function" && (
         <Button variant="outline" size="sm" onClick={handleNativeShare} className="gap-2">
           <Share2 className="h-3.5 w-3.5" />
           {t("share.share", "Share")}

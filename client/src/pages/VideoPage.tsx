@@ -174,11 +174,11 @@ export default function VideoPage() {
     }),
     ...(video.categories &&
       video.categories.length > 0 && {
-        genre: video.categories.map((cat) => cat.name),
+        genre: video.categories.map((cat) => (cat as any).name),
       }),
     ...(video.tags &&
       video.tags.length > 0 && {
-        keywords: video.tags.map((tag) => tag.tagName).join(", "),
+        keywords: video.tags.map((tag) => (tag as any).tagName).join(", "),
       }),
   };
 
@@ -411,14 +411,14 @@ export default function VideoPage() {
                   {video.categories.map((category) => (
                     <Link
                       key={category.id}
-                      href={`/category/${category.slug || category.id}`}
+                      href={`/category/${(category as any).slug || category.id}`}
                     >
                       <Badge
                         variant="secondary"
                         className="cursor-pointer hover-elevate"
                         data-testid={`badge-category-${category.id}`}
                       >
-                        {category.name}
+                        {(category as any).name}
                       </Badge>
                     </Link>
                   ))}
@@ -434,14 +434,14 @@ export default function VideoPage() {
                 </h3>
                 <div className="flex flex-wrap gap-2">
                   {video.tags.map((tag) => (
-                    <Link key={tag.id} href={`/tag/${encodeURIComponent(String(tag.tagName || "").trim().replace(/\s+/g, "-"))}`}>
+                    <Link key={tag.id} href={`/tag/${encodeURIComponent(String((tag as any).tagName || "").trim().replace(/\s+/g, "-"))}`}>
                       <Badge
                         variant="outline"
                         className="cursor-pointer hover-elevate"
                         data-testid={`badge-tag-${tag.id}`}
                       >
                         <Sparkles className="h-3 w-3 mr-1" />
-                        {tag.tagName}
+                        {(tag as any).tagName}
                       </Badge>
                     </Link>
                   ))}

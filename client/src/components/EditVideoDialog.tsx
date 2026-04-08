@@ -50,7 +50,7 @@ export function EditVideoDialog({
       setTitle(video.title);
       setDescription(video.description || "");
       setSelectedCategories(video.categories?.map((c) => c.id) || []);
-      setTagsInput(video.tags?.map((t) => t.tagName).join(", ") || "");
+      setTagsInput(video.tags?.map((t) => (t as any).tagName).join(", ") || "");
     }
   }, [video, open]);
 

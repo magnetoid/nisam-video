@@ -131,14 +131,14 @@ router.post("/:id/scrape", requireAuth, async (req, res) => {
           let category = await storage.getLocalizedCategoryBySlug(categorySlug, 'en');
 
           if (!category) {
-            const translations = [];
+            const translations: { languageCode: string; name: string; slug: string; description: string | null }[] = [];
             translations.push({
               languageCode: 'en',
               name: nameEn,
               slug: categorySlug,
               description: null
             });
-            
+
             if (nameSr) {
               translations.push({
                 languageCode: 'sr-Latn',

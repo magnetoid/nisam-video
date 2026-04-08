@@ -20,7 +20,7 @@ export function UserMenu() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: session } = useQuery({
+  const { data: session } = useQuery<any>({
     queryKey: ["/api/auth/session"],
     queryFn: getQueryFn({ on401: "returnNull" }),
   });

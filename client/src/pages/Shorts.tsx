@@ -37,6 +37,7 @@ export default function Shorts() {
   });
 
   const origin = window.location.origin;
+  const currentUrl = `${origin}/shorts`;
   const hreflangLinks = [
     ...languages.map(lang => {
       const prefix = lang.isDefault ? "" : `/${lang.code}`;

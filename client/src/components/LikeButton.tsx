@@ -179,6 +179,10 @@ export function LikeButton({
     },
   });
 
+  const isLiked = localIsLiked ?? effectiveLikeStatus?.isLiked ?? false;
+  const likesCount = effectiveLikeStatus?.likesCount || 0;
+  const isPending = likeMutation.isPending || unlikeMutation.isPending;
+
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -192,25 +196,13 @@ export function LikeButton({
     const currentlyLiked = localIsLiked ?? effectiveLikeStatus?.isLiked ?? false;
 
     if (currentlyLiked) {
-      console.log(
-        `[LikeButton] Unliking video ${videoId}, current state:`,
-        currentlyLiked,
-      );
       setLocalIsLiked(false); // Optimistically update local state
       unlikeMutation.mutate();
     } else {
-      console.log(
-        `[LikeButton] Liking video ${videoId}, current state:`,
-        currentlyLiked,
-      );
       setLocalIsLiked(true); // Optimistically update local state
       likeMutation.mutate();
     }
   };
-
-  const isLiked = localIsLiked ?? effectiveLikeStatus?.isLiked ?? false;
-  const likesCount = effectiveLikeStatus?.likesCount || 0;
-  const isPending = likeMutation.isPending || unlikeMutation.isPending;
 
   return (
     <Button

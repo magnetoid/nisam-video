@@ -39,10 +39,10 @@ export const sitemapHandler = async (_req: any, res: any) => {
     
     // Fetch all public URLs
     const [allVideos, allCategories, allChannels, allTags] = await Promise.all([
-      db.select({ slug: videos.slug, updatedAt: videos.updatedAt }).from(videos).where(isNull(videos.deletedAt)),
-      db.select({ slug: categories.slug }).from(categories),
-      db.select({ slug: channels.slug }).from(channels),
-      db.select({ slug: tags.slug }).from(tags),
+      db.select({ slug: (videos as any).slug, updatedAt: (videos as any).updatedAt }).from(videos).where(isNull((videos as any).deletedAt)),
+      db.select({ slug: (categories as any).slug }).from(categories),
+      db.select({ slug: (channels as any).slug }).from(channels),
+      db.select({ slug: (tags as any).slug }).from(tags),
     ]);
 
     let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;

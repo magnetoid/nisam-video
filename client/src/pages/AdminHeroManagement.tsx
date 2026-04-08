@@ -16,7 +16,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { toast } from 'sonner';
 import { Search, Filter, X, Play, Clock, Eye, Calendar as CalendarIcon, GripVertical, Plus, Image, Settings, Upload, Trash2 } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
-import type { VideoWithRelations } from '@shared/schema';
+import type { Video, VideoWithRelations } from '@shared/schema';
 import { HeroVideoWithVideo, InsertHeroVideo, HeroImage, InsertHeroImage, HeroSettings, InsertHeroSettings, insertHeroSettingsSchema } from '@shared/schema';
 import { format } from 'date-fns';
 import { z } from 'zod';
@@ -24,7 +24,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 
 interface HeroSlot extends InsertHeroVideo {
-  video?: VideoWithRelations | null;
+  video?: Video | VideoWithRelations | null;
   tempId?: string; // For drag and drop of new items
 }
 

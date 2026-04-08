@@ -83,13 +83,18 @@ const HeroImageSlider: React.FC<Props> = ({ items, ariaLabel = 'Featured titles'
         title: it.title,
         imageUrl: it.imageUrl || null,
         slug: it.slug,
-        buttonLink: it.buttonLink
+        buttonLink: it.buttonLink,
+        viewCount: it.viewCount,
+        publishDate: it.publishDate,
+        description: it.description,
+        primaryCategory: it.primaryCategory,
+        secondaryCategories: it.secondaryCategories,
       }));
 
     if (primary.length === 0) {
        // Only show fallback if absolutely no content
        const fb = FALLBACK_SLIDES[0];
-       return [{ id: fb.id, title: fb.title, imageUrl: fb.imageUrl, slug: '', buttonLink: '' }];
+       return [{ id: fb.id, title: fb.title, imageUrl: fb.imageUrl, slug: '', buttonLink: '' } as HeroSlideItem];
     }
     
     return primary;

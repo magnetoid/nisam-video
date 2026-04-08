@@ -12,7 +12,7 @@ export default function Settings() {
   const { t } = useTranslation();
   const [, setLocation] = useLocation();
 
-  const { data: session, isLoading } = useQuery({
+  const { data: session, isLoading } = useQuery<any>({
     queryKey: ["/api/auth/session"],
     queryFn: getQueryFn({ on401: "returnNull" }),
   });

@@ -355,11 +355,11 @@ export class MemStorage implements IStorage {
     }
 
     this.emailSettings = {
-      ...this.emailSettings,
+      ...this.emailSettings!,
       ...(data as any),
       updatedAt: new Date(),
     };
-    return this.emailSettings;
+    return this.emailSettings!;
   }
 
   // Videos
@@ -763,14 +763,14 @@ export class MemStorage implements IStorage {
     };
     this.categories.set(id, newCategory);
 
-    const fullTranslations: CategoryTranslation[] = translations.map((t, idx) => ({
+    const fullTranslations: CategoryTranslation[] = translations.map((t: any, idx: number) => ({
       ...t,
       categoryId: id,
       id: `${id}-${t.languageCode}-${idx}`,
       createdAt: new Date(),
       updatedAt: new Date(),
       description: t.description ?? null,
-    }));
+    })) as CategoryTranslation[];
     this.categoryTranslationsByCategoryId.set(id, fullTranslations);
 
     const chosen =
@@ -836,6 +836,19 @@ export class MemStorage implements IStorage {
       createdAt: new Date(),
       updatedAt: new Date()
     };
+  }
+
+  async getCategoryBySlug(slug: string): Promise<Category | undefined> {
+    for (const [id, translations] of this.categoryTranslationsByCategoryId.entries()) {
+      if (translations.some(t => t.slug === slug)) {
+        return this.categories.get(id);
+      }
+    }
+    return undefined;
+  }
+
+  async getCategory(id: string): Promise<Category | undefined> {
+    return this.categories.get(id);
   }
 
   async updateCategory(id: string, data: Partial<Category>): Promise<Category | undefined> {
@@ -1257,6 +1270,7 @@ export class MemStorage implements IStorage {
             customHeadCode: null,
             customBodyStartCode: null,
             customBodyEndCode: null,
+            youtubeApiKey: null,
             updatedAt: new Date()
         };
     }

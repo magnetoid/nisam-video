@@ -208,7 +208,7 @@ export function VideoDetailModal({
                         className="px-3 py-1"
                         data-testid={`badge-category-${category.id}`}
                       >
-                        {category.name}
+                        {(category as any).name}
                       </Badge>
                     ))}
                   </div>
@@ -228,7 +228,7 @@ export function VideoDetailModal({
                         className="px-3 py-1"
                         data-testid={`badge-tag-${tag.id}`}
                       >
-                        {tag.tagName}
+                        {(tag as any).tagName}
                       </Badge>
                     ))}
                   </div>

@@ -17,9 +17,9 @@ router.get("/", async (req, res) => {
     const { channelId, categoryId, search, limit, offset, lang, tagName, sort } = req.query;
     const limitNum = limit ? parseInt(limit as string, 10) || 20 : undefined;
     const offsetNum = offset ? parseInt(offset as string, 10) || 0 : undefined;
-    const sortValue = ["publishDate", "createdAt", "views", "popularity"].includes(sort as string) 
-      ? (sort as "publishDate" | "createdAt" | "views" | "popularity") 
-      : "publishDate";
+    const sortValue = ["publishDate", "createdAt", "views", "popularity"].includes(sort as string)
+      ? (sort as "publishDate" | "createdAt" | "views" | "popularity")
+      : (sort === "oldest" ? "createdAt" as const : "publishDate" as const);
     const filters = {
       channelId: channelId as string | undefined,
       categoryId: categoryId as string | undefined,
@@ -292,7 +292,7 @@ router.post("/:id/categorize", requireAuth, async (req, res) => {
       let category = await storage.getLocalizedCategoryBySlug(slug, "en");
 
       if (!category) {
-        const translations = [];
+        const translations: { languageCode: string; name: string; slug: string; description: string }[] = [];
         translations.push({
           languageCode: "en",
           name: nameEn,

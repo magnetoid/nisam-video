@@ -31,11 +31,12 @@ class Logger {
 
   private formatError(error: unknown): any {
     if (error instanceof Error) {
+      const { message, name, stack, ...rest } = error as Error & Record<string, unknown>;
       return {
-        message: error.message,
-        stack: error.stack,
-        name: error.name,
-        ...error
+        message,
+        stack,
+        name,
+        ...rest
       };
     }
     return error;

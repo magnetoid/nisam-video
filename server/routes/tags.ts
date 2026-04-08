@@ -5,8 +5,7 @@ import { insertTagTranslationSchema, tags, tagImages, tagTranslations } from "..
 import { db } from "../db.js";
 import { eq, inArray } from "drizzle-orm";
 import { ObjectStorageService } from "../replit_integrations/object_storage/index.js";
-// Use the shared OpenAI service instead of direct import
-import { openai } from "../ai-service.js";
+// OpenAI service import removed - image generation not supported with current provider
 
 const router = Router();
 
@@ -62,7 +61,7 @@ router.get("/stats", async (req, res) => {
     .innerJoin(tagTranslations, eq(tags.id, tagTranslations.tagId))
     .where(eq(tagTranslations.languageCode, 'en'));
 
-    const tagCounts = allTags.reduce<Record<string, { tagName: string; count: number; videoIds: string[] }>>(
+    const tagCounts = (allTags as any[]).reduce<Record<string, { tagName: string; count: number; videoIds: string[] }>>(
       (acc, tag) => {
         if (!acc[tag.tagName]) {
           acc[tag.tagName] = { tagName: tag.tagName, count: 0, videoIds: [] };

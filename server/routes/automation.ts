@@ -165,7 +165,7 @@ router.get("/jobs/:id/stream", requireAuth, async (req, res) => {
     }
     } catch (e) {
       console.error('Tick error:', e);
-      writeSseEvent(res, "error", { message: e.message || 'tick_error', code: 'INTERNAL' });
+      writeSseEvent(res, "error", { message: (e as Error).message || 'tick_error', code: 'INTERNAL' });
     }
   };
 
@@ -271,7 +271,7 @@ router.get("/jobs/active/stream", requireAuth, async (req, res) => {
     }
     } catch (e) {
       console.error('Active tick error:', e);
-      writeSseEvent(res, "error", { message: e.message || 'tick_error', code: 'INTERNAL' });
+      writeSseEvent(res, "error", { message: (e as Error).message || 'tick_error', code: 'INTERNAL' });
     }
   };
 
@@ -396,12 +396,12 @@ router.get("/export", requireAuth, async (req, res) => {
     videos.forEach(video => {
       if (video.categories && video.categories.length > 0) {
         video.categories.forEach(cat => {
-          categoryCounts[cat.name] = (categoryCounts[cat.name] || 0) + 1;
+          categoryCounts[(cat as any).name] = (categoryCounts[(cat as any).name] || 0) + 1;
         });
       }
       if (video.tags && video.tags.length > 0) {
         video.tags.forEach(tag => {
-          tagCounts[tag.tagName] = (tagCounts[tag.tagName] || 0) + 1;
+          tagCounts[(tag as any).tagName] = (tagCounts[(tag as any).tagName] || 0) + 1;
         });
       }
     });
@@ -642,7 +642,7 @@ router.post("/scheduler/config", requireAuth, async (req, res) => {
     });
     const { intervalHours, timezone } = configSchema.parse(req.body);
 
-    await scheduler.updateSettings({ intervalHours, timezone });
+    await scheduler.updateSettings({ intervalHours, timezone } as any);
     await scheduler.stop();
     await scheduler.start();
 

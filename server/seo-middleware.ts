@@ -28,7 +28,7 @@ export async function seoMiddleware(req: Request, res: Response, next: NextFunct
     // Defaults from settings
     const settings = await storage.getSeoSettings();
     const baseUrl = process.env.PUBLIC_BASE_URL || "https://nisam.video";
-    let title = settings?.siteTitle || "nisam.video - AI Curated Videos";
+    let title = settings?.siteName || "nisam.video - AI Curated Videos";
     let description = settings?.siteDescription || "Discover the best videos curated by AI. Automatically categorized and tagged for your viewing pleasure.";
     let image = settings?.ogImage || `${baseUrl}/og-image.jpg`;
     let twitterHandle = settings?.twitterHandle || "@nisamvideo";
@@ -91,7 +91,7 @@ export async function seoMiddleware(req: Request, res: Response, next: NextFunct
     if (categoryMatch) {
       const slug = categoryMatch[1];
       try {
-        const category = await storage.getCategoryBySlug?.(slug) || await storage.getCategory?.(slug);
+        const category = await (storage as any).getCategoryBySlug?.(slug) || await (storage as any).getCategory?.(slug);
         if (category) {
           title = `${category.name} Videos | nisam.video`;
           description = category.description || `Browse the best ${category.name} videos on nisam.video. AI-curated content organized by category.`;

@@ -252,7 +252,7 @@ export function VideoManagement({
             <SelectItem value="all">{t("admin.allCategories", "All Categories")}</SelectItem>
             {categories.map((category) => (
               <SelectItem key={category.id} value={category.id}>
-                {category.name}
+                {(category as any).name}
               </SelectItem>
             ))}
           </SelectContent>
@@ -356,7 +356,7 @@ export function VideoManagement({
                             variant="outline"
                             className="text-xs"
                           >
-                            {cat.name}
+                            {(cat as any).name}
                           </Badge>
                         ))}
                         {video.categories.length > 2 && (
@@ -380,7 +380,7 @@ export function VideoManagement({
                             variant="secondary"
                             className="text-xs"
                           >
-                            {tag.tagName}
+                            {(tag as any).tagName}
                           </Badge>
                         ))}
                         {video.tags.length > 2 && (

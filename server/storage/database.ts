@@ -71,7 +71,7 @@ import {
   type InsertUiTranslation
 } from "../../shared/schema.js";
 import { db } from "../db.js";
-import { eq, like, and, or, isNull, lte, gte, inArray, notInArray, sql, desc } from "drizzle-orm";
+import { eq, like, and, or, isNull, lte, gte, inArray, notInArray, sql, desc, asc } from "drizzle-orm";
 import { cache } from "../cache.js";
 import { invalidateChannelCaches, invalidateVideoContentCaches } from "../cache-invalidation.js";
 import { IStorage } from "./types.js";
@@ -259,7 +259,9 @@ export class DatabaseStorage implements IStorage {
     try {
       const result = await db.select().from(channels);
       const settings = await this.getCacheSettings();
-      cache.set(cacheKey, result, settings.channelsTTL);
+      if (settings.enabled) {
+        cache.set(cacheKey, result, settings.channelsTTL);
+      }
       return result;
     } catch (error) {
       console.error("[storage] getAllChannels failed:", error);
@@ -312,7 +314,9 @@ export class DatabaseStorage implements IStorage {
     try {
       const result = await db.select().from(channels).where(eq(channels.platform, platform));
       const settings = await this.getCacheSettings();
-      cache.set(cacheKey, result, settings.channelsTTL);
+      if (settings.enabled) {
+        cache.set(cacheKey, result, settings.channelsTTL);
+      }
       return result;
     } catch (error) {
       console.error(`[storage] getChannelsByPlatform failed for ${platform}:`, error);
@@ -555,7 +559,8 @@ export class DatabaseStorage implements IStorage {
     lang?: string;
     limit?: number;
     offset?: number;
-    sort?: "publishDate" | "createdAt" | "views" | "popularity";
+    minViews?: number;
+    sort?: "publishDate" | "createdAt" | "views" | "popularity" | "oldest";
   }): Promise<VideoWithLocalizedRelations[]> {
     const lang = filters?.lang || 'en';
     const cacheKey = `videos:all:${JSON.stringify(filters || {})}`;
@@ -565,7 +570,7 @@ export class DatabaseStorage implements IStorage {
     try {
       let query = db.select().from(videos).$dynamic();
 
-      const conditions = [];
+      const conditions: any[] = [];
       if (filters?.channelId) {
         conditions.push(eq(videos.channelId, filters.channelId));
       }
@@ -611,10 +616,12 @@ export class DatabaseStorage implements IStorage {
             COALESCE(CAST(NULLIF(REGEXP_REPLACE(${videos.viewCount}, '[^0-9]', '', 'g'), '') AS INTEGER), 0) * 0.3 +
             COALESCE(${videos.internalViewsCount}, 0) * 50 +
             COALESCE(${videos.likesCount}, 0) * 100
-          ) DESC`
+          ) DESC NULLS LAST`
         );
+      } else if (sort === "oldest") {
+        query = query.orderBy(asc(videos.publishDate), asc(videos.createdAt));
       } else {
-        query = query.orderBy(desc(videos.publishDate));
+        query = query.orderBy(desc(videos.publishDate), desc(videos.createdAt));
       }
 
       if (filters?.limit) {
@@ -633,7 +640,9 @@ export class DatabaseStorage implements IStorage {
       const videosWithRelations = await this.hydrateVideosWithRelations(baseVideos, lang);
 
       const settings = await this.getCacheSettings();
-      cache.set(cacheKey, videosWithRelations, settings.videosTTL);
+      if (settings.enabled) {
+        cache.set(cacheKey, videosWithRelations, settings.videosTTL);
+      }
       return videosWithRelations;
     } catch (error) {
       console.error("[storage] getAllVideos failed:", error);
@@ -816,7 +825,7 @@ export class DatabaseStorage implements IStorage {
         for (const base of allBaseTags) {
           const trans = langMap.get(base.id) || enMap.get(base.id);
           const localized: LocalizedTag = trans
-            ? ({ ...base, translations: [trans], tagName: trans.tagName } as any)
+            ? ({ ...base, translations: [trans], tagName: (trans as any).tagName } as any)
             : ({ ...base, translations: [], tagName: "" } as any);
 
           if (!tagsByVideoId.has(base.videoId)) tagsByVideoId.set(base.videoId, []);
@@ -873,7 +882,9 @@ export class DatabaseStorage implements IStorage {
 
       const hydrated = await this.hydrateVideosWithRelations([video], lang);
       const settings = await this.getCacheSettings();
-      cache.set(cacheKey, hydrated[0] || null, settings.videosTTL);
+      if (settings.enabled) {
+        cache.set(cacheKey, hydrated[0] || null, settings.videosTTL);
+      }
       return hydrated[0] || null;
     } catch (error) {
       console.error(`[storage] getHeroVideo failed for lang ${lang}:`, error);
@@ -899,7 +910,9 @@ export class DatabaseStorage implements IStorage {
 
       const hydrated = await this.hydrateVideosWithRelations(recentVideos, lang);
       const settings = await this.getCacheSettings();
-      cache.set(cacheKey, hydrated, settings.videosTTL);
+      if (settings.enabled) {
+        cache.set(cacheKey, hydrated, settings.videosTTL);
+      }
       return hydrated;
     } catch (error) {
       console.error(`[storage] getRecentVideos failed for limit ${limit}, lang ${lang}:`, error);
@@ -928,7 +941,7 @@ export class DatabaseStorage implements IStorage {
         .from(videoCategories)
         .innerJoin(videos, eq(videos.id, videoCategories.videoId))
         .where(eq(videoCategories.categoryId, categoryId))
-        .orderBy(desc(videos.publishDate))
+        .orderBy(desc(videos.publishDate), desc(videos.createdAt))
         .limit(limit) as { videoId: string }[];
 
       if (videoCats.length === 0) {
@@ -941,11 +954,13 @@ export class DatabaseStorage implements IStorage {
         .select()
         .from(videos)
         .where(inArray(videos.id, videoIds))
-        .orderBy(desc(videos.publishDate));
+        .orderBy(desc(videos.publishDate), desc(videos.createdAt));
 
       const hydrated = await this.hydrateVideosWithRelations(categoryVideos, lang);
       const settings = await this.getCacheSettings();
-      cache.set(cacheKey, hydrated, settings.videosTTL);
+      if (settings.enabled) {
+        cache.set(cacheKey, hydrated, settings.videosTTL);
+      }
       return hydrated;
     } catch (error) {
       console.error(`[storage] getVideosByCategory failed for categoryId ${categoryId}:`, error);
@@ -994,8 +1009,18 @@ export class DatabaseStorage implements IStorage {
       }
 
       const hydrated = await this.hydrateVideosWithRelations(trendingVideos, lang);
+      
+      // Ensure all carousel videos are sorted strictly by upload date
+      hydrated.sort((a, b) => {
+        const dateA = a.publishDate || (a.createdAt instanceof Date ? a.createdAt.toISOString() : String(a.createdAt));
+        const dateB = b.publishDate || (b.createdAt instanceof Date ? b.createdAt.toISOString() : String(b.createdAt));
+        return dateB.localeCompare(dateA);
+      });
+
       const settings = await this.getCacheSettings();
-      cache.set(cacheKey, hydrated, settings.videosTTL);
+      if (settings.enabled) {
+        cache.set(cacheKey, hydrated, settings.videosTTL);
+      }
       return hydrated;
     } catch (error) {
       console.error(`[storage] getTrendingVideos failed for limit ${limit}:`, error);
@@ -1045,7 +1070,9 @@ export class DatabaseStorage implements IStorage {
       });
 
       const settings = await this.getCacheSettings();
-      cache.set(cacheKey, validated, settings.videosTTL);
+      if (settings.enabled) {
+        cache.set(cacheKey, validated, settings.videosTTL);
+      }
       return validated;
     } catch (error) {
       console.error("[storage] getShorts failed:", error);
@@ -1453,7 +1480,7 @@ export class DatabaseStorage implements IStorage {
         settings = updated;
       }
       cache.set("hero:settings", settings, 60000);
-      return settings;
+      return settings!;
     } catch (error) {
       console.error("[storage] updateHeroSettings failed:", error);
       throw error;
@@ -1687,7 +1714,7 @@ export class DatabaseStorage implements IStorage {
       
       cache.invalidate("categories:all");
       cache.invalidatePattern("videos:");
-      return this.getLocalizedCategory(category.id, 'en')!; // Return with default lang
+      return (await this.getLocalizedCategory(category.id, 'en'))!; // Return with default lang
     } catch (error) {
       console.error("[storage] createCategory failed:", error);
       throw error;
@@ -1778,7 +1805,7 @@ export class DatabaseStorage implements IStorage {
       const localized: LocalizedCategory[] = bases.map(base => {
         let trans = transMap.get(base.id);
         if (!trans) trans = enMap.get(base.id);
-        return trans ? { ...base, translations: [trans], name: trans.name, slug: trans.slug, description: trans.description } : null; 
+        return trans ? { ...base, translations: [trans], name: (trans as any).name, slug: (trans as any).slug, description: (trans as any).description } : null;
       }).filter((c): c is LocalizedCategory => c !== null);
 
       const settings = await this.getCacheSettings();
@@ -1888,7 +1915,7 @@ export class DatabaseStorage implements IStorage {
       const transInserts = translations.map(t => ({ ...t, tagId: tag.id, createdAt: new Date(), updatedAt: new Date() }));
       await db.insert(tagTranslations).values(transInserts);
       
-      return this.getLocalizedTag(tag.id, 'en')!; // Return with default lang
+      return (await this.getLocalizedTag(tag.id, 'en'))!; // Return with default lang
     } catch (error) {
       console.error("[storage] createTag failed:", error);
       throw error;
@@ -1978,15 +2005,15 @@ export class DatabaseStorage implements IStorage {
         return trans ? { 
           ...base, 
           translations: [trans], 
-          tagName: trans.tagName,
+          tagName: (trans as any).tagName,
           videoCount: tagCounts.get(base.id) || 0
         } : null;
       }).filter((t): t is LocalizedTag => t !== null);
 
       // Sort by video count (descending), then by tag name
       localized.sort((a, b) => {
-        if (b.videoCount !== a.videoCount) {
-          return b.videoCount - a.videoCount;
+        if ((b.videoCount || 0) !== (a.videoCount || 0)) {
+          return (b.videoCount || 0) - (a.videoCount || 0);
         }
         return (a.tagName || "").localeCompare(b.tagName || "");
       });
@@ -2601,8 +2628,8 @@ export class DatabaseStorage implements IStorage {
       if (langs.length === 0) {
         // Seed defaults if empty
         const defaults = [
-          { code: 'sr-Latn', name: 'Srpski', isActive: true, isDefault: true, createdAt: new Date() },
-          { code: 'en', name: 'English', isActive: true, isDefault: false, createdAt: new Date() }
+          { code: 'sr-Latn', name: 'Srpski', rootUri: null, isActive: true, isDefault: true, createdAt: new Date() },
+          { code: 'en', name: 'English', rootUri: null, isActive: true, isDefault: false, createdAt: new Date() }
         ];
         await db.insert(supportedLanguages).values(defaults).onConflictDoNothing();
         return defaults;

@@ -420,7 +420,7 @@ router.post("/regenerate", requireAuth, async (req, res) => {
               let category = await storage.getLocalizedCategoryBySlug(slug, 'en');
 
               if (!category) {
-                 const translations = [];
+                 const translations: { languageCode: string; name: string; slug: string; description: string | null }[] = [];
                  translations.push({
                    languageCode: 'en',
                    name: nameEn,
@@ -432,7 +432,7 @@ router.post("/regenerate", requireAuth, async (req, res) => {
                    translations.push({
                      languageCode: 'sr-Latn',
                      name: nameSr,
-                     slug, 
+                     slug,
                      description: null
                    });
                  }
@@ -497,9 +497,22 @@ router.post("/regenerate", requireAuth, async (req, res) => {
 
           processed++;
           console.log(`[admin] regenerate processed video=${video.id} in ${Date.now() - startedAt}ms`);
-        } catch (error) {
+        } catch (error: any) {
           const msg = error instanceof Error ? error.message : String(error);
           console.error(`[admin] Error regenerating video ${video.id}:`, error);
+          try {
+            const { activityLogs } = await import("../../shared/schema.js");
+            await db.insert(activityLogs).values({
+              action: "regenerate_error",
+              entityType: "video",
+              entityId: video.id,
+              username: (req as any).user?.username || "admin",
+              details: JSON.stringify({ error: msg }),
+              ipAddress: req.ip,
+            }).catch(() => {});
+          } catch (logErr) {
+            // ignore log error
+          }
         }
       })
     );
@@ -510,6 +523,17 @@ router.post("/regenerate", requireAuth, async (req, res) => {
     cacheModule.clear();
 
     const done = mode === "missing" ? total === 0 : nextOffset >= total;
+
+    try {
+      const { activityLogs } = await import("../../shared/schema.js");
+      await db.insert(activityLogs).values({
+        action: "regenerate_batch",
+        entityType: "system",
+        username: (req as any).user?.username || "admin",
+        details: JSON.stringify({ type, mode, limit, offset, processed, categoriesGenerated, tagsGenerated, done }),
+        ipAddress: req.ip,
+      }).catch(() => {});
+    } catch (logErr) {}
 
     res.json({
       success: true,
@@ -664,9 +688,10 @@ router.post("/cache/clear", requireAuth, async (req, res) => {
 
 router.get("/cache/settings", requireAuth, async (req, res) => {
   try {
-    const settings = await storage.getSystemSettings();
+    let settings = await storage.getSystemSettings();
     if (!settings) {
-      return res.status(404).json({ error: "Settings not found" });
+      // Auto-create default settings row if none exists
+      settings = await storage.updateSystemSettings({});
     }
     res.json({
       cacheEnabled: settings.cacheEnabled === 1,
@@ -795,7 +820,7 @@ router.get("/tags", requireAuth, async (_req, res) => {
       .innerJoin(tagTranslations, eq(tags.id, tagTranslations.tagId))
       .where(eq(tagTranslations.languageCode, "en"));
 
-    const tagCounts = allTags.reduce<
+    const tagCounts = (allTags as any[]).reduce<
       Record<string, { tagName: string; count: number; videoIds: string[] }>
     >((acc, tag) => {
       if (!acc[tag.tagName]) {
@@ -965,9 +990,9 @@ router.post("/hero/images", requireAuth, async (req, res) => {
 // Analytics Settings Routes
 router.get("/analytics/settings", requireAuth, async (req, res) => {
   try {
-    const settings = await storage.getSystemSettings();
+    let settings = await storage.getSystemSettings();
     if (!settings) {
-      return res.status(404).json({ error: "Settings not found" });
+      settings = await storage.updateSystemSettings({});
     }
     res.json({
       gtmId: settings.gtmId,
@@ -1083,9 +1108,9 @@ router.get("/debug/system-health", requireAuth, async (req, res) => {
       database: dbStatus,
       criticalErrorsLastHour: criticalErrors.items.length,
       cache: {
-        keys: cacheStats.keys,
-        hits: cacheStats.hits,
-        misses: cacheStats.misses
+        keys: (cacheStats as any).keys,
+        hits: (cacheStats as any).hits,
+        misses: (cacheStats as any).misses
       },
       memory: {
         rss: Math.round(memory.rss / 1024 / 1024) + "MB",

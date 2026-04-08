@@ -55,7 +55,8 @@ import {
   Terminal,
   Bug
 } from "lucide-react";
-import type { ActivityLog } from "@shared/schema";
+import type { ActivityLog, ErrorEvent as AppErrorEvent } from "@shared/schema";
+import { apiRequest } from "@/lib/queryClient";
 import { format } from "date-fns";
 
 // --- Types ---
@@ -74,7 +75,7 @@ interface SystemHealth {
   uptime: string;
 }
 
-interface ErrorEvent {
+interface AppError {
   id: number;
   fingerprint: string;
   level: string;
@@ -83,6 +84,7 @@ interface ErrorEvent {
   stack?: string;
   module?: string;
   url?: string;
+  statusCode?: number;
   lastSeenAt: string;
   count: number;
 }
@@ -133,17 +135,17 @@ export default function AdminLogs() {
     refetchInterval: 10000,
   });
 
-  const { data: errorLogData, refetch: refetchErrors } = useQuery<{ items: ErrorEvent[] }>({
+  const { data: errorLogData, refetch: refetchErrors } = useQuery<{ items: AppError[] }>({
     queryKey: ["/api/admin/error-logs", { limit: 50 }],
     refetchInterval: 5000,
   });
   const errors = errorLogData?.items || [];
 
-  const [selectedError, setSelectedError] = useState<ErrorEvent | null>(null);
+  const [selectedError, setSelectedError] = useState<AppError | null>(null);
   const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
-  const handleAnalyzeError = async (error: ErrorEvent) => {
+  const handleAnalyzeError = async (error: AppError) => {
     setIsAnalyzing(true);
     setAiAnalysis(null);
     try {

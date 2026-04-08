@@ -194,8 +194,8 @@ router.get("/enhanced/meta-tags", async (req, res) => {
     const { pageType, isActive, search } = req.query;
     const offset = (safePage - 1) * safeLimit;
     
-    let conditions = [];
-    if (pageType) conditions.push(eq(seoMetaTags.pageType, pageType as string));
+    let conditions: any[] = [];
+    if (pageType) conditions.push(eq(seoMetaTags.pageType, pageType as any));
     if (isActive !== undefined) conditions.push(eq(seoMetaTags.isActive, isActive === "true"));
     if (search) {
       conditions.push(sql`${seoMetaTags.title} ILIKE ${`%${search}%`} OR ${seoMetaTags.pageUrl} ILIKE ${`%${search}%`}`);
@@ -369,7 +369,7 @@ router.get("/enhanced/redirects", async (req, res) => {
     const { page = 1, limit = 50, type, isActive, search } = req.query;
     const offset = (Number(page) - 1) * Number(limit);
     
-    let conditions = [];
+    let conditions: any[] = [];
     if (type) conditions.push(eq(seoRedirects.type, type as string));
     if (isActive !== undefined) conditions.push(eq(seoRedirects.isActive, isActive === "true"));
     if (search) {
@@ -474,7 +474,7 @@ router.get("/enhanced/keywords", async (req, res) => {
     const { page = 1, limit = 50, competition, search, sortBy = "keyword" } = req.query;
     const offset = (Number(page) - 1) * Number(limit);
     
-    let conditions = [];
+    let conditions: any[] = [];
     if (competition) conditions.push(eq(seoKeywords.competition, competition as string));
     if (search) {
       conditions.push(sql`${seoKeywords.keyword} ILIKE ${`%${search}%`}`);
@@ -592,7 +592,7 @@ router.get("/enhanced/audits", async (req, res) => {
     const { page = 1, limit = 50, auditType, pageUrl } = req.query;
     const offset = (Number(page) - 1) * Number(limit);
     
-    let conditions = [];
+    let conditions: any[] = [];
     if (auditType) conditions.push(eq(seoAuditLogs.auditType, auditType as string));
     if (pageUrl) conditions.push(eq(seoAuditLogs.pageUrl, pageUrl as string));
     
@@ -655,7 +655,7 @@ router.get("/enhanced/ab-tests", async (req, res) => {
     const { page = 1, limit = 50, status, elementType } = req.query;
     const offset = (Number(page) - 1) * Number(limit);
     
-    let conditions = [];
+    let conditions: any[] = [];
     if (status) conditions.push(eq(seoABTests.status, status as string));
     if (elementType) conditions.push(eq(seoABTests.elementType, elementType as string));
     
@@ -718,7 +718,7 @@ router.get("/enhanced/competitors", async (req, res) => {
     const { page = 1, limit = 50, search } = req.query;
     const offset = (Number(page) - 1) * Number(limit);
     
-    let conditions = [];
+    let conditions: any[] = [];
     if (search) {
       conditions.push(sql`${seoCompetitors.domain} ILIKE ${`%${search}%`} OR ${seoCompetitors.name} ILIKE ${`%${search}%`}`);
     }
@@ -829,7 +829,7 @@ router.get("/enhanced/sitemap", async (req, res) => {
     // Add tag pages
     for (const tag of tags) {
       sitemap += "  <url>\n";
-      sitemap += `    <loc>${baseUrl}/tag/${tag.slug}</loc>\n`;
+      sitemap += `    <loc>${baseUrl}/tag/${(tag as any).slug}</loc>\n`;
       sitemap += "    <changefreq>weekly</changefreq>\n";
       sitemap += "    <priority>0.5</priority>\n";
       sitemap += "  </url>\n";
@@ -954,8 +954,8 @@ async function runSEOAudit(pageUrl: string): Promise<any> {
   // This is a simplified audit - in a real implementation, you'd integrate with
   // tools like Google PageSpeed Insights, Lighthouse, or custom audit logic
   
-  const issues = [];
-  const recommendations = [];
+  const issues: any[] = [];
+  const recommendations: string[] = [];
   let score = 100;
   
   // Simulate audit results

@@ -54,7 +54,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import type { SystemSettings, AnalyticsEvent, EmailSettings } from "@shared/schema";
-import { insertSystemSettingsSchema, insertEmailSettingsSchema } from "@shared/schema";
+import { insertEmailSettingsSchema } from "@shared/schema";
 import {
   Settings,
   AlertTriangle,
@@ -83,12 +83,7 @@ export default function AdminSystemSettings() {
 
   const updateSettingsMutation = useMutation({
     mutationFn: async (data: Partial<SystemSettings>) => {
-      const response = await fetch("/api/system/settings", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      if (!response.ok) throw new Error("Failed to update settings");
+      const response = await apiRequest("PATCH", "/api/system/settings", data);
       return response.json();
     },
     onSuccess: () => {
@@ -107,17 +102,24 @@ export default function AdminSystemSettings() {
     },
   });
 
-  const form = useForm({
-    resolver: zodResolver(insertSystemSettingsSchema),
+  const form = useForm<Record<string, any>>({
     defaultValues: {
       maintenanceMode: 0,
       maintenanceMessage: "",
       allowRegistration: 0,
       itemsPerPage: 24,
       pwaEnabled: 1,
+      pwaName: "",
+      pwaShortName: "",
+      pwaDescription: "",
+      pwaThemeColor: "#E50914",
+      pwaBackgroundColor: "#141414",
+      pwaIcon192: "/icon-192.png",
+      pwaIcon512: "/icon-512.png",
       clientErrorLogging: 1,
       gtmId: "",
       ga4Id: "",
+      youtubeApiKey: "",
       customHeadCode: "",
       customBodyStartCode: "",
       customBodyEndCode: "",
@@ -125,22 +127,30 @@ export default function AdminSystemSettings() {
   });
 
   useEffect(() => {
-    if (settings && !form.formState.isDirty) {
+    if (settings) {
       form.reset({
         maintenanceMode: settings.maintenanceMode,
         maintenanceMessage: settings.maintenanceMessage || "",
         allowRegistration: settings.allowRegistration,
         itemsPerPage: settings.itemsPerPage,
         pwaEnabled: settings.pwaEnabled,
+        pwaName: settings.pwaName || "",
+        pwaShortName: settings.pwaShortName || "",
+        pwaDescription: settings.pwaDescription || "",
+        pwaThemeColor: settings.pwaThemeColor || "#E50914",
+        pwaBackgroundColor: settings.pwaBackgroundColor || "#141414",
+        pwaIcon192: settings.pwaIcon192 || "/icon-192.png",
+        pwaIcon512: settings.pwaIcon512 || "/icon-512.png",
         clientErrorLogging: settings.clientErrorLogging,
         gtmId: settings.gtmId || "",
         ga4Id: settings.ga4Id || "",
+        youtubeApiKey: settings.youtubeApiKey || "",
         customHeadCode: settings.customHeadCode || "",
         customBodyStartCode: settings.customBodyStartCode || "",
         customBodyEndCode: settings.customBodyEndCode || "",
       });
     }
-  }, [settings, form]);
+  }, [settings]);
 
   const onSettingsSubmit = (data: any) => {
     updateSettingsMutation.mutate(data);
@@ -287,10 +297,14 @@ export default function AdminSystemSettings() {
             </div>
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-              <TabsList className="grid w-full grid-cols-6">
+              <TabsList className="flex w-full flex-wrap justify-start gap-1">
                 <TabsTrigger value="general" className="flex items-center gap-2">
                   <Sliders className="h-4 w-4" />
                   {t("admin.general", "General")}
+                </TabsTrigger>
+                <TabsTrigger value="api" className="flex items-center gap-2">
+                  <Code className="h-4 w-4" />
+                  API Keys
                 </TabsTrigger>
                 <TabsTrigger value="security" className="flex items-center gap-2">
                   <Shield className="h-4 w-4" />
@@ -536,6 +550,46 @@ export default function AdminSystemSettings() {
                 </Card>
               </TabsContent>
 
+              {/* --- API Keys Tab --- */}
+              <TabsContent value="api">
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onSettingsSubmit)} className="space-y-6">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <Code className="h-5 w-5" />
+                          API Keys
+                        </CardTitle>
+                        <CardDescription>
+                          Manage external service API keys and integrations
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <FormField
+                          control={form.control}
+                          name="youtubeApiKey"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>YouTube Data API v3 Key</FormLabel>
+                              <FormControl>
+                                <Input type="password" placeholder="AIzaSy..." {...field} />
+                              </FormControl>
+                              <FormDescription>
+                                Used for channel enrichment to fetch descriptions, banners, etc. when scraping fails or provides partial data. Get one from Google Cloud Console.
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <Button type="submit" disabled={updateSettingsMutation.isPending}>
+                          {updateSettingsMutation.isPending ? t("common.saving", "Saving...") : t("common.save", "Save")}
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  </form>
+                </Form>
+              </TabsContent>
+
               {/* --- PWA Tab --- */}
               <TabsContent value="pwa">
                 <Form {...form}>
@@ -625,7 +679,7 @@ export default function AdminSystemSettings() {
                               <FormItem>
                                 <FormLabel>{t("admin.themeColor", "Theme Color")}</FormLabel>
                                 <div className="flex gap-2">
-                                  <div className="w-10 h-10 rounded border" style={{ backgroundColor: field.value }}></div>
+                                  <div className="w-10 h-10 rounded border" style={{ backgroundColor: String(field.value) }}></div>
                                   <FormControl>
                                     <Input placeholder="#E50914" {...field} />
                                   </FormControl>
@@ -641,7 +695,7 @@ export default function AdminSystemSettings() {
                               <FormItem>
                                 <FormLabel>{t("admin.backgroundColor", "Background Color")}</FormLabel>
                                 <div className="flex gap-2">
-                                  <div className="w-10 h-10 rounded border" style={{ backgroundColor: field.value }}></div>
+                                  <div className="w-10 h-10 rounded border" style={{ backgroundColor: String(field.value) }}></div>
                                   <FormControl>
                                     <Input placeholder="#141414" {...field} />
                                   </FormControl>

@@ -266,8 +266,8 @@ router.get("/enhanced/meta-tags", async (req, res) => {
     const { pageType, isActive, search } = req.query;
     const offset = (safePage - 1) * safeLimit;
     
-    let conditions = [];
-    if (pageType) conditions.push(eq(seoMetaTags.pageType, pageType as string));
+    let conditions: any[] = [];
+    if (pageType) conditions.push(eq(seoMetaTags.pageType, pageType as any));
     if (isActive !== undefined) conditions.push(eq(seoMetaTags.isActive, isActive === "true"));
     if (search) {
       conditions.push(sql`${seoMetaTags.title} ILIKE ${`%${search}%`} OR ${seoMetaTags.pageUrl} ILIKE ${`%${search}%`}`);
@@ -382,7 +382,7 @@ router.patch("/enhanced/meta-tags/:id", requireAuth, async (req, res) => {
 router.delete("/enhanced/meta-tags/:id", requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
-    const success = await storage.deleteSeoMetaTag(id);
+    const success = await (storage as any).deleteSeoMetaTag(id);
     if (!success) return res.status(404).json({ error: "Meta tag not found", code: "NOT_FOUND" });
     res.json({ success: true, message: "Meta tag deleted successfully" });
   } catch (error: any) {
@@ -490,7 +490,7 @@ router.get("/enhanced/redirects", async (req, res) => {
     const { page = 1, limit = 50, type, isActive, search } = req.query;
     const offset = (Number(page) - 1) * Number(limit);
     
-    let conditions = [];
+    let conditions: any[] = [];
     if (type) conditions.push(eq(seoRedirects.type, type as string));
     if (isActive !== undefined) conditions.push(eq(seoRedirects.isActive, isActive === "true"));
     if (search) {
@@ -600,7 +600,7 @@ router.get("/enhanced/keywords", async (req, res) => {
     const { page = 1, limit = 50, competition, search, sortBy = "keyword" } = req.query;
     const offset = (Number(page) - 1) * Number(limit);
     
-    let conditions = [];
+    let conditions: any[] = [];
     if (competition) conditions.push(eq(seoKeywords.competition, competition as string));
     if (search) {
       conditions.push(sql`${seoKeywords.keyword} ILIKE ${`%${search}%`}`);
@@ -723,7 +723,7 @@ router.get("/enhanced/audits", async (req, res) => {
     const { page = 1, limit = 50, auditType, pageUrl } = req.query;
     const offset = (Number(page) - 1) * Number(limit);
     
-    let conditions = [];
+    let conditions: any[] = [];
     if (auditType) conditions.push(eq(seoAuditLogs.auditType, auditType as string));
     if (pageUrl) conditions.push(eq(seoAuditLogs.pageUrl, pageUrl as string));
     
@@ -791,7 +791,7 @@ router.get("/enhanced/ab-tests", async (req, res) => {
     const { page = 1, limit = 50, status, elementType } = req.query;
     const offset = (Number(page) - 1) * Number(limit);
     
-    let conditions = [];
+    let conditions: any[] = [];
     if (status) conditions.push(eq(seoABTests.status, status as string));
     if (elementType) conditions.push(eq(seoABTests.elementType, elementType as string));
     
@@ -859,7 +859,7 @@ router.get("/enhanced/competitors", async (req, res) => {
     const { page = 1, limit = 50, search } = req.query;
     const offset = (Number(page) - 1) * Number(limit);
     
-    let conditions = [];
+    let conditions: any[] = [];
     if (search) {
       conditions.push(sql`${seoCompetitors.domain} ILIKE ${`%${search}%`} OR ${seoCompetitors.name} ILIKE ${`%${search}%`}`);
     }

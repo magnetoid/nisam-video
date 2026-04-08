@@ -364,8 +364,8 @@ export default function AdminVideos() {
       />
 
       <EditVideoDialog
-        video={editingVideo}
-        categories={categories}
+        video={editingVideo as any}
+        categories={categories as any}
         open={!!editingVideo}
         onClose={() => setEditingVideo(null)}
         onSave={(data) => {

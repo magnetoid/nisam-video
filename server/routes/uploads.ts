@@ -49,7 +49,7 @@ router.post(
         token,
       });
 
-      res.json({ url: blob.url, pathname: blob.pathname, size: blob.size, contentType: blob.contentType });
+      res.json({ url: blob.url, pathname: blob.pathname, size: (blob as any).size, contentType: blob.contentType });
     } catch (error: any) {
       console.error("Blob upload error:", error);
       res.status(500).json({ error: error?.message || "Blob upload failed" });

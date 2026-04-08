@@ -234,8 +234,8 @@ export default function AdminCategories() {
                       <div className="flex flex-wrap gap-1">
                         {category.translations && category.translations.length > 0 ? (
                           category.translations.map((trans) => (
-                            <Badge key={trans.language} variant="outline" className="text-xs px-1.5 py-0 h-5">
-                              {trans.language}
+                            <Badge key={(trans as any).language || trans.languageCode} variant="outline" className="text-xs px-1.5 py-0 h-5">
+                              {(trans as any).language || trans.languageCode}
                             </Badge>
                           ))
                         ) : (

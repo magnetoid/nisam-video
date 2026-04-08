@@ -45,18 +45,18 @@ export default function AdminDashboard() {
   const { toast } = useToast();
 
   // Fetch Analytics
-  const { data: analytics, isLoading: analyticsLoading } = useQuery({
+  const { data: analytics, isLoading: analyticsLoading } = useQuery<any>({
     queryKey: ["/api/analytics?days=30"],
   });
 
   // Fetch Scheduler Settings/Status
-  const { data: scheduler, isLoading: schedulerLoading } = useQuery({
+  const { data: scheduler, isLoading: schedulerLoading } = useQuery<any>({
     queryKey: ["/api/scheduler"],
     refetchInterval: 5000, // Poll every 5s for real-time status
   });
 
   // Fetch Recent Jobs
-  const { data: recentJobs = [], isLoading: jobsLoading } = useQuery({
+  const { data: recentJobs = [], isLoading: jobsLoading } = useQuery<any[]>({
     queryKey: ["/api/scheduler/jobs"],
     refetchInterval: 5000,
   });

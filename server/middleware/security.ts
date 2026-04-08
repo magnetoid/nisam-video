@@ -62,10 +62,10 @@ export function getHelmetConfig() {
       },
     },
     crossOriginEmbedderPolicy: false,
-    crossOriginResourcePolicy: { policy: "cross-origin" },
+    crossOriginResourcePolicy: { policy: "cross-origin" as const },
     crossOriginOpenerPolicy: false,
     dnsPrefetchControl: { allow: false },
-    frameguard: { action: "deny" },
+    frameguard: { action: "deny" as const },
     hidePoweredBy: true,
     hsts: {
       maxAge: 31536000,
@@ -75,8 +75,8 @@ export function getHelmetConfig() {
     ieNoOpen: true,
     noSniff: true,
     originAgentCluster: true,
-    permittedCrossDomainPolicies: { permittedPolicies: "none" },
-    referrerPolicy: { policy: "strict-origin-when-cross-origin" },
+    permittedCrossDomainPolicies: { permittedPolicies: "none" as const },
+    referrerPolicy: { policy: "strict-origin-when-cross-origin" as const },
     xssFilter: true,
   };
 }

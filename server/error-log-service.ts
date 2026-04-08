@@ -192,7 +192,7 @@ export async function recordError(input: ErrorEventInput) {
 
     errorLogBus.emit("error_event", { fingerprint, level: input.level });
     await maybeNotifyCritical(input, fingerprint);
-    enforceRetention();
+    await enforceRetention();
     return row;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
