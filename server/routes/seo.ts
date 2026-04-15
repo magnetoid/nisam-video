@@ -997,7 +997,7 @@ router.get("/enhanced/sitemap", async (req, res) => {
     // Add tag pages
     for (const tag of tags) {
       sitemap += "  <url>\n";
-      const tagSlug = encodeURIComponent(String((tag as any).tagName || "").trim().replace(/\s+/g, "-"));
+      const tagSlug = encodeURIComponent(String(tag.tagName || "").trim().replace(/\s+/g, "-"));
       sitemap += `    <loc>${baseUrl}/tag/${tagSlug}</loc>\n`;
       sitemap += "    <changefreq>weekly</changefreq>\n";
       sitemap += "    <priority>0.5</priority>\n";

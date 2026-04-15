@@ -53,14 +53,14 @@ import { Pagination } from "@/components/ui/pagination";
 import type {
   VideoWithRelations,
   Channel,
-  Category,
+  LocalizedCategory,
   Playlist,
 } from "@shared/schema";
 
 interface VideoManagementProps {
   videos: VideoWithRelations[];
   channels?: Channel[];
-  categories?: Category[];
+  categories?: LocalizedCategory[];
   playlists?: Playlist[];
   selectedVideoIds: string[];
   selectedChannelId?: string;
@@ -252,7 +252,7 @@ export function VideoManagement({
             <SelectItem value="all">{t("admin.allCategories", "All Categories")}</SelectItem>
             {categories.map((category) => (
               <SelectItem key={category.id} value={category.id}>
-                {(category as any).name}
+                {category.name}
               </SelectItem>
             ))}
           </SelectContent>
@@ -356,7 +356,7 @@ export function VideoManagement({
                             variant="outline"
                             className="text-xs"
                           >
-                            {(cat as any).name}
+                            {cat.name}
                           </Badge>
                         ))}
                         {video.categories.length > 2 && (
@@ -380,7 +380,7 @@ export function VideoManagement({
                             variant="secondary"
                             className="text-xs"
                           >
-                            {(tag as any).tagName}
+                            {tag.tagName}
                           </Badge>
                         ))}
                         {video.tags.length > 2 && (

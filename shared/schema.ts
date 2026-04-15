@@ -184,6 +184,7 @@ export const videoCategories = pgTable(
   (table) => ({
     pk: primaryKey({ columns: [table.videoId, table.categoryId] }),
     categoryIdIdx: index("video_categories_category_id_idx").on(table.categoryId),
+    categoryVideoIdx: index("video_categories_cat_vid_idx").on(table.categoryId, table.videoId),
   }),
 );
 
@@ -805,17 +806,6 @@ export type InsertPlaylist = z.infer<typeof insertPlaylistSchema>;
 
 export type PlaylistVideo = typeof playlistVideos.$inferSelect;
 
-export type VideoWithRelations = Video & {
-  channel: Channel;
-  tags: Tag[];
-  categories: Category[];
-};
-
-export type VideoWithLocalizedRelations = VideoWithRelations & {
-  categories: LocalizedCategory[];
-  tags: LocalizedTag[];
-};
-
 // Extended types for localized data
 export type LocalizedCategory = Category & {
   translations: CategoryTranslation[];
@@ -829,6 +819,17 @@ export type LocalizedTag = Tag & {
   tagName: string;
   videoCount?: number;
 };
+
+// Storage layer always returns localized relations (joins translations).
+// Single type avoids the casting dance throughout components.
+export type VideoWithRelations = Video & {
+  channel: Channel;
+  tags: LocalizedTag[];
+  categories: LocalizedCategory[];
+};
+
+// Retained as alias for API compatibility. Prefer VideoWithRelations.
+export type VideoWithLocalizedRelations = VideoWithRelations;
 
 export type PlaylistWithVideos = Playlist & {
   videos: VideoWithRelations[];
@@ -890,6 +891,10 @@ export const systemSettings = pgTable("system_settings", {
   customHeadCode: text("custom_head_code"), // Injected in <head> (for GTM, analytics)
   customBodyStartCode: text("custom_body_start_code"), // Injected after <body> (for GTM noscript)
   customBodyEndCode: text("custom_body_end_code"), // Injected before </body> (for tracking scripts)
+  
+  // YouTube API
+  youtubeApiKey: text("youtube_api_key"),
+
   updatedAt: timestamp("updated_at")
     .notNull()
     .default(sql`now()`),
@@ -962,6 +967,80 @@ export const analyticsEvents = pgTable("analytics_events", {
     .default(sql`now()`),
 });
 
+export const analyticsCustomEvents = pgTable(
+  "analytics_custom_events",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    sessionId: varchar("session_id").notNull(),
+    visitorId: varchar("visitor_id").notNull(),
+    eventName: text("event_name").notNull(),
+    properties: jsonb("properties"),
+    timestamp: timestamp("timestamp").notNull().default(sql`now()`),
+  },
+  (table) => ({
+    sessionIdIdx: index("analytics_custom_events_session_id_idx").on(table.sessionId),
+    visitorIdIdx: index("analytics_custom_events_visitor_id_idx").on(table.visitorId),
+    eventNameIdx: index("analytics_custom_events_event_name_idx").on(table.eventName),
+    timestampIdx: index("analytics_custom_events_timestamp_idx").on(table.timestamp),
+  }),
+);
+
+export const analyticsSavedViews = pgTable(
+  "analytics_saved_views",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    ownerUserId: varchar("owner_user_id").notNull(),
+    name: text("name").notNull(),
+    visibility: text("visibility").notNull().default("private"),
+    config: jsonb("config").notNull(),
+    createdAt: timestamp("created_at").notNull().default(sql`now()`),
+    updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
+  },
+  (table) => ({
+    ownerIdx: index("analytics_saved_views_owner_idx").on(table.ownerUserId),
+    updatedAtIdx: index("analytics_saved_views_updated_at_idx").on(table.updatedAt),
+  }),
+);
+
+// Visitor Analytics
+export const visitorSessions = pgTable("visitor_sessions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  visitorId: varchar("visitor_id").notNull(), // Anonymized hash or random ID
+  ipHash: varchar("ip_hash"), // Anonymized IP hash
+  userAgent: text("user_agent"),
+  browser: text("browser"),
+  os: text("os"),
+  device: text("device"), // desktop, mobile, tablet
+  country: text("country"),
+  city: text("city"),
+  referrer: text("referrer"),
+  utmSource: text("utm_source"),
+  utmMedium: text("utm_medium"),
+  utmCampaign: text("utm_campaign"),
+  startedAt: timestamp("started_at").notNull().default(sql`now()`),
+  endedAt: timestamp("ended_at").notNull().default(sql`now()`),
+  durationSeconds: integer("duration_seconds").default(0),
+  isBounce: boolean("is_bounce").default(true),
+  consentGranted: boolean("consent_granted").default(false),
+}, (table) => ({
+  startedAtIdx: index("visitor_sessions_started_at_idx").on(table.startedAt),
+  visitorIdIdx: index("visitor_sessions_visitor_id_idx").on(table.visitorId),
+}));
+
+export const pageViews = pgTable("page_views", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sessionId: varchar("session_id").notNull(),
+  visitorId: varchar("visitor_id").notNull(),
+  path: text("path").notNull(),
+  title: text("title"),
+  durationSeconds: integer("duration_seconds").default(0),
+  timestamp: timestamp("timestamp").notNull().default(sql`now()`),
+}, (table) => ({
+  sessionIdIdx: index("page_views_session_id_idx").on(table.sessionId),
+  timestampIdx: index("page_views_timestamp_idx").on(table.timestamp),
+  pathIdx: index("page_views_path_idx").on(table.path),
+}));
+
 // Activity logs table - Track admin actions for auditing
 export const activityLogs = pgTable("activity_logs", {
   id: varchar("id")
@@ -1018,6 +1097,36 @@ export const insertAnalyticsEventSchema = createInsertSchemaAny(analyticsEvents)
 
 export type AnalyticsEvent = typeof analyticsEvents.$inferSelect;
 export type InsertAnalyticsEvent = z.infer<typeof insertAnalyticsEventSchema>;
+
+export const insertAnalyticsCustomEventSchema = createInsertSchemaAny(analyticsCustomEvents).omit({
+  id: true,
+  timestamp: true,
+});
+export type AnalyticsCustomEvent = typeof analyticsCustomEvents.$inferSelect;
+export type InsertAnalyticsCustomEvent = z.infer<typeof insertAnalyticsCustomEventSchema>;
+
+export const insertAnalyticsSavedViewSchema = createInsertSchemaAny(analyticsSavedViews).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type AnalyticsSavedView = typeof analyticsSavedViews.$inferSelect;
+export type InsertAnalyticsSavedView = z.infer<typeof insertAnalyticsSavedViewSchema>;
+
+export const insertVisitorSessionSchema = createInsertSchemaAny(visitorSessions).omit({
+  id: true,
+  startedAt: true,
+  endedAt: true,
+});
+export type VisitorSession = typeof visitorSessions.$inferSelect;
+export type InsertVisitorSession = z.infer<typeof insertVisitorSessionSchema>;
+
+export const insertPageViewSchema = createInsertSchemaAny(pageViews).omit({
+  id: true,
+  timestamp: true,
+});
+export type PageView = typeof pageViews.$inferSelect;
+export type InsertPageView = z.infer<typeof insertPageViewSchema>;
 
 // Tag Images table - Store images for unique tag names
 export const tagImages = pgTable("tag_images", {

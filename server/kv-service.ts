@@ -1,5 +1,6 @@
 import { kvStorage as kvStore } from './storage/kv.js';
 import { storage } from './storage.js';
+import { getRedisClient } from './services/redis.js';
 
 /**
  * KV Store Service for nisam.video
@@ -85,42 +86,71 @@ export const kvService = {
   },
 
   /**
-   * Buffer view count and periodically sync to database
+   * Buffer view count and periodically sync to database.
+   *
+   * Uses Redis INCR (atomic, race-free, multi-instance safe) when available.
+   * Falls back to the Postgres-backed kvStore when Redis is unavailable —
+   * note: the fallback path is not race-safe across instances and should
+   * only be relied on for single-instance / local-dev deployments.
    */
   async bufferView(videoId: string, userIdentifier: string): Promise<void> {
     const bufferKey = `viewbuffer:${videoId}`;
-    
+    const lastSyncKey = `viewbuffer:lastsync:${videoId}`;
+
     try {
-      // Get current buffer
-      const buffer = await kvStore.get(bufferKey) || { count: 0, lastSync: Date.now() };
-      
-      // Increment buffer
-      buffer.count++;
-      const now = Date.now();
-      
-      // Check if we should sync
-      const shouldSync = buffer.count >= VIEW_BUFFER_THRESHOLD || 
-                         (now - buffer.lastSync) >= VIEW_BUFFER_TIMEOUT;
-      
-      if (shouldSync) {
-        // Sync to database
-        await this.syncViewBuffer(videoId, buffer.count);
-        
-        // Reset buffer
-        await kvStore.set(bufferKey, { count: 0, lastSync: now });
+      const redis = getRedisClient();
+
+      if (redis) {
+        // Atomic increment + read in a single round trip.
+        const count = await redis.incr(bufferKey);
+
+        // First write seeds the lastSync marker; later reads check elapsed time.
+        let shouldSync = count >= VIEW_BUFFER_THRESHOLD;
+        if (!shouldSync) {
+          const lastSyncRaw = await redis.get(lastSyncKey);
+          const lastSync = lastSyncRaw ? Number(lastSyncRaw) : 0;
+          if (!lastSync) {
+            await redis.set(lastSyncKey, String(Date.now()), "EX", 3600);
+          } else if (Date.now() - lastSync >= VIEW_BUFFER_TIMEOUT) {
+            shouldSync = true;
+          }
+        }
+
+        if (shouldSync) {
+          // GETSET atomically reads + resets the counter so concurrent flushes
+          // don't double-count.
+          const flushed = await redis.getset(bufferKey, "0");
+          const flushedCount = Number(flushed) || 0;
+          if (flushedCount > 0) {
+            await this.syncViewBuffer(videoId, flushedCount);
+          }
+          await redis.set(lastSyncKey, String(Date.now()), "EX", 3600);
+        }
       } else {
-        // Update buffer
-        await kvStore.set(bufferKey, buffer);
+        // Fallback: Postgres-backed buffer (legacy behavior, racy across instances).
+        const buffer = await kvStore.get(bufferKey) || { count: 0, lastSync: Date.now() };
+        buffer.count++;
+        const now = Date.now();
+        const shouldSync =
+          buffer.count >= VIEW_BUFFER_THRESHOLD ||
+          (now - buffer.lastSync) >= VIEW_BUFFER_TIMEOUT;
+
+        if (shouldSync) {
+          await this.syncViewBuffer(videoId, buffer.count);
+          await kvStore.set(bufferKey, { count: 0, lastSync: now });
+        } else {
+          await kvStore.set(bufferKey, buffer);
+        }
       }
-      
-      // Also record individual view for history (non-blocking)
-      this.recordViewInHistory(userIdentifier, videoId).catch(err => 
+
+      // Record viewing history off the hot path.
+      this.recordViewInHistory(userIdentifier, videoId).catch(err =>
         console.error('History recording error:', err)
       );
     } catch (error) {
       console.error('View buffering error:', error);
-      // Fall back to direct DB write
-      await this.syncViewBuffer(videoId, 1);
+      // Last-resort fallback: write the single view directly.
+      await this.syncViewBuffer(videoId, 1).catch(() => {});
     }
   },
 

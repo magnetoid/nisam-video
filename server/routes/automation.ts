@@ -396,12 +396,12 @@ router.get("/export", requireAuth, async (req, res) => {
     videos.forEach(video => {
       if (video.categories && video.categories.length > 0) {
         video.categories.forEach(cat => {
-          categoryCounts[(cat as any).name] = (categoryCounts[(cat as any).name] || 0) + 1;
+          categoryCounts[cat.name] = (categoryCounts[cat.name] || 0) + 1;
         });
       }
       if (video.tags && video.tags.length > 0) {
         video.tags.forEach(tag => {
-          tagCounts[(tag as any).tagName] = (tagCounts[(tag as any).tagName] || 0) + 1;
+          tagCounts[tag.tagName] = (tagCounts[tag.tagName] || 0) + 1;
         });
       }
     });

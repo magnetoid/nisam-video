@@ -132,7 +132,7 @@ export async function seoMiddleware(req: Request, res: Response, next: NextFunct
         const channel = await storage.getChannel?.(channelId);
         if (channel) {
           title = `${channel.name} | nisam.video`;
-          description = (channel as any).description || `Watch all videos from ${channel.name} on nisam.video. AI-curated video content from this channel.`;
+          description = `Watch all videos from ${channel.name} on nisam.video. AI-curated video content from this channel.`;
           image = channel.thumbnailUrl || channel.bannerUrl || image;
           const canonicalSlug = `${generateSlug(channel.name, 80)}-${channel.id}`;
           canonicalUrl = `${baseUrl}/channels/${canonicalSlug}`;

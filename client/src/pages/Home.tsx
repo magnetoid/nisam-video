@@ -105,7 +105,7 @@ export default function Home() {
       imageUrl: v.thumbnailUrl ? getMaxResolutionThumbnail(v.thumbnailUrl, v.videoId) : null,
       slug: v.slug || v.id,
       primaryCategory: (v.categories?.[0] as any)?.name || (v.categories?.[0] as any)?.translations?.[0]?.name || undefined,
-      secondaryCategories: (v.categories || []).slice(1).map((c) => (c as any).name || (c as any).translations?.[0]?.name).filter(Boolean) as string[],
+      secondaryCategories: (v.categories || []).slice(1).map((c) => c.name || c.translations?.[0]?.name).filter(Boolean) as string[],
       viewCount: v.viewCount || null,
       publishDate: v.publishDate || null,
       description: v.description || null,

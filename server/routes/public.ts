@@ -2,8 +2,31 @@ import { Router } from "express";
 import { storage } from "../storage/index.js";
 import { cache } from "../cache.js";
 import { db } from "../db.js";
-import { videos, categories, channels, tags, seoSettings } from "../../shared/schema.js";
-import { eq, isNull } from "drizzle-orm";
+import {
+  videos,
+  channels,
+  seoSettings,
+  categoryTranslations,
+  tagTranslations,
+} from "../../shared/schema.js";
+import { eq } from "drizzle-orm";
+
+function slugifyChannel(name: string, id: string): string {
+  const base = (name || "")
+    .toLowerCase()
+    .trim()
+    .replace(/č/g, "c")
+    .replace(/ć/g, "c")
+    .replace(/đ/g, "dj")
+    .replace(/š/g, "s")
+    .replace(/ž/g, "z")
+    .replace(/[^\w\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/--+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80);
+  return base ? `${base}-${id}` : id;
+}
 
 const router = Router();
 
@@ -37,12 +60,20 @@ export const sitemapHandler = async (_req: any, res: any) => {
   try {
     const baseUrl = process.env.APP_URL || "https://nisam.video";
     
-    // Fetch all public URLs
+    const defaultLang = "en";
+    // Fetch all public URLs. Categories and tags get their slugs from
+    // translations; channels build a slug from name+id the same way the client does.
     const [allVideos, allCategories, allChannels, allTags] = await Promise.all([
-      db.select({ slug: (videos as any).slug, updatedAt: (videos as any).updatedAt }).from(videos).where(isNull((videos as any).deletedAt)),
-      db.select({ slug: (categories as any).slug }).from(categories),
-      db.select({ slug: (channels as any).slug }).from(channels),
-      db.select({ slug: (tags as any).slug }).from(tags),
+      db.select({ slug: videos.slug, createdAt: videos.createdAt }).from(videos),
+      db
+        .select({ slug: categoryTranslations.slug })
+        .from(categoryTranslations)
+        .where(eq(categoryTranslations.languageCode, defaultLang)),
+      db.select({ id: channels.id, name: channels.name }).from(channels),
+      db
+        .select({ tagName: tagTranslations.tagName })
+        .from(tagTranslations)
+        .where(eq(tagTranslations.languageCode, defaultLang)),
     ]);
 
     let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
@@ -54,7 +85,7 @@ export const sitemapHandler = async (_req: any, res: any) => {
     // Add videos
     for (const v of allVideos) {
       if (!v.slug) continue;
-      const date = v.updatedAt ? new Date(v.updatedAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+      const date = v.createdAt ? new Date(v.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
       xml += `  <url>\n    <loc>${baseUrl}/video/${v.slug}</loc>\n    <lastmod>${date}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.8</priority>\n  </url>\n`;
     }
 
@@ -66,14 +97,17 @@ export const sitemapHandler = async (_req: any, res: any) => {
 
     // Add channels
     for (const ch of allChannels) {
-      if (!ch.slug) continue;
-      xml += `  <url>\n    <loc>${baseUrl}/channels/${ch.slug}</loc>\n    <changefreq>weekly</changefreq>\n    <priority>0.6</priority>\n  </url>\n`;
+      const slug = slugifyChannel(ch.name, ch.id);
+      xml += `  <url>\n    <loc>${baseUrl}/channels/${slug}</loc>\n    <changefreq>weekly</changefreq>\n    <priority>0.6</priority>\n  </url>\n`;
     }
 
     // Add tags
+    const seenTagSlugs = new Set<string>();
     for (const t of allTags) {
-      if (!t.slug) continue;
-      xml += `  <url>\n    <loc>${baseUrl}/tag/${t.slug}</loc>\n    <changefreq>monthly</changefreq>\n    <priority>0.5</priority>\n  </url>\n`;
+      const slug = encodeURIComponent((t.tagName || "").trim().replace(/\s+/g, "-"));
+      if (!slug || seenTagSlugs.has(slug)) continue;
+      seenTagSlugs.add(slug);
+      xml += `  <url>\n    <loc>${baseUrl}/tag/${slug}</loc>\n    <changefreq>monthly</changefreq>\n    <priority>0.5</priority>\n  </url>\n`;
     }
 
     xml += `</urlset>`;

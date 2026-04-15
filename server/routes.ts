@@ -265,7 +265,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const slice = all.slice(offset, offset + pageSize);
         for (const category of slice) {
           // Use slug-based URLs for proper SEO; fall back to id-based slug
-          const catSlug = (category as any).slug || generateSlug(category.name || String(category.id), 80);
+          const catSlug = category.slug || generateSlug(category.name || String(category.id), 80);
           const lastmod = (category as any).updatedAt
             ? new Date((category as any).updatedAt).toISOString().split("T")[0]
             : undefined;
@@ -277,7 +277,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const all = await storage.getAllLocalizedTags(lang);
         const slice = all.slice(offset, offset + pageSize);
         for (const tag of slice) {
-          const tagSlug = encodeURIComponent(String((tag as any).tagName || "").trim().replace(/\s+/g, "-"));
+          const tagSlug = encodeURIComponent(String(tag.tagName || "").trim().replace(/\s+/g, "-"));
           addUrl(`${baseUrl}/tag/${tagSlug}`, { changefreq: "weekly", priority: "0.5" });
         }
       }

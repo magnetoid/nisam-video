@@ -11,7 +11,7 @@ import { useTranslation } from "react-i18next";
 import type {
   VideoWithRelations,
   Channel,
-  Category,
+  LocalizedCategory,
   Playlist,
 } from "@shared/schema";
 
@@ -67,7 +67,7 @@ export default function AdminVideos() {
     queryKey: ["/api/channels"],
   });
 
-  const { data: categories = [] } = useQuery<Category[]>({
+  const { data: categories = [] } = useQuery<LocalizedCategory[]>({
     queryKey: ["/api/categories"],
   });
 

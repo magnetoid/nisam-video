@@ -819,14 +819,15 @@ export class DatabaseStorage implements IStorage {
             .where(and(inArray(tagTranslations.tagId, tagIds), eq(tagTranslations.languageCode, "en"))),
         ]);
 
-        const langMap = new Map(langTrans.map((t) => [t.tagId, t]));
-        const enMap = new Map(enTrans.map((t) => [t.tagId, t]));
+        type TagTransRow = (typeof langTrans)[number];
+        const langMap = new Map<string, TagTransRow>(langTrans.map((t) => [t.tagId, t]));
+        const enMap = new Map<string, TagTransRow>(enTrans.map((t) => [t.tagId, t]));
 
         for (const base of allBaseTags) {
           const trans = langMap.get(base.id) || enMap.get(base.id);
           const localized: LocalizedTag = trans
-            ? ({ ...base, translations: [trans], tagName: (trans as any).tagName } as any)
-            : ({ ...base, translations: [], tagName: "" } as any);
+            ? { ...base, translations: [trans], tagName: trans.tagName }
+            : { ...base, translations: [], tagName: "" };
 
           if (!tagsByVideoId.has(base.videoId)) tagsByVideoId.set(base.videoId, []);
           tagsByVideoId.get(base.videoId)!.push(localized);
@@ -1799,13 +1800,14 @@ export class DatabaseStorage implements IStorage {
         .where(eq(categoryTranslations.languageCode, 'en'));
 
       // Map translations
-      const transMap = new Map(langTrans.map(t => [t.categoryId, t]));
-      const enMap = new Map(enTrans.map(t => [t.categoryId, t]));
+      type CatTransRow = (typeof langTrans)[number];
+      const transMap = new Map<string, CatTransRow>(langTrans.map(t => [t.categoryId, t]));
+      const enMap = new Map<string, CatTransRow>(enTrans.map(t => [t.categoryId, t]));
 
       const localized: LocalizedCategory[] = bases.map(base => {
         let trans = transMap.get(base.id);
         if (!trans) trans = enMap.get(base.id);
-        return trans ? { ...base, translations: [trans], name: (trans as any).name, slug: (trans as any).slug, description: (trans as any).description } : null;
+        return trans ? { ...base, translations: [trans], name: trans.name, slug: trans.slug, description: trans.description } : null;
       }).filter((c): c is LocalizedCategory => c !== null);
 
       const settings = await this.getCacheSettings();
@@ -1990,8 +1992,9 @@ export class DatabaseStorage implements IStorage {
         .where(eq(tagTranslations.languageCode, 'en'));
 
       // Map translations
-      const transMap = new Map(langTrans.map(t => [t.tagId, t]));
-      const enMap = new Map(enTrans.map(t => [t.tagId, t]));
+      type TagTransRow = (typeof langTrans)[number];
+      const transMap = new Map<string, TagTransRow>(langTrans.map(t => [t.tagId, t]));
+      const enMap = new Map<string, TagTransRow>(enTrans.map(t => [t.tagId, t]));
 
       // Count videos per tag
       const tagCounts = new Map<string, number>();
@@ -2005,7 +2008,7 @@ export class DatabaseStorage implements IStorage {
         return trans ? { 
           ...base, 
           translations: [trans], 
-          tagName: (trans as any).tagName,
+          tagName: trans.tagName,
           videoCount: tagCounts.get(base.id) || 0
         } : null;
       }).filter((t): t is LocalizedTag => t !== null);

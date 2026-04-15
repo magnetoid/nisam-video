@@ -826,10 +826,13 @@ router.get("/enhanced/sitemap", async (req, res) => {
       sitemap += "  </url>\n";
     }
     
-    // Add tag pages
+    // Add tag pages — tags don't have a stored slug; the URL uses the
+    // tag name encoded the same way the client links do.
     for (const tag of tags) {
+      const slug = encodeURIComponent((tag.tagName || "").trim().replace(/\s+/g, "-"));
+      if (!slug) continue;
       sitemap += "  <url>\n";
-      sitemap += `    <loc>${baseUrl}/tag/${(tag as any).slug}</loc>\n`;
+      sitemap += `    <loc>${baseUrl}/tag/${slug}</loc>\n`;
       sitemap += "    <changefreq>weekly</changefreq>\n";
       sitemap += "    <priority>0.5</priority>\n";
       sitemap += "  </url>\n";

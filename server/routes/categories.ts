@@ -108,8 +108,8 @@ router.post("/", requireAuth, async (req, res) => {
 
         if (!translated) continue;
 
-        const translatedName = String((translated as any).name || "").trim();
-        const translatedDescriptionRaw = (translated as any).description;
+        const translatedName = String(translated.name || "").trim();
+        const translatedDescriptionRaw = translated.description;
         const translatedDescription =
           typeof translatedDescriptionRaw === "string" && translatedDescriptionRaw.trim().length > 0
             ? translatedDescriptionRaw
@@ -170,8 +170,8 @@ router.post("/admin/translate-missing", requireAuth, requireAdmin, async (req, r
       ).catch(() => null);
       if (!translated) continue;
 
-      const translatedName = String((translated as any).name || "").trim();
-      const translatedDescriptionRaw = (translated as any).description;
+      const translatedName = String(translated.name || "").trim();
+      const translatedDescriptionRaw = translated.description;
       const translatedDescription =
         typeof translatedDescriptionRaw === "string" && translatedDescriptionRaw.trim().length > 0
           ? translatedDescriptionRaw
