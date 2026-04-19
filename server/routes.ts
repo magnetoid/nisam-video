@@ -199,12 +199,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } catch {
       }
 
+      const langs = (await storage.getSupportedLanguages().catch(() => []))
+        .map((l: any) => String(l?.code || "").trim())
+        .filter(Boolean);
+
+      const buildAlternates = (loc: string): string => {
+        if (langs.length < 2) return "";
+        const url = new URL(loc);
+        let out = "";
+        for (const code of langs) {
+          const u = new URL(url.toString());
+          u.searchParams.set("lang", code);
+          out += `    <xhtml:link rel="alternate" hreflang="${escapeXml(code)}" href="${escapeXml(u.toString())}" />\n`;
+        }
+        const xDefault = new URL(url.toString());
+        xDefault.searchParams.delete("lang");
+        out += `    <xhtml:link rel="alternate" hreflang="x-default" href="${escapeXml(xDefault.toString())}" />\n`;
+        return out;
+      };
+
       let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
-      xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">\n';
+      xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:video="http://www.google.com/schemas/sitemap-video/1.1" xmlns:xhtml="http://www.w3.org/1999/xhtml">\n';
 
       const addUrl = (loc: string, opts?: { changefreq?: string; priority?: string; lastmod?: string; video?: any }) => {
         xml += "  <url>\n";
         xml += `    <loc>${escapeXml(loc)}</loc>\n`;
+        xml += buildAlternates(loc);
         if (opts?.lastmod) xml += `    <lastmod>${opts.lastmod}</lastmod>\n`;
         if (opts?.changefreq) xml += `    <changefreq>${opts.changefreq}</changefreq>\n`;
         if (opts?.priority) xml += `    <priority>${opts.priority}</priority>\n`;

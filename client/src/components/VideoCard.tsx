@@ -6,6 +6,7 @@ import type { VideoWithRelations } from "@shared/schema";
 import { getOptimizedThumbnail } from "@/lib/video";
 
 import { useTranslation } from "react-i18next";
+import { RelativeTime } from "./RelativeTime";
 
 interface VideoCardProps {
   video: VideoWithRelations;
@@ -82,7 +83,7 @@ export const VideoCard = memo(function VideoCard({ video, onClick, variant = "ca
 
         <img
           src={optimizedThumbnail}
-          alt={video.title}
+          alt={video.channel?.name ? `${video.title} — ${video.channel.name}` : video.title}
           width={480}
           height={270}
           className="w-full h-full object-cover relative z-1 transform-gpu transition-transform duration-300 ease-out group-hover:scale-105"
@@ -121,12 +122,15 @@ export const VideoCard = memo(function VideoCard({ video, onClick, variant = "ca
           {video.title}
         </h3>
         <div className="flex items-center justify-between gap-2">
-          <p
-            className="text-xs text-muted-foreground"
-            data-testid="text-channel-static"
-          >
-            {video.channel?.name || t('video.unknownChannel', 'Unknown Channel')}
-          </p>
+          <div className="flex flex-col gap-0.5">
+            <p
+              className="text-xs text-muted-foreground"
+              data-testid="text-channel-static"
+            >
+              {video.channel?.name || t('video.unknownChannel', 'Unknown Channel')}
+            </p>
+            <RelativeTime date={video.publishDate || video.createdAt} className="text-[11px] text-muted-foreground/70" />
+          </div>
           <LikeButton
             videoId={video.id}
             size="sm"
