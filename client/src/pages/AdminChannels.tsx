@@ -8,11 +8,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { formatDistanceToNow } from "date-fns";
 import { useTranslation } from "react-i18next";
+import { Grid, Card, Metric, Text, Flex, Badge as TremorBadge } from "@tremor/react";
+import { TvIcon, CheckCircle2, Clock, XCircle } from "lucide-react";
 
 export default function AdminChannels() {
   const { t } = useTranslation();
@@ -155,6 +157,10 @@ export default function AdminChannels() {
     },
   });
 
+  const pendingCount = recommendations.filter(r => r.status === "pending").length;
+  const approvedCount = recommendations.filter(r => r.status === "approved").length;
+  const rejectedCount = recommendations.filter(r => r.status === "rejected").length;
+
   return (
     <div className="space-y-6">
       <div>
@@ -165,6 +171,40 @@ export default function AdminChannels() {
           {t("admin.channelManagementDesc", "Manage channels and review community recommendations")}
         </p>
       </div>
+
+      <Grid numItems={1} numItemsSm={2} numItemsLg={4} className="gap-6">
+        <Card decoration="top" decorationColor="blue">
+          <Flex alignItems="start">
+            <Text>{t("admin.totalChannels", "Total Channels")}</Text>
+            <TvIcon className="h-5 w-5 text-blue-500" />
+          </Flex>
+          <Metric className="mt-2">{channels.length}</Metric>
+        </Card>
+        
+        <Card decoration="top" decorationColor="yellow">
+          <Flex alignItems="start">
+            <Text>{t("admin.pendingRecommendations", "Pending Reviews")}</Text>
+            <Clock className="h-5 w-5 text-yellow-500" />
+          </Flex>
+          <Metric className="mt-2">{pendingCount}</Metric>
+        </Card>
+
+        <Card decoration="top" decorationColor="emerald">
+          <Flex alignItems="start">
+            <Text>{t("admin.approvedRecommendations", "Approved")}</Text>
+            <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+          </Flex>
+          <Metric className="mt-2">{approvedCount}</Metric>
+        </Card>
+
+        <Card decoration="top" decorationColor="rose">
+          <Flex alignItems="start">
+            <Text>{t("admin.rejectedRecommendations", "Rejected")}</Text>
+            <XCircle className="h-5 w-5 text-rose-500" />
+          </Flex>
+          <Metric className="mt-2">{rejectedCount}</Metric>
+        </Card>
+      </Grid>
 
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
         <TabsList>
