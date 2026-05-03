@@ -1,5 +1,6 @@
-const HTML_CACHE = "nisam-video-html-v4";
-const STATIC_CACHE = "nisam-video-static-v4";
+const HTML_CACHE = "nisam-video-html-v5";
+const STATIC_CACHE = "nisam-video-static-v5";
+const IMAGE_CACHE = "nisam-video-images-v5";
 const urlsToCache = ["/offline.html"];
 
 self.addEventListener("install", (event) => {
@@ -15,6 +16,21 @@ self.addEventListener("install", (event) => {
       }),
   );
   self.skipWaiting();
+});
+
+self.addEventListener("activate", (event) => {
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.map((cacheName) => {
+          if (cacheName !== HTML_CACHE && cacheName !== STATIC_CACHE && cacheName !== IMAGE_CACHE) {
+            return caches.delete(cacheName);
+          }
+        })
+      );
+    })
+  );
+  self.clients.claim();
 });
 
 self.addEventListener("fetch", (event) => {
@@ -35,66 +51,54 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Skip chrome-extension and other non-http(s) schemes
+  // Skip non-http(s) schemes
   if (!event.request.url.startsWith("http")) {
     return;
   }
 
-  // Skip browser extension requests
-  if (event.request.url.startsWith("chrome-extension://")) {
-    return;
-  }
-
+  // Handle navigation requests (HTML pages)
   if (event.request.mode === "navigate") {
     event.respondWith(
-      fetch(event.request).catch(() => caches.match("/offline.html")),
+      fetch(event.request).catch(() => caches.match("/offline.html"))
     );
     return;
   }
 
-  const isSameOrigin = url.origin === self.location.origin;
-  const pathname = url.pathname;
-  const isAsset = isSameOrigin && pathname.startsWith("/assets/");
-  const isStaticFile = /\.(?:js|css|map|json|txt|xml|webmanifest)$/i.test(pathname);
-  const isMedia = /\.(?:png|jpg|jpeg|webp|gif|svg|ico|mp4|webm|woff2?|ttf|otf)$/i.test(pathname);
-
-  // Never cache HTML/JS/CSS (prevents stale bundles after deploy)
-  if (isAsset || isStaticFile) {
-    event.respondWith(fetch(event.request));
-    return;
-  }
-
-  // Cache-first for images/fonts/media
-  if (isMedia) {
+  // Cache images (Stale-While-Revalidate)
+  if (event.request.destination === "image" || url.pathname.match(/\.(png|jpg|jpeg|gif|svg|webp|avif)$/)) {
     event.respondWith(
-      caches.open(STATIC_CACHE).then(async (cache) => {
-        const cached = await cache.match(event.request);
-        if (cached) return cached;
-        const res = await fetch(event.request);
-        if (res && res.status === 200 && res.type === "basic") {
-          cache.put(event.request, res.clone()).catch(() => {});
-        }
-        return res;
-      }),
+      caches.match(event.request).then((cachedResponse) => {
+        const fetchPromise = fetch(event.request).then((networkResponse) => {
+          if (networkResponse.ok) {
+            const clone = networkResponse.clone();
+            caches.open(IMAGE_CACHE).then((cache) => {
+              cache.put(event.request, clone);
+            });
+          }
+          return networkResponse;
+        }).catch(() => cachedResponse);
+        return cachedResponse || fetchPromise;
+      })
     );
     return;
   }
 
-  event.respondWith(fetch(event.request));
-});
-
-self.addEventListener("activate", (event) => {
-  const cacheWhitelist = [HTML_CACHE, STATIC_CACHE];
-  event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheWhitelist.indexOf(cacheName) === -1) {
-            return caches.delete(cacheName);
+  // Cache JS and CSS (Stale-While-Revalidate)
+  if (event.request.destination === "script" || event.request.destination === "style") {
+    event.respondWith(
+      caches.match(event.request).then((cachedResponse) => {
+        const fetchPromise = fetch(event.request).then((networkResponse) => {
+          if (networkResponse.ok) {
+            const clone = networkResponse.clone();
+            caches.open(STATIC_CACHE).then((cache) => {
+              cache.put(event.request, clone);
+            });
           }
-        }),
-      );
-    }),
-  );
-  self.clients.claim();
+          return networkResponse;
+        }).catch(() => cachedResponse);
+        return cachedResponse || fetchPromise;
+      })
+    );
+    return;
+  }
 });

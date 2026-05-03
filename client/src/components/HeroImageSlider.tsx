@@ -200,6 +200,7 @@ const HeroImageSlider: React.FC<Props> = ({ items, ariaLabel = 'Featured titles'
               alt={activeSlide?.title || 'Featured slide'}
               className="h-full w-full object-cover"
               loading="eager"
+              fetchPriority="high"
               decoding="async"
               onError={() => {
                 setPrimaryFailed((prev) => ({ ...prev, [activeIndex]: true }));

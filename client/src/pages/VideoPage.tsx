@@ -282,10 +282,20 @@ export default function VideoPage() {
               <div 
                 className="absolute inset-0 z-10 cursor-pointer group/overlay"
                 onClick={() => setIsPlaying(true)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    setIsPlaying(true);
+                  }
+                }}
+                role="button"
+                tabIndex={0}
+                aria-label={`Play ${video.title}`}
               >
                 <img 
                   src={video.thumbnailUrl} 
                   alt={video.title} 
+                  fetchPriority="high"
                   className="w-full h-full object-cover opacity-80 transition-all duration-500 group-hover/overlay:scale-105 group-hover/overlay:opacity-60"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-60 group-hover/overlay:opacity-80 transition-opacity duration-500" />

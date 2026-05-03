@@ -10,11 +10,14 @@ import {
   seoCompetitors,
   type SeoSettings,
   type InsertSeoSettings,
-  type SeoMetaTag,
-  type InsertSeoMetaTag,
-  type SeoRedirect,
-  type InsertSeoRedirect,
 } from "../../shared/schema.js";
+
+// Manually extract types from the schema using InferSelectModel/InferInsertModel if they aren't exported directly
+import { type InferSelectModel, type InferInsertModel } from "drizzle-orm";
+export type SeoMetaTag = InferSelectModel<typeof seoMetaTags>;
+export type InsertSeoMetaTag = InferInsertModel<typeof seoMetaTags>;
+export type SeoRedirect = InferSelectModel<typeof seoRedirects>;
+export type InsertSeoRedirect = InferInsertModel<typeof seoRedirects>;
 
 export class SeoRepository {
   async getSettings(): Promise<SeoSettings | undefined> {
@@ -81,7 +84,7 @@ export class SeoRepository {
 
   async getRedirects(): Promise<SeoRedirect[]> {
     try {
-      return await db.select().from(seoRedirects).orderBy(seoRedirects.sourceUrl);
+      return await db.select().from(seoRedirects).orderBy(seoRedirects.fromUrl);
     } catch (error) {
       console.error("[SeoRepository] getRedirects failed:", error);
       return [];

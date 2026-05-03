@@ -33,7 +33,9 @@ export abstract class BaseScraper<T> {
         if (!response.ok) {
           if (response.status === 404) {
             // Do not retry 404s
-            throw new pRetry.AbortError(`Resource not found: 404 ${url}`);
+            const err = new Error(`Resource not found: 404 ${url}`);
+            err.name = 'AbortError';
+            throw err;
           }
           throw new Error(`HTTP error! status: ${response.status} for ${url}`);
         }

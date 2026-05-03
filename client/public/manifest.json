@@ -4,9 +4,14 @@
   "description": "AI-powered YouTube video aggregation hub with curated content",
   "start_url": "/",
   "display": "standalone",
+  "display_override": ["window-controls-overlay"],
   "background_color": "#141414",
   "theme_color": "#E50914",
   "orientation": "any",
+  "dir": "auto",
+  "lang": "en",
+  "id": "/?source=pwa",
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "/icon-192.png",
