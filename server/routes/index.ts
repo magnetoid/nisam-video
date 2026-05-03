@@ -28,6 +28,7 @@ import adminChannelRecommendationsRouter from "./admin-channel-recommendations.j
 import emailSettingsRouter from "./email-settings.js";
 import suggestionsRouter from "./suggestions.js";
 import inboxRouter from "./inbox.js";
+import { systemRulesSkillsRouter } from "./system-rules-skills.js";
 import { createRateLimiters } from "../middleware/security.js";
 
 export function registerFeatureRoutes(app: Express): void {
@@ -65,6 +66,7 @@ export function registerFeatureRoutes(app: Express): void {
   app.use("/api/export", exportsRouter);
   app.use("/api/ai", aiSettingsRouter);
   app.use("/api/cron", cronRouter);
+  app.use("/api/system-rules-skills", systemRulesSkillsRouter);
   
   // Upload routes with upload-specific rate limiting
   app.use("/api/uploads", upload, uploadsRouter);

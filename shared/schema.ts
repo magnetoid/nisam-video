@@ -520,6 +520,34 @@ export const videoViews = pgTable("video_views", {
   createdAtIdx: index("video_views_created_at_idx").on(table.createdAt),
 }));
 
+// System Rules table
+export const systemRules = pgTable("system_rules", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  description: text("description"),
+  content: text("content").notNull(), // Markdown content
+  category: text("category").notNull().default("general"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
+});
+
+// System Skills table
+export const systemSkills = pgTable("system_skills", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  content: text("content").notNull(), // Markdown content
+  category: text("category").notNull().default("general"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
+});
+
 export const heroVideos = pgTable("hero_videos", {
   id: varchar("id")
     .primaryKey()
@@ -727,6 +755,18 @@ export const insertVideoSchema = createInsertSchemaAny(videos).omit({
   videoType: z.enum(["regular", "youtube_short", "tiktok"]).optional().default("regular"),
 });
 
+export const insertSystemRuleSchema = createInsertSchemaAny(systemRules).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSystemSkillSchema = createInsertSchemaAny(systemSkills).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Base insert for categories (no name/slug/desc)
 export const insertCategorySchema = createInsertSchemaAny(categories).omit({
   id: true,
@@ -850,6 +890,12 @@ export const insertScrapeJobSchema = createInsertSchemaAny(scrapeJobs).omit({
 
 export type ScrapeJob = typeof scrapeJobs.$inferSelect;
 export type InsertScrapeJob = z.infer<typeof insertScrapeJobSchema>;
+
+export type SystemRule = typeof systemRules.$inferSelect;
+export type InsertSystemRule = z.infer<typeof insertSystemRuleSchema>;
+
+export type SystemSkill = typeof systemSkills.$inferSelect;
+export type InsertSystemSkill = z.infer<typeof insertSystemSkillSchema>;
 
 export type VideoLike = typeof videoLikes.$inferSelect;
 export type VideoView = typeof videoViews.$inferSelect;
