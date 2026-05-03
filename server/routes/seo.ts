@@ -11,6 +11,7 @@ import { generateSlug } from "../utils.js";
 import { getAiConfig } from "../ai-service.js";
 import { generateOpenAICompletion } from "../services/openai.js";
 import { generateOllamaCompletion } from "../services/ollama.js";
+import { clearCache, getCache, setCache } from "../services/redis.js";
 
 const router = Router();
 
@@ -933,6 +934,13 @@ router.get("/enhanced/sitemap", async (req, res) => {
     const maxVideosRaw = typeof req.query.maxVideos === "string" ? req.query.maxVideos : "";
     const maxVideos = Number.isFinite(parseInt(maxVideosRaw || "", 10)) ? Math.max(0, parseInt(maxVideosRaw, 10)) : 0;
 
+    const cacheKey = `sitemap:xml:enhanced:${lang}:${includeVideos}:${includeCategories}:${includeTags}:${includeChannels}:${maxVideos}`;
+    const cachedXml = await getCache<string>(cacheKey);
+    if (cachedXml) {
+      res.setHeader("Content-Type", "application/xml");
+      return res.send(cachedXml);
+    }
+
     const [videos, categories, tags, channels] = await Promise.all([
       includeVideos && maxVideos !== 0
         ? storage.getAllVideos({
@@ -1015,11 +1023,24 @@ router.get("/enhanced/sitemap", async (req, res) => {
     
     sitemap += "</urlset>";
     
+    await setCache(cacheKey, sitemap, 3600);
+
     res.setHeader("Content-Type", "application/xml");
     res.send(sitemap);
   } catch (error) {
     console.error("Generate sitemap error:", error);
     res.status(500).json({ error: "Failed to generate sitemap" });
+  }
+});
+
+// Regenerate sitemap (clear cache)
+router.post("/enhanced/sitemap/regenerate", requireAuth, async (req, res) => {
+  try {
+    await clearCache("sitemap:xml:*");
+    res.json({ success: true, message: "Sitemap cache cleared successfully" });
+  } catch (error) {
+    console.error("Regenerate sitemap error:", error);
+    res.status(500).json({ error: "Failed to regenerate sitemap" });
   }
 });
 

@@ -36,7 +36,7 @@ export function SitemapAndRobotsPanel({
     params.set("includeTags", includeTags ? "1" : "0");
     params.set("includeChannels", includeChannels ? "1" : "0");
     params.set("maxVideos", String(Math.max(0, Math.floor(maxVideos || 0))));
-    return `/sitemap.xml?${params.toString()}`;
+    return `/api/seo/enhanced/sitemap?${params.toString()}`;
   }, [defaultLanguage, includeVideos, includeCategories, includeTags, includeChannels, maxVideos]);
 
   const {

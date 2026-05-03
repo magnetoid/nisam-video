@@ -30,6 +30,8 @@ function slugifyChannel(name: string, id: string): string {
 
 const router = Router();
 
+import { getCache, setCache } from "../services/redis.js";
+
 export const robotsHandler = async (_req: any, res: any) => {
   try {
     const settings = await db.select().from(seoSettings).limit(1);
@@ -58,6 +60,14 @@ Sitemap: ${process.env.APP_URL || "https://nisam.video"}/sitemap.xml
 
 export const sitemapHandler = async (_req: any, res: any) => {
   try {
+    const cacheKey = "sitemap:xml:main";
+    const cachedXml = await getCache<string>(cacheKey);
+    if (cachedXml) {
+      res.setHeader("Content-Type", "application/xml");
+      res.setHeader("Cache-Control", "public, max-age=3600");
+      return res.send(cachedXml);
+    }
+
     const baseUrl = process.env.APP_URL || "https://nisam.video";
     
     const defaultLang = "en";
@@ -111,6 +121,8 @@ export const sitemapHandler = async (_req: any, res: any) => {
     }
 
     xml += `</urlset>`;
+
+    await setCache(cacheKey, xml, 3600);
 
     res.setHeader("Content-Type", "application/xml");
     res.setHeader("Cache-Control", "public, max-age=3600"); // Cache for 1 hour
