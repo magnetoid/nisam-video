@@ -1,5 +1,6 @@
 import Redis from "ioredis";
 import pRetry from "p-retry";
+import { recordError } from "../error-log-service.js";
 
 // Global instance
 let redisClient: Redis | null = null;
@@ -175,9 +176,11 @@ export async function setCache(key: string, value: any, ttlSeconds: number = 300
         maxTimeout: 1500,
         onFailedAttempt: () => {},
       },
-    ).catch(() => {});
+    ).catch((error) => {
+      recordError({ level: "error", type: "redis_error", message: "Failed to set cache", context: { service: "Redis", method: "setCache", key, error: String(error) } });
+    });
   } catch (error) {
-    // Ignore set errors
+    recordError({ level: "error", type: "redis_error", message: "Failed to set cache", context: { service: "Redis", method: "setCache", key, error: String(error) } });
   }
 }
 

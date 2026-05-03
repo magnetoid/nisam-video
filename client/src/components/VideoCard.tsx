@@ -6,7 +6,7 @@ import type { VideoWithRelations } from "@shared/schema";
 import { getOptimizedThumbnail } from "@/lib/video";
 
 import { useTranslation } from "react-i18next";
-import { RelativeTime } from "./RelativeTime";
+import { formatTimeAgo } from "@/lib/formatters";
 
 interface VideoCardProps {
   video: VideoWithRelations;
@@ -129,7 +129,7 @@ export const VideoCard = memo(function VideoCard({ video, onClick, variant = "ca
             >
               {video.channel?.name || t('video.unknownChannel', 'Unknown Channel')}
             </p>
-            <RelativeTime date={video.publishDate || video.createdAt} className="text-[11px] text-muted-foreground/70" />
+            <span className="text-[11px] text-muted-foreground/70">{formatTimeAgo(video.publishDate || video.createdAt)}</span>
           </div>
           <LikeButton
             videoId={video.id}

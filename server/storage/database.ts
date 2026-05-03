@@ -2398,19 +2398,14 @@ export class DatabaseStorage implements IStorage {
 
   async updateAllVideoThumbnails(): Promise<number> {
     try {
-      const allVideos = await db
-        .select({ id: videos.id, videoId: videos.videoId })
-        .from(videos);
+      const result = await db
+        .update(videos)
+        .set({
+          thumbnailUrl: sql`'https://i.ytimg.com/vi/' || ${videos.videoId} || '/hqdefault.jpg'`
+        })
+        .returning({ id: videos.id });
 
-      for (const video of allVideos) {
-        const highQualityThumbnail = `https://i.ytimg.com/vi/${video.videoId}/hqdefault.jpg`;
-        await db
-          .update(videos)
-          .set({ thumbnailUrl: highQualityThumbnail })
-          .where(eq(videos.id, video.id));
-      }
-
-      return allVideos.length;
+      return result.length;
     } catch (error) {
       console.error("[storage] updateAllVideoThumbnails failed:", error);
       return 0;

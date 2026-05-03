@@ -2,7 +2,6 @@ import { Router } from "express";
 import { requireAuth } from "../middleware/auth.js";
 import { storage } from "../storage.js";
 import { scrapeYouTubeChannel, scrapeYouTubeChannelAbout } from "../youtube-scraper.js";
-import { fetchYouTubeChannelInfoViaApi } from "../services/youtube-api.js";
 import { categorizeVideo } from "../ai-service.js";
 import { insertChannelSchema, videos } from "../../shared/schema.js";
 import { generateSlug } from "../utils.js";
@@ -21,21 +20,10 @@ async function enrichYouTubeChannel(channel: any) {
     let description: string | null = null;
     let bannerUrl: string | null = null;
 
-    // Try to get info via API first (if available and channel has a channelId)
-    if (channel.channelId) {
-      const apiInfo = await fetchYouTubeChannelInfoViaApi(channel.channelId);
-      if (apiInfo) {
-        description = apiInfo.description || null;
-        bannerUrl = apiInfo.bannerUrl || null;
-      }
-    }
-
-    // Fallback to scraping if API didn't return data (or API key not configured)
-    if (!description && !bannerUrl) {
-      const about = await scrapeYouTubeChannelAbout(channel.url);
-      description = about.description || null;
-      bannerUrl = about.bannerUrl || null;
-    }
+    // Use scraping to get about info
+    const about = await scrapeYouTubeChannelAbout(channel.url);
+    description = about.description || null;
+    bannerUrl = about.bannerUrl || null;
 
     const payload = {
       description,
