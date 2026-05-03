@@ -63,13 +63,15 @@ const OPENAI_MODEL_PRESETS: Array<{ value: string; label: string; notes?: string
 
 // Schema for AI Settings
 const aiSettingsSchema = z.object({
-  provider: z.enum(["openai", "ollama"]),
+  provider: z.enum(["openai", "ollama", "openrouter"]),
   openaiApiKey: z.string().optional(),
   openaiBaseUrl: z.string().optional(),
   openaiModel: z.string().optional(),
   ollamaUrl: z.string().default("http://localhost:11434"),
   ollamaModel: z.string().optional(),
   ollamaApiKey: z.string().optional(),
+  openrouterApiKey: z.string().optional(),
+  openrouterModel: z.string().optional(),
 });
 
 type AiSettings = z.infer<typeof aiSettingsSchema>;
@@ -120,6 +122,8 @@ export default function AdminAISettings() {
       ollamaUrl: "http://localhost:11434",
       ollamaModel: "",
       ollamaApiKey: "",
+      openrouterApiKey: "",
+      openrouterModel: "openai/gpt-4o",
     },
   });
 
@@ -128,13 +132,15 @@ export default function AdminAISettings() {
     if (config) {
       if (didHydrateFromServerRef.current && form.formState.isDirty) return;
       form.reset({
-        provider: config.provider as "openai" | "ollama",
+        provider: config.provider as "openai" | "ollama" | "openrouter",
         openaiApiKey: config.openaiApiKey || "",
         openaiBaseUrl: config.openaiBaseUrl || "",
         openaiModel: config.openaiModel || "gpt-4o-mini",
         ollamaUrl: config.ollamaUrl || "http://localhost:11434",
         ollamaModel: config.ollamaModel || "",
         ollamaApiKey: config.ollamaApiKey || "",
+        openrouterApiKey: config.openrouterApiKey || "",
+        openrouterModel: config.openrouterModel || "openai/gpt-4o",
       });
       didHydrateFromServerRef.current = true;
     }
@@ -240,8 +246,11 @@ export default function AdminAISettings() {
     const provider = form.getValues("provider");
     const openaiKeyRaw = form.getValues("openaiApiKey");
     const ollamaKeyRaw = form.getValues("ollamaApiKey");
+    const openrouterKeyRaw = form.getValues("openrouterApiKey");
+    
     const openaiApiKey = openaiKeyRaw && openaiKeyRaw !== "********" ? openaiKeyRaw : undefined;
     const ollamaApiKey = ollamaKeyRaw && ollamaKeyRaw !== "********" ? ollamaKeyRaw : undefined;
+    const openrouterApiKey = openrouterKeyRaw && openrouterKeyRaw !== "********" ? openrouterKeyRaw : undefined;
 
     const data =
       provider === "ollama"
@@ -249,6 +258,11 @@ export default function AdminAISettings() {
             provider,
             url: form.getValues("ollamaUrl"),
             apiKey: ollamaApiKey,
+          }
+        : provider === "openrouter"
+        ? {
+            provider,
+            apiKey: openrouterApiKey,
           }
         : {
             provider,
@@ -359,6 +373,7 @@ export default function AdminAISettings() {
                           <SelectContent>
                             <SelectItem value="openai">OpenAI</SelectItem>
                             <SelectItem value="ollama">Ollama (Local/Custom)</SelectItem>
+                            <SelectItem value="openrouter">OpenRouter (Multiple Models)</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -422,6 +437,38 @@ export default function AdminAISettings() {
                             )}
                             <FormDescription>
                               {t("admin.modelDesc", "Pick a preset or enter a custom model id.")}
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </>
+                  ) : form.watch("provider") === "openrouter" ? (
+                    <>
+                      <FormField
+                        control={form.control}
+                        name="openrouterApiKey"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>{t("admin.apiKey", "API Key")}</FormLabel>
+                            <FormControl>
+                              <Input type="password" placeholder="sk-or-v1-..." {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="openrouterModel"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>{t("common.model", "Model")}</FormLabel>
+                            <FormControl>
+                              <Input placeholder="openai/gpt-4o" {...field} />
+                            </FormControl>
+                            <FormDescription>
+                              Enter the model ID from OpenRouter (e.g., anthropic/claude-3-sonnet, openai/gpt-4o).
                             </FormDescription>
                             <FormMessage />
                           </FormItem>
@@ -620,6 +667,43 @@ export default function AdminAISettings() {
                       )}
                     </TableBody>
                   </Table>
+                </div>
+              </CardContent>
+            </Card>
+          ) : form.watch("provider") === "openrouter" ? (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Server className="h-5 w-5" />
+                  OpenRouter Status
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-green-100 dark:bg-green-900 rounded-full">
+                        <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
+                      </div>
+                      <div>
+                        <div className="font-medium">{t("admin.serviceStatus", "Service Status")}</div>
+                        <div className="text-sm text-muted-foreground">Configured by OpenRouter API key</div>
+                      </div>
+                    </div>
+                    <Badge variant="outline">{t("common.info", "Info")}</Badge>
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-full">
+                        <Cpu className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                      </div>
+                      <div>
+                        <div className="font-medium">{t("admin.selectedModel", "Selected Model")}</div>
+                        <div className="text-sm text-muted-foreground">{form.watch("openrouterModel") || "openai/gpt-4o"}</div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>

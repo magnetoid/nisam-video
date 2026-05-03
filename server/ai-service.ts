@@ -11,7 +11,7 @@ export async function getAiConfig() {
     const settings = await db.select().from(aiSettings).limit(1);
     const config = settings[0];
 
-    const provider = (config?.provider || "ollama") as "ollama" | "openai";
+    const provider = (config?.provider || "ollama") as "ollama" | "openai" | "openrouter";
 
     const rawOllamaUrl = (config?.ollamaUrl || "http://localhost:11434").trim();
     const ollamaUrl = (() => {
@@ -49,6 +49,11 @@ export async function getAiConfig() {
         model: config?.openaiModel || "gpt-4o-mini",
         apiKey: config?.openaiApiKey || process.env.OPENAI_API_KEY,
       },
+      openrouter: {
+        baseUrl: "https://openrouter.ai/api/v1",
+        model: config?.openrouterModel || "openai/gpt-4o",
+        apiKey: config?.openrouterApiKey,
+      }
     };
   } catch (error: any) {
     // Suppress "relation does not exist" error (code 42P01)
@@ -71,6 +76,11 @@ export async function getAiConfig() {
         model: "gpt-4o-mini",
         apiKey: process.env.OPENAI_API_KEY,
       },
+      openrouter: {
+        baseUrl: "https://openrouter.ai/api/v1",
+        model: "openai/gpt-4o",
+        apiKey: undefined,
+      }
     };
   }
 }
@@ -228,21 +238,31 @@ Example JSON:
 Return ONLY valid JSON. Do not include markdown formatting or explanations.`;
 
           const signal = timeoutMs ? AbortSignal.timeout(timeoutMs) : undefined;
-          const content =
-            config.provider === "openai"
-              ? await openaiGenerate(prompt, {
-                  model: config.openai.model,
-                  baseUrl: config.openai.baseUrl,
-                  apiKey: config.openai.apiKey,
-                  signal,
-                })
-              : await ollamaGenerate(prompt, {
-                  model: config.ollama.model,
-                  url: config.ollama.url,
-                  apiKey: config.ollama.apiKey,
-                  format: "json",
-                  signal,
-                });
+          let content = "";
+
+          if (config.provider === "openai") {
+            content = await openaiGenerate(prompt, {
+              model: config.openai.model,
+              baseUrl: config.openai.baseUrl,
+              apiKey: config.openai.apiKey,
+              signal,
+            });
+          } else if (config.provider === "openrouter") {
+            content = await openaiGenerate(prompt, {
+              model: config.openrouter.model,
+              baseUrl: config.openrouter.baseUrl,
+              apiKey: config.openrouter.apiKey,
+              signal,
+            });
+          } else {
+            content = await ollamaGenerate(prompt, {
+              model: config.ollama.model,
+              url: config.ollama.url,
+              apiKey: config.ollama.apiKey,
+              format: "json",
+              signal,
+            });
+          }
 
           let result;
           try {
@@ -401,20 +421,30 @@ Description: ${description || "No description"}
 Summary:`;
 
           const signal = timeoutMs ? AbortSignal.timeout(timeoutMs) : undefined;
-          const content =
-            config.provider === "openai"
-              ? await openaiGenerate(prompt, {
-                  model: config.openai.model,
-                  baseUrl: config.openai.baseUrl,
-                  apiKey: config.openai.apiKey,
-                  signal,
-                })
-              : await ollamaGenerate(prompt, {
-                  model: config.ollama.model,
-                  url: config.ollama.url,
-                  apiKey: config.ollama.apiKey,
-                  signal,
-                });
+          let content = "";
+
+          if (config.provider === "openai") {
+            content = await openaiGenerate(prompt, {
+              model: config.openai.model,
+              baseUrl: config.openai.baseUrl,
+              apiKey: config.openai.apiKey,
+              signal,
+            });
+          } else if (config.provider === "openrouter") {
+            content = await openaiGenerate(prompt, {
+              model: config.openrouter.model,
+              baseUrl: config.openrouter.baseUrl,
+              apiKey: config.openrouter.apiKey,
+              signal,
+            });
+          } else {
+            content = await ollamaGenerate(prompt, {
+              model: config.ollama.model,
+              url: config.ollama.url,
+              apiKey: config.ollama.apiKey,
+              signal,
+            });
+          }
 
           return content.trim() || "No summary available.";
         } catch (error: any) {
@@ -477,21 +507,31 @@ Example JSON:
 Return ONLY valid JSON.`;
 
           const signal = timeoutMs ? AbortSignal.timeout(timeoutMs) : undefined;
-          const content =
-            config.provider === "openai"
-              ? await openaiGenerate(prompt, {
-                  model: config.openai.model,
-                  baseUrl: config.openai.baseUrl,
-                  apiKey: config.openai.apiKey,
-                  signal,
-                })
-              : await ollamaGenerate(prompt, {
-                  model: config.ollama.model,
-                  url: config.ollama.url,
-                  apiKey: config.ollama.apiKey,
-                  format: "json",
-                  signal,
-                });
+          let content = "";
+
+          if (config.provider === "openai") {
+            content = await openaiGenerate(prompt, {
+              model: config.openai.model,
+              baseUrl: config.openai.baseUrl,
+              apiKey: config.openai.apiKey,
+              signal,
+            });
+          } else if (config.provider === "openrouter") {
+            content = await openaiGenerate(prompt, {
+              model: config.openrouter.model,
+              baseUrl: config.openrouter.baseUrl,
+              apiKey: config.openrouter.apiKey,
+              signal,
+            });
+          } else {
+            content = await ollamaGenerate(prompt, {
+              model: config.ollama.model,
+              url: config.ollama.url,
+              apiKey: config.ollama.apiKey,
+              format: "json",
+              signal,
+            });
+          }
 
           let result;
           try {

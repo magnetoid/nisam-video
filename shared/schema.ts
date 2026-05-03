@@ -1253,13 +1253,15 @@ export const aiSettings = pgTable("ai_settings", {
   id: varchar("id")
     .primaryKey()
     .default(sql`gen_random_uuid()`),
-  provider: text("provider").notNull().default("openai"), // 'openai' | 'ollama'
+  provider: text("provider").notNull().default("openai"), // 'openai' | 'ollama' | 'openrouter'
   openaiApiKey: text("openai_api_key"),
   openaiBaseUrl: text("openai_base_url"),
   openaiModel: text("openai_model").default("gpt-5"),
   ollamaUrl: text("ollama_url").default("http://localhost:11434"),
   ollamaModel: text("ollama_model"), // Selected model for generation
   ollamaApiKey: text("ollama_api_key"), // Optional API Key for remote Ollama
+  openrouterApiKey: text("openrouter_api_key"),
+  openrouterModel: text("openrouter_model").default("openai/gpt-4o"),
   updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
 });
 

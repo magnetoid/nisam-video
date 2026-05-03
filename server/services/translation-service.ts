@@ -57,6 +57,18 @@ Rules:
     );
   };
 
+  const tryOpenRouter = async () => {
+    const apiKey = config?.openrouterApiKey;
+    if (!apiKey) throw new Error("OpenRouter API key not configured.");
+    return await generateOpenAICompletion(
+      "https://openrouter.ai/api/v1",
+      apiKey,
+      config?.openrouterModel || "openai/gpt-4o",
+      systemPrompt,
+      userPrompt,
+    );
+  };
+
   if (effectiveProvider === "ollama") {
     if (!config?.ollamaModel) throw new Error("Ollama model not selected.");
 
@@ -79,6 +91,8 @@ Rules:
         throw new Error(`Ollama failed (${ollamaMsg}). OpenAI fallback also failed (${openAiMsg}).`);
       }
     }
+  } else if (effectiveProvider === "openrouter") {
+    rawResponse = await tryOpenRouter();
   } else {
     rawResponse = await tryOpenAI();
   }

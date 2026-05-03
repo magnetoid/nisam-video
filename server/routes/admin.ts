@@ -62,6 +62,8 @@ router.post("/run-migration", requireAdmin, async (req, res) => {
           "ollama_url" text DEFAULT 'http://localhost:11434',
           "ollama_model" text,
           "ollama_api_key" text,
+          "openrouter_api_key" text,
+          "openrouter_model" text DEFAULT 'openai/gpt-4o',
           "updated_at" timestamp DEFAULT now() NOT NULL
         );
       `;
@@ -77,6 +79,12 @@ router.post("/run-migration", requireAdmin, async (req, res) => {
         
         if (!existingColumns.includes('ollama_api_key')) {
           await db.execute(sql`ALTER TABLE "ai_settings" ADD COLUMN "ollama_api_key" text`);
+        }
+        if (!existingColumns.includes('openrouter_api_key')) {
+          await db.execute(sql`ALTER TABLE "ai_settings" ADD COLUMN "openrouter_api_key" text`);
+        }
+        if (!existingColumns.includes('openrouter_model')) {
+          await db.execute(sql`ALTER TABLE "ai_settings" ADD COLUMN "openrouter_model" text DEFAULT 'openai/gpt-4o'`);
         }
       } catch (e) {
         console.warn("Failed to alter ai_settings table:", e);

@@ -29,6 +29,10 @@ router.get("/config", requireAuth, async (req, res) => {
     if (config.ollamaApiKey) {
       config.ollamaApiKey = "********";
     }
+
+    if (config.openrouterApiKey) {
+      config.openrouterApiKey = "********";
+    }
     
     res.json(config);
   } catch (error: any) {
@@ -49,13 +53,15 @@ router.get("/config", requireAuth, async (req, res) => {
 router.patch("/config", requireAuth, async (req, res) => {
   try {
     const schema = z.object({
-      provider: z.enum(["openai", "ollama"]).optional(),
+      provider: z.enum(["openai", "ollama", "openrouter"]).optional(),
       openaiApiKey: z.string().optional(),
       openaiBaseUrl: z.string().optional(),
       openaiModel: z.string().optional(),
       ollamaUrl: z.string().optional(),
       ollamaModel: z.string().optional(),
       ollamaApiKey: z.string().optional(),
+      openrouterApiKey: z.string().optional(),
+      openrouterModel: z.string().optional(),
     });
     
     const data = schema.parse(req.body);
@@ -66,6 +72,9 @@ router.patch("/config", requireAuth, async (req, res) => {
     }
     if (data.ollamaApiKey === "********") {
       delete data.ollamaApiKey;
+    }
+    if (data.openrouterApiKey === "********") {
+      delete data.openrouterApiKey;
     }
     
     const existing = await db.select().from(aiSettings).limit(1);
@@ -207,6 +216,8 @@ router.post("/test", requireAuth, async (req, res) => {
           if (provider === "ollama") {
             apiKey = settings[0].ollamaApiKey || undefined;
             if (!url) url = settings[0].ollamaUrl || "http://localhost:11434";
+          } else if (provider === "openrouter") {
+            apiKey = settings[0].openrouterApiKey || undefined;
           } else {
             apiKey = settings[0].openaiApiKey || undefined;
             if (!url) url = settings[0].openaiBaseUrl || undefined;
@@ -223,6 +234,20 @@ router.post("/test", requireAuth, async (req, res) => {
       if (!url) url = "http://localhost:11434";
       const success = await testOllamaConnection(url, apiKey);
       return res.json({ success });
+    }
+
+    if (provider === "openrouter") {
+      if (!apiKey) {
+        return res.status(400).json({ success: false, error: "OpenRouter API key is required" });
+      }
+      // Test OpenRouter by making a lightweight request
+      const response = await fetch("https://openrouter.ai/api/v1/auth/key", {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${apiKey}`,
+        }
+      });
+      return res.json({ success: response.ok });
     }
     
     if (!apiKey) {
