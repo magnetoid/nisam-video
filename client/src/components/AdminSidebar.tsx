@@ -24,9 +24,7 @@ import {
   Bot,
   Users,
   Globe,
-  Inbox,
-  BookOpen,
-  Lightbulb,
+  Inbox
 } from "lucide-react";
 import { SiTiktok } from "react-icons/si";
 import { useTranslation } from "react-i18next";
@@ -160,18 +158,6 @@ export function AdminSidebar({ open = false, onClose, className }: AdminSidebarP
     {
       title: t("admin.system", "System"),
       items: [
-        {
-          icon: BookOpen,
-          label: "Rules",
-          path: "/admin/rules",
-          testId: "link-rules",
-        },
-        {
-          icon: Lightbulb,
-          label: "Skills",
-          path: "/admin/skills",
-          testId: "link-skills",
-        },
         {
           icon: Activity,
           label: t("admin.automation", "Automation"),
