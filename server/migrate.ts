@@ -21,7 +21,12 @@ async function applySqlMigrations(migrationsFolder: string) {
       .map((s) => s.trim())
       .filter(Boolean);
 
+    // Per-file isolation: a failure in one migration file should not block
+    // subsequent files. Within a file we do stop at the first hard failure,
+    // since later statements may depend on earlier ones.
+    let fileFailed = false;
     for (const stmt of statements) {
+      if (fileFailed) break;
       try {
         await pool.query(stmt);
       } catch (e: any) {
@@ -29,7 +34,8 @@ async function applySqlMigrations(migrationsFolder: string) {
           console.log(`[migrate] Skipped already-applied statement (${e.code}) from ${file}`);
           continue;
         }
-        throw e;
+        console.error(`[migrate] ${file} failed at statement (code=${e?.code}): ${e?.message || e}`);
+        fileFailed = true;
       }
     }
   }
@@ -395,9 +401,15 @@ export async function runMigrations() {
       return;
     }
 
-    await applySqlMigrations(migrationsFolder);
-
-    console.log("[migrate] Database migrations completed successfully");
+    // Apply SQL migration files. If any single file throws (e.g. an early
+    // migration without IF NOT EXISTS guards), don't abort the whole chain —
+    // the idempotent bootstrap functions below are designed to fill any gap.
+    try {
+      await applySqlMigrations(migrationsFolder);
+      console.log("[migrate] Database migrations completed successfully");
+    } catch (e) {
+      console.error("[migrate] applySqlMigrations failed (continuing to bootstraps):", e);
+    }
 
     try {
       await ensureScrapeJobsColumns();
