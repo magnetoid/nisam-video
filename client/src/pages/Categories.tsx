@@ -6,7 +6,7 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { VideoGrid } from "@/components/VideoGrid";
 import { SEO } from "@/components/SEO";
-import type { LocalizedCategory, VideoWithLocalizedRelations } from "@shared/schema";
+import type { LocalizedCategory, VideoWithLocalizedRelations, SupportedLanguage } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 
 type TagStat = { tagName: string; count: number; videoIds?: string[] };
@@ -80,10 +80,15 @@ export default function Categories() {
     },
   });
 
-  const currentUrl = `${window.location.origin}/categories`;
+  const { data: languages = [] } = useQuery<SupportedLanguage[]>({
+    queryKey: ["/api/languages"],
+    staleTime: Infinity,
+  });
+
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const currentUrl = `${origin}/categories`;
   const hreflangLinks = [
-    { lang: "sr-Latn", url: currentUrl },
-    { lang: "en", url: currentUrl },
+    ...languages.map(lang => ({ lang: lang.code, url: currentUrl })),
     { lang: "x-default", url: currentUrl },
   ];
 
@@ -120,7 +125,9 @@ export default function Categories() {
               src={featuredVideo.thumbnailUrl}
               alt={featuredVideo.title}
               className="w-full h-full object-cover"
-              loading="lazy"
+              loading="eager"
+              fetchPriority="high"
+              decoding="async"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
             <div className="absolute inset-0 bg-gradient-to-r from-background via-transparent to-transparent" />
@@ -138,12 +145,12 @@ export default function Categories() {
                 </span>
               </div>
 
-              <h1
+              <h2
                 className="text-4xl md:text-6xl font-bold"
                 data-testid="text-hero-title"
               >
                 {featuredVideo.title}
-              </h1>
+              </h2>
 
               {featuredVideo.description && (
                 <p className="text-base md:text-lg text-foreground/90 line-clamp-3">
@@ -169,7 +176,7 @@ export default function Categories() {
 
       {/* Categories Grid/Filter */}
       <div className="px-4 sm:px-8 md:px-16 py-8">
-        <h2 className="text-2xl font-bold mb-6">{t("categories.browseByCategory", "Browse by Category")}</h2>
+        <h1 className="text-2xl font-bold mb-6">{t("categories.browseByCategory", "Browse by Category")}</h1>
         <div className="flex flex-wrap gap-2 sm:gap-3 mb-8">
           <button
             onClick={() => setSelectedCategory(null)}

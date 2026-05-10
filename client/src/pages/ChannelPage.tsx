@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { apiRequest } from "@/lib/queryClient";
 import { getOptimizedImageUrl } from "@/lib/image";
-import type { Channel, VideoWithLocalizedRelations, SupportedLanguage } from "@shared/schema";
+import type { Channel, VideoWithLocalizedRelations, SupportedLanguage, SeoSettings } from "@shared/schema";
 
 export default function ChannelPage() {
   const { t, i18n } = useTranslation();
@@ -114,7 +114,12 @@ export default function ChannelPage() {
     staleTime: Infinity,
   });
 
-  const origin = typeof window !== "undefined" ? window.location.origin : "https://nisam.video";
+  const { data: seoSettings } = useQuery<SeoSettings>({
+    queryKey: ["/api/seo/settings"],
+  });
+  const siteName = seoSettings?.siteName || "";
+
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
   const currentLang = languages.find(l => l.code === i18n.language);
   const currentPrefix = currentLang?.isDefault ? "" : `/${i18n.language}`;
   const effectivePrefix = currentLang ? currentPrefix : (i18n.language === "en" ? "/en" : "");
@@ -133,7 +138,10 @@ export default function ChannelPage() {
   const seoDescription = description ||
     t("channelPage.seoDescription", {
       channel: pageTitle,
-      defaultValue: `Watch all videos from ${pageTitle} on nisam.video. AI-curated content from this channel.`,
+      site: siteName,
+      defaultValue: siteName
+        ? `Watch all videos from ${pageTitle} on ${siteName}. AI-curated content from this channel.`
+        : `Watch all videos from ${pageTitle}. AI-curated content from this channel.`,
     });
 
   const channelStructuredData = channel

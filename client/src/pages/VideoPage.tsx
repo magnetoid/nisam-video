@@ -13,7 +13,7 @@ import { PageBreadcrumb } from "@/components/PageBreadcrumb";
 import { ShareButtons } from "@/components/ShareButtons";
 import { useTranslation } from "react-i18next";
 import { useEffect, useState } from "react";
-import type { VideoWithLocalizedRelations, SupportedLanguage } from "@shared/schema";
+import type { VideoWithLocalizedRelations, SupportedLanguage, SeoSettings } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 
 export default function VideoPage() {
@@ -27,6 +27,11 @@ export default function VideoPage() {
     queryKey: ["/api/languages"],
     staleTime: Infinity,
   });
+
+  const { data: seoSettings } = useQuery<SeoSettings>({
+    queryKey: ["/api/seo/settings"],
+  });
+  const siteName = seoSettings?.siteName || "";
 
   const {
     data: video,
@@ -118,7 +123,9 @@ export default function VideoPage() {
   const seoTitle = video.title;
   const seoDescription =
     video.description ||
-    `Watch ${video.title} on nisam.video - AI-powered video aggregation hub`;
+    (siteName
+      ? `Watch ${video.title} on ${siteName}`
+      : `Watch ${video.title}`);
   const seoImage = video.thumbnailUrl || "";
 
   // Convert view count string to number

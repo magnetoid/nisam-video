@@ -21,72 +21,82 @@ import {
 import { Link } from "wouter";
 import { useTranslation } from "react-i18next";
 import { SuggestFeatureDialog } from "@/components/SuggestFeatureDialog";
-import type { SystemSettings } from "@shared/schema";
+import type { SystemSettings, SeoSettings } from "@shared/schema";
 
 export default function About() {
   const { t } = useTranslation();
   const { data: settings } = useQuery<SystemSettings>({
     queryKey: ["/api/system/settings"],
   });
+  const { data: seoSettings } = useQuery<SeoSettings>({
+    queryKey: ["/api/seo/settings"],
+  });
+
+  const siteName = seoSettings?.siteName || "";
+  const siteDescription = seoSettings?.siteDescription || "";
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const logoUrl = settings?.pwaIcon512 ? `${origin}${settings.pwaIcon512}` : `${origin}/icon-512.png`;
 
   const aboutStructuredData = {
     "@context": "https://schema.org",
     "@graph": [
       {
         "@type": "Organization",
-        "@id": "https://nisam.video/#organization",
-        name: "nisam.video",
-        url: "https://nisam.video",
+        "@id": `${origin}/#organization`,
+        name: siteName,
+        url: origin,
         logo: {
           "@type": "ImageObject",
-          url: "https://nisam.video/icon-512.png",
+          url: logoUrl,
           width: 512,
           height: 512,
         },
-        description: "Independent journalism video platform aggregating diverse news sources. Supporting freedom of press and civil journalism across all networks in Serbia.",
+        description: siteDescription,
         sameAs: [],
       },
       {
         "@type": "WebPage",
-        "@id": "https://nisam.video/about",
-        url: "https://nisam.video/about",
-        name: "About nisam.video - Independent Journalism Platform",
-        isPartOf: { "@id": "https://nisam.video/#website" },
-        about: { "@id": "https://nisam.video/#organization" },
+        "@id": `${origin}/about`,
+        url: `${origin}/about`,
+        name: siteName ? `${t("about.title", "About")} ${siteName}` : t("about.title", "About"),
+        isPartOf: { "@id": `${origin}/#website` },
+        about: { "@id": `${origin}/#organization` },
       },
       {
         "@type": "FAQPage",
         mainEntity: [
           {
             "@type": "Question",
-            name: "What is nisam.video?",
+            name: t("about.faq.what.q", siteName ? `What is ${siteName}?` : "What is this platform?"),
             acceptedAnswer: {
               "@type": "Answer",
-              text: "nisam.video is an independent journalism video platform that aggregates diverse news and media sources into one accessible place. Available on all networks including MTS and SBB, it supports freedom of press and civil journalism in Serbia.",
+              text: t("about.faq.what.a", siteDescription || ""),
             },
           },
           {
             "@type": "Question",
-            name: "Is nisam.video free to use?",
+            name: t("about.faq.free.q", siteName ? `Is ${siteName} free to use?` : "Is it free to use?"),
             acceptedAnswer: {
               "@type": "Answer",
-              text: "Yes, nisam.video is completely free. We believe access to independent journalism should be available to everyone, regardless of their internet provider or platform.",
+              text: t("about.faq.free.a", siteName
+                ? `Yes, ${siteName} is completely free.`
+                : "Yes, it is completely free."),
             },
           },
           {
             "@type": "Question",
-            name: "How can I support this platform?",
+            name: t("about.faq.support.q", "How can I support this platform?"),
             acceptedAnswer: {
               "@type": "Answer",
-              text: "You can support us by donating, recommending channels, suggesting features, or simply sharing the platform with others who value independent journalism and press freedom.",
+              text: t("about.faq.support.a", "You can support us by donating, recommending channels, suggesting features, or sharing the platform with others."),
             },
           },
           {
             "@type": "Question",
-            name: "Can I suggest a channel or feature?",
+            name: t("about.faq.suggest.q", "Can I suggest a channel or feature?"),
             acceptedAnswer: {
               "@type": "Answer",
-              text: "Absolutely! We welcome all recommendations and suggestions. Use the 'Suggest Feature' or 'Recommend Channel' options to share your ideas with us. Every suggestion is reviewed and considered for implementation.",
+              text: t("about.faq.suggest.a", "Yes — use the 'Suggest Feature' or 'Recommend Channel' options to share your ideas. Every suggestion is reviewed."),
             },
           },
         ],
@@ -97,9 +107,9 @@ export default function About() {
   return (
     <div className="min-h-screen bg-background flex flex-col font-sans">
       <SEO
-        title="About - Independent Journalism Platform"
-        description="nisam.video is an independent journalism video platform aggregating diverse news sources. Supporting freedom of press and civil journalism across all networks in Serbia."
-        canonical="https://nisam.video/about"
+        title={t("about.title", "About")}
+        description={siteDescription}
+        canonical={`${origin}/about`}
         structuredData={aboutStructuredData}
       />
       <Header />

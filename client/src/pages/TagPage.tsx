@@ -6,7 +6,7 @@ import { Footer } from "@/components/Footer";
 import { SEO } from "@/components/SEO";
 import { PageBreadcrumb } from "@/components/PageBreadcrumb";
 import { VideoGrid } from "@/components/VideoGrid";
-import type { VideoWithLocalizedRelations, SupportedLanguage } from "@shared/schema";
+import type { VideoWithLocalizedRelations, SupportedLanguage, SeoSettings } from "@shared/schema";
 
 export default function TagPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -25,7 +25,12 @@ export default function TagPage() {
     staleTime: Infinity,
   });
 
-  const origin = typeof window !== "undefined" ? window.location.origin : "https://nisam.video";
+  const { data: seoSettings } = useQuery<SeoSettings>({
+    queryKey: ["/api/seo/settings"],
+  });
+  const siteName = seoSettings?.siteName || "";
+
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
   const tagSlug = slug || "";
   const currentLang = languages.find(l => l.code === i18n.language);
   const currentPrefix = currentLang?.isDefault ? "" : `/${i18n.language}`;
@@ -41,8 +46,11 @@ export default function TagPage() {
   const pageTitle = t("tags.tagTitle", { tag: tagName, defaultValue: "Tag: {{tag}}" });
   const pageDescription = t("tags.tagDescription", {
     tag: tagName,
+    site: siteName,
     count: videos?.length || 0,
-    defaultValue: `Browse videos tagged with "${tagName}" on nisam.video. Discover AI-curated content about ${tagName}.`,
+    defaultValue: siteName
+      ? `Browse videos tagged with "${tagName}" on ${siteName}. Discover AI-curated content about ${tagName}.`
+      : `Browse videos tagged with "${tagName}". Discover AI-curated content about ${tagName}.`,
   });
 
   const structuredData = {

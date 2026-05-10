@@ -7,7 +7,7 @@ import { LazyCarouselRow } from "@/components/LazyCarouselRow";
 import { SearchOverlay } from "@/components/SearchOverlay";
 import { SEO } from "@/components/SEO";
 import { LikeStatusBatchProvider } from "@/components/LikeButton";
-import type { Channel, LocalizedCategory, VideoWithLocalizedRelations, SupportedLanguage } from "@shared/schema";
+import type { Channel, LocalizedCategory, VideoWithLocalizedRelations, SupportedLanguage, SeoSettings } from "@shared/schema";
 import { useTranslation } from "react-i18next";
 import { apiRequest } from "@/lib/queryClient";
 import { getMaxResolutionThumbnail } from "@/lib/video";
@@ -122,18 +122,21 @@ export default function Home() {
     return Array.from(new Set(ids));
   }, [featuredVideos, recentVideos, trendingVideos, popularVideos, popularSegments]);
 
+  const { data: seoSettings } = useQuery<SeoSettings>({
+    queryKey: ["/api/seo/settings"],
+  });
+
   const websiteStructuredData = {
     "@context": "https://schema.org",
     "@type": "WebSite",
-    name: "nisam.video",
-    description:
-      "AI-powered video aggregation hub with curated YouTube content",
-    url: window.location.origin,
+    name: seoSettings?.siteName || "",
+    description: seoSettings?.siteDescription || "",
+    url: typeof window !== "undefined" ? window.location.origin : "",
     potentialAction: {
       "@type": "SearchAction",
       target: {
         "@type": "EntryPoint",
-        urlTemplate: `${window.location.origin}/search?q={search_term_string}`,
+        urlTemplate: `${typeof window !== "undefined" ? window.location.origin : ""}/search?q={search_term_string}`,
       },
       "query-input": "required name=search_term_string",
     },
@@ -183,6 +186,7 @@ export default function Home() {
       <Header onSearchClick={() => setShowSearch(true)} />
 
       <main id="main-content" className="pt-16">
+        <h1 className="sr-only">{t("home.metaTitle", "AI-Powered Video Hub – Discover Curated Videos")}</h1>
         <LikeStatusBatchProvider videoIds={allVideoIds}>
           <div className="space-y-0">
             <HeroImageSlider

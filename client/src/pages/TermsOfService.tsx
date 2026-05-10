@@ -2,24 +2,35 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { SEO } from "@/components/SEO";
 import { useTranslation } from "react-i18next";
+import { useQuery } from "@tanstack/react-query";
+import type { SeoSettings } from "@shared/schema";
 
 export default function TermsOfService() {
   const { t } = useTranslation();
 
+  const { data: seoSettings } = useQuery<SeoSettings>({
+    queryKey: ["/api/seo/settings"],
+  });
+  const siteName = seoSettings?.siteName || "";
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const canonical = `${origin}/terms`;
+
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "WebPage",
-    name: "Terms of Service - nisam.video",
-    description: "Terms of service for nisam.video independent journalism platform.",
-    url: "https://nisam.video/terms",
+    name: siteName ? `${t("terms.title", "Terms of Service")} - ${siteName}` : t("terms.title", "Terms of Service"),
+    description: siteName ? `Terms of service for ${siteName}.` : "Terms of service.",
+    url: canonical,
   };
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <SEO
         title={t("terms.title", "Terms of Service")}
-        description={t("terms.metaDescription", "Read the terms of service for nisam.video. Understand your rights and responsibilities when using our independent journalism platform.")}
-        canonical="https://nisam.video/terms"
+        description={t("terms.metaDescription", siteName
+          ? `Read the terms of service for ${siteName}. Understand your rights and responsibilities.`
+          : "Read the terms of service. Understand your rights and responsibilities.")}
+        canonical={canonical}
         structuredData={structuredData}
       />
       <Header />

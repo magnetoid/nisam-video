@@ -25,9 +25,10 @@ export default function NotFound() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <SEO 
-        title="404 - Page Not Found"
-        description="The page you are looking for does not exist."
+      <SEO
+        title={t("404.title", "Page Not Found")}
+        description={t("404.description", "The page you are looking for does not exist.")}
+        noindex
       />
       
       <Header />

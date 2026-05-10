@@ -24,6 +24,7 @@ interface SEOProps {
   videoDuration?: number;
   videoWidth?: string;
   videoHeight?: string;
+  noindex?: boolean;
 }
 
 // Track dynamically added elements so we can clean them up on navigation
@@ -85,6 +86,7 @@ export function SEO({
   videoDuration,
   videoWidth = "1280",
   videoHeight = "720",
+  noindex = false,
 }: SEOProps) {
   const { t, i18n } = useTranslation();
   const [location] = useLocation();
@@ -94,8 +96,10 @@ export function SEO({
     queryKey: ["/api/seo/settings"],
   });
 
-  const fullTitle = title ? `${title} | ${settings?.siteName || "nisam.video"}` : settings?.siteName || "nisam.video";
-  const url = `https://nisam.video${currentPath}`;
+  const siteName = settings?.siteName || "";
+  const fullTitle = title && siteName ? `${title} | ${siteName}` : (title || siteName);
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const url = `${origin}${currentPath}`;
 
   const { data: seoMeta } = useQuery({
     queryKey: ["seo-meta", currentPath],
@@ -111,32 +115,33 @@ export function SEO({
     cleanupDynamicTags();
 
     // Update document title
-    document.title = fullTitle;
+    if (fullTitle) document.title = fullTitle;
 
     const meta = seoMeta?.[0] || {};
-    const effectiveTitle = meta.title || title || settings?.siteName || "nisam.video";
+    const effectiveTitle = meta.title || title || siteName;
     const effectiveDesc = meta.description || description || settings?.siteDescription || "";
     const effectiveImage = meta.ogImage || image || settings?.ogImage || "";
 
     // Standard meta tags
-    setOrCreateMeta("description", effectiveDesc);
-    if (meta.keywords || settings?.metaKeywords) {
-      setOrCreateMeta("keywords", meta.keywords || settings?.metaKeywords || "");
-    }
+    if (effectiveDesc) setOrCreateMeta("description", effectiveDesc);
+    const keywords = meta.keywords || settings?.metaKeywords;
+    if (keywords) setOrCreateMeta("keywords", keywords);
 
     // Open Graph tags
-    setOrCreateMeta("og:title", meta.ogTitle || effectiveTitle, true);
-    setOrCreateMeta("og:description", meta.ogDescription || effectiveDesc, true);
+    if (effectiveTitle) setOrCreateMeta("og:title", meta.ogTitle || effectiveTitle, true);
+    if (effectiveDesc) setOrCreateMeta("og:description", meta.ogDescription || effectiveDesc, true);
     setOrCreateMeta("og:type", type, true);
-    setOrCreateMeta("og:url", url, true);
-    setOrCreateMeta("og:site_name", settings?.siteName || "nisam.video", true);
-    setOrCreateMeta("og:locale", document.documentElement.lang === "sr" ? "sr_RS" : "en_US", true);
+    if (url) setOrCreateMeta("og:url", url, true);
+    if (siteName) setOrCreateMeta("og:site_name", siteName, true);
+    const defaultLang = settings?.defaultLanguage || "en";
+    const htmlLang = document.documentElement.lang || defaultLang;
+    setOrCreateMeta("og:locale", htmlLang === "sr" ? "sr_RS" : `${htmlLang}_${htmlLang.toUpperCase()}`, true);
     if (effectiveImage) {
       setOrCreateMeta("og:image", effectiveImage, true);
       setOrCreateMeta("og:image:secure_url", effectiveImage, true);
       setOrCreateMeta("og:image:width", imageWidth, true);
       setOrCreateMeta("og:image:height", imageHeight, true);
-      setOrCreateMeta("og:image:alt", imageAlt || effectiveTitle, true);
+      setOrCreateMeta("og:image:alt", imageAlt || effectiveTitle || "", true);
     }
 
     // og:video tags (only on video pages)
@@ -149,40 +154,44 @@ export function SEO({
       if (videoDuration) setOrCreateMeta("og:video:duration", String(videoDuration), true);
     }
 
-    // Twitter Card tags
-    const twitterHandle = settings?.twitterHandle || "@nisamvideo";
+    // Twitter Card tags — only emit if backend has a handle configured
+    const twitterHandle = settings?.twitterHandle;
     setOrCreateMeta("twitter:card", effectiveImage ? "summary_large_image" : "summary");
-    setOrCreateMeta("twitter:site", twitterHandle);
-    setOrCreateMeta("twitter:creator", twitterHandle);
-    setOrCreateMeta("twitter:title", meta.twitterTitle || effectiveTitle);
-    setOrCreateMeta("twitter:description", meta.twitterDescription || effectiveDesc);
+    if (twitterHandle) {
+      setOrCreateMeta("twitter:site", twitterHandle);
+      setOrCreateMeta("twitter:creator", twitterHandle);
+    }
+    if (effectiveTitle) setOrCreateMeta("twitter:title", meta.twitterTitle || effectiveTitle);
+    if (effectiveDesc) setOrCreateMeta("twitter:description", meta.twitterDescription || effectiveDesc);
     if (meta.twitterImage || effectiveImage) {
       setOrCreateMeta("twitter:image", meta.twitterImage || effectiveImage);
     }
     if (imageAlt || effectiveTitle) setOrCreateMeta("twitter:image:alt", imageAlt || effectiveTitle);
 
-    // Canonical
-    const effectiveCanonical = meta.canonicalUrl || canonical;
+    // Canonical — backend meta-tag wins, then per-page canonical prop, then runtime URL
+    const effectiveCanonical = meta.canonicalUrl || canonical || url;
     if (effectiveCanonical) {
       setOrCreateLink("canonical", effectiveCanonical);
     }
 
-    // Hreflang
-    if (hreflang && hreflang.length > 0) {
+    // Hreflang — only if backend has it enabled
+    if (settings?.enableHreflang !== false && hreflang && hreflang.length > 0) {
       hreflang.forEach(({ lang, url: hrefUrl }) => {
         setOrCreateLink("alternate", hrefUrl, { hreflang: lang });
       });
     }
 
-    // Schema markup (JSON-LD)
-    const effectiveSchema = meta.schemaMarkup || structuredData;
-    if (effectiveSchema) {
-      const script = document.createElement("script");
-      script.id = "seo-schema-script";
-      script.setAttribute("type", "application/ld+json");
-      script.textContent = JSON.stringify(effectiveSchema);
-      document.head.appendChild(script);
-      dynamicElements.add(script);
+    // Schema markup (JSON-LD) — only if backend has it enabled
+    if (settings?.enableSchemaMarkup !== false) {
+      const effectiveSchema = meta.schemaMarkup || structuredData;
+      if (effectiveSchema) {
+        const script = document.createElement("script");
+        script.id = "seo-schema-script";
+        script.setAttribute("type", "application/ld+json");
+        script.textContent = JSON.stringify(effectiveSchema);
+        document.head.appendChild(script);
+        dynamicElements.add(script);
+      }
     }
 
     // HTML lang attribute
@@ -195,10 +204,15 @@ export function SEO({
     if (publishedTime) setOrCreateMeta("article:published_time", publishedTime, true);
     if (modifiedTime) setOrCreateMeta("article:modified_time", modifiedTime, true);
 
+    // Robots — pages can opt out of indexing (e.g. 404, search results)
+    if (noindex) {
+      setOrCreateMeta("robots", "noindex, follow");
+    }
+
     return () => {
       cleanupDynamicTags();
     };
-  }, [title, description, image, imageAlt, imageWidth, imageHeight, type, publishedTime, modifiedTime, settings, currentPath, seoMeta, fullTitle, url, structuredData, canonical, hreflang, videoUrl, videoSecureUrl, videoDuration, videoWidth, videoHeight, i18n.language]);
+  }, [title, description, image, imageAlt, imageWidth, imageHeight, type, publishedTime, modifiedTime, settings, currentPath, seoMeta, fullTitle, url, structuredData, canonical, hreflang, videoUrl, videoSecureUrl, videoDuration, videoWidth, videoHeight, i18n.language, siteName, noindex]);
 
   return null;
 }

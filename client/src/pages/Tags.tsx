@@ -154,8 +154,11 @@ export default function Tags() {
           <>
             <img
               src={displayHeroImage}
-              alt="Tag hero background"
+              alt={selectedTagName || t("tags.exploreByTags", "Explore by Tags")}
               className="absolute inset-0 w-full h-full object-cover"
+              loading="eager"
+              fetchPriority="high"
+              decoding="async"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent" />
           </>

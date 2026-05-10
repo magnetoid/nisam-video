@@ -6,7 +6,7 @@ import { Footer } from "@/components/Footer";
 import { VideoGrid } from "@/components/VideoGrid";
 import { SEO } from "@/components/SEO";
 import { PageBreadcrumb } from "@/components/PageBreadcrumb";
-import type { LocalizedCategory, VideoWithLocalizedRelations, SupportedLanguage } from "@shared/schema";
+import type { LocalizedCategory, VideoWithLocalizedRelations, SupportedLanguage, SeoSettings } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 
 const LANGUAGE_CODES = ['en', 'sr', 'sr-latn', 'sr-cyrl', 'bs', 'hr', 'me'];
@@ -62,7 +62,12 @@ export default function CategoryPage() {
     staleTime: Infinity,
   });
 
-  const origin = window.location.origin;
+  const { data: seoSettings } = useQuery<SeoSettings>({
+    queryKey: ["/api/seo/settings"],
+  });
+  const siteName = seoSettings?.siteName || "";
+
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
   const currentLang = languages.find(l => l.code === i18n.language);
   const currentPrefix = currentLang?.isDefault ? "" : `/${i18n.language}`;
   const effectivePrefix = currentLang ? currentPrefix : (i18n.language === "en" ? "/en" : "");
@@ -82,15 +87,17 @@ export default function CategoryPage() {
       {
         "@type": "CollectionPage",
         name: category.name,
-        description: category.description || `Browse ${category.name} videos on nisam.video`,
+        description: category.description || (siteName
+          ? `Browse ${category.name} videos on ${siteName}`
+          : `Browse ${category.name} videos`),
         url: currentUrl,
         numberOfItems: videos?.length ?? 0,
       },
       {
         "@type": "BreadcrumbList",
         itemListElement: [
-          { "@type": "ListItem", position: 1, name: "Home", item: window.location.origin },
-          { "@type": "ListItem", position: 2, name: "Categories", item: `${window.location.origin}/categories` },
+          { "@type": "ListItem", position: 1, name: "Home", item: origin },
+          { "@type": "ListItem", position: 2, name: "Categories", item: `${origin}/categories` },
           { "@type": "ListItem", position: 3, name: category.name, item: currentUrl },
         ],
       },
@@ -101,7 +108,9 @@ export default function CategoryPage() {
     <div className="min-h-screen bg-background flex flex-col">
       <SEO
         title={category.name}
-        description={category.description || `Browse the best ${category.name} videos on nisam.video. Curated and categorized by AI.`}
+        description={category.description || (siteName
+          ? `Browse the best ${category.name} videos on ${siteName}. Curated and categorized by AI.`
+          : `Browse the best ${category.name} videos. Curated and categorized by AI.`)}
         canonical={currentUrl}
         hreflang={hreflangLinks}
         structuredData={categoryStructuredData}

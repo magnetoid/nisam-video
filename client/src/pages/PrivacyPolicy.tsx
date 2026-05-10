@@ -2,24 +2,37 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { SEO } from "@/components/SEO";
 import { useTranslation } from "react-i18next";
+import { useQuery } from "@tanstack/react-query";
+import type { SeoSettings } from "@shared/schema";
 
 export default function PrivacyPolicy() {
   const { t } = useTranslation();
 
+  const { data: seoSettings } = useQuery<SeoSettings>({
+    queryKey: ["/api/seo/settings"],
+  });
+  const siteName = seoSettings?.siteName || "";
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const canonical = `${origin}/privacy`;
+
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "WebPage",
-    name: "Privacy Policy - nisam.video",
-    description: "Privacy policy for nisam.video — how we handle your data on our independent journalism platform.",
-    url: "https://nisam.video/privacy",
+    name: siteName ? `${t("privacy.title", "Privacy Policy")} - ${siteName}` : t("privacy.title", "Privacy Policy"),
+    description: t("privacy.metaDescription", siteName
+      ? `Learn how ${siteName} collects, uses, and protects your personal information.`
+      : "Learn how we collect, use, and protect your personal information."),
+    url: canonical,
   };
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <SEO
         title={t("privacy.title", "Privacy Policy")}
-        description={t("privacy.metaDescription", "Learn how nisam.video collects, uses, and protects your personal information on our independent journalism platform.")}
-        canonical="https://nisam.video/privacy"
+        description={t("privacy.metaDescription", siteName
+          ? `Learn how ${siteName} collects, uses, and protects your personal information.`
+          : "Learn how we collect, use, and protect your personal information.")}
+        canonical={canonical}
         structuredData={structuredData}
       />
       <Header />

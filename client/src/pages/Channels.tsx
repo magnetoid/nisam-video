@@ -165,7 +165,7 @@ export default function Channels() {
     staleTime: Infinity,
   });
 
-  const origin = typeof window !== "undefined" ? window.location.origin : "https://nisam.video";
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
   const currentLang = languages.find(l => l.code === i18n.language);
   const currentPrefix = currentLang?.isDefault ? "" : `/${i18n.language}`;
   const effectivePrefix = currentLang ? currentPrefix : (i18n.language === "en" ? "/en" : "");
