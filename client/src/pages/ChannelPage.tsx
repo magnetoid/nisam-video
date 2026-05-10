@@ -186,7 +186,7 @@ export default function ChannelPage() {
       />
       <Header />
 
-      <main className="pt-16">
+      <main id="main-content" className="pt-16">
         <div className="relative h-[44vh] md:h-[62vh] overflow-hidden">
           {heroImage ? (
             <img

@@ -210,7 +210,7 @@ export default function Channels() {
       />
       <Header />
 
-      <main className="pt-16">
+      <main id="main-content" className="pt-16">
         <HeroImageSlider items={heroItems} ariaLabel={pageTitle} />
 
         <section className="px-4 md:px-12 py-10 space-y-6">

@@ -33,7 +33,7 @@ export default function NotFound() {
       
       <Header />
 
-      <main className="flex-grow container mx-auto px-4 py-12 flex flex-col items-center">
+      <main id="main-content" className="flex-grow container mx-auto px-4 py-12 flex flex-col items-center">
         <div className="text-center max-w-2xl mx-auto mb-16">
           <div className="flex justify-center mb-6">
             <div className="h-24 w-24 rounded-full bg-muted flex items-center justify-center">

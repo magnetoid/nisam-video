@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { SEO } from "@/components/SEO";
@@ -6,6 +7,7 @@ import { ChevronDown } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { SuggestFeatureDialog } from "@/components/SuggestFeatureDialog";
 import { RecommendChannelDialog } from "@/components/RecommendChannelDialog";
+import type { SeoSettings } from "@shared/schema";
 
 interface FAQItem {
   question: string;
@@ -35,6 +37,11 @@ function FAQAccordion({ question, answer }: FAQItem) {
 
 export default function FAQ() {
   const { t } = useTranslation();
+  const { data: seoSettings } = useQuery<SeoSettings>({
+    queryKey: ["/api/seo/settings"],
+  });
+  const siteName = seoSettings?.siteName || "";
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
 
   const faqs: FAQItem[] = [
     {
@@ -116,12 +123,14 @@ export default function FAQ() {
     <div className="min-h-screen bg-background flex flex-col">
       <SEO
         title={t("faq.title", "Frequently Asked Questions")}
-        description={t("faq.metaDescription", "Find answers to common questions about nisam.video — the independent journalism video platform. Learn how it works, how to contribute, and more.")}
-        canonical="https://nisam.video/faq"
+        description={t("faq.metaDescription", siteName
+          ? `Find answers to common questions about ${siteName}. Learn how it works, how to contribute, and more.`
+          : "Find answers to common questions. Learn how it works, how to contribute, and more.")}
+        canonical={`${origin}/faq`}
         structuredData={faqStructuredData}
       />
       <Header />
-      <main className="flex-1 container mx-auto px-4 py-8 pt-24 max-w-3xl">
+      <main id="main-content" className="flex-1 container mx-auto px-4 py-8 pt-24 max-w-3xl">
         <h1 className="text-3xl font-bold mb-2">{t("faq.title", "Frequently Asked Questions")}</h1>
         <p className="text-muted-foreground mb-8">
           {t("faq.subtitle", "Everything you need to know about nisam.video")}

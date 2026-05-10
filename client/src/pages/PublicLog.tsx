@@ -154,7 +154,7 @@ export default function PublicLog() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Header onSearchClick={() => {}} />
-      <main className="pt-16 flex-1">
+      <main id="main-content" className="pt-16 flex-1">
         <div className="px-4 md:px-12 py-6 space-y-4">
           <Card>
             <CardHeader>

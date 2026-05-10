@@ -86,7 +86,7 @@ export default function TagPage() {
         structuredData={structuredData}
       />
       <Header />
-      <main className="flex-1 container mx-auto px-4 py-8 pt-24">
+      <main id="main-content" className="flex-1 container mx-auto px-4 py-8 pt-24">
         <PageBreadcrumb items={[
           { label: t("nav.tags", "Tags"), href: "/tags" },
           { label: tagName },

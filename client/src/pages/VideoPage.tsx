@@ -266,7 +266,7 @@ export default function VideoPage() {
 
       <Header />
 
-      <main className="min-h-screen bg-background pt-16">
+      <main id="main-content" className="min-h-screen bg-background pt-16">
         <article>
           {/* Back button - contained width */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-4">
@@ -388,9 +388,12 @@ export default function VideoPage() {
                   {video.publishDate && (
                     <>
                       <span>•</span>
-                      <span data-testid="text-publish-date">
+                      <time
+                        dateTime={new Date(video.publishDate).toISOString()}
+                        data-testid="text-publish-date"
+                      >
                         {t("video.publishedOn", { date: video.publishDate })}
-                      </span>
+                      </time>
                     </>
                   )}
                 </div>

@@ -36,7 +36,7 @@ export default function PrivacyPolicy() {
         structuredData={structuredData}
       />
       <Header />
-      <main className="flex-1 container mx-auto px-4 py-8 pt-24 max-w-4xl">
+      <main id="main-content" className="flex-1 container mx-auto px-4 py-8 pt-24 max-w-4xl">
         <h1 className="text-3xl font-bold mb-8">{t("privacy.title", "Privacy Policy")}</h1>
         <div className="prose prose-invert max-w-none space-y-6 text-foreground/80">
           <p className="text-sm text-muted-foreground">{t("privacy.lastUpdated", "Last updated: April 2026")}</p>
