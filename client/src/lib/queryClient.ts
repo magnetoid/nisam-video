@@ -94,19 +94,23 @@ export const queryClient = new QueryClient({
     onError: (error, query) => {
       // Don't show toast for background refetch errors or if explicitly silenced
       if (query.meta?.silenceError) return;
-      
+
       const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
       const stack = error instanceof Error ? error.stack : undefined;
-      
+
       // Try to parse JSON error message if it looks like one
       let displayMessage = errorMessage;
+      let serverDetails: string | undefined;
       try {
           // If error message is like "500: {...}", extract the JSON part
-          const match = errorMessage.match(/^\d+:\s*({.*})$/);
-          if (match) {
-             const json = JSON.parse(match[1]);
+          // Body has format "STATUS: [content-type ]{json}" — find the first { and parse from there
+          const jsonStart = errorMessage.indexOf("{");
+          const jsonEnd = errorMessage.lastIndexOf("}");
+          if (jsonStart !== -1 && jsonEnd > jsonStart) {
+             const json = JSON.parse(errorMessage.slice(jsonStart, jsonEnd + 1));
              if (json.error) displayMessage = json.error;
              if (json.message) displayMessage = json.message;
+             if (json.details) serverDetails = String(json.details);
           }
       } catch (e) {
           // Keep original message
@@ -116,7 +120,7 @@ export const queryClient = new QueryClient({
         variant: "destructive",
         title: "Request Failed",
         description: displayMessage,
-        details: stack || String(error)
+        details: serverDetails || stack || String(error)
       });
 
       reportClientError({
@@ -137,14 +141,16 @@ export const queryClient = new QueryClient({
 
        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
        const stack = error instanceof Error ? error.stack : undefined;
-       
+
        let displayMessage = errorMessage;
+       let serverDetails: string | undefined;
        try {
-           const match = errorMessage.match(/^\d+:\s*({.*})$/);
+           const match = errorMessage.match(/^\d+:\s*(?:[\w\/]+;?\s*charset=[\w-]+\s+)?({.*})$/s);
            if (match) {
               const json = JSON.parse(match[1]);
               if (json.error) displayMessage = json.error;
               if (json.message) displayMessage = json.message;
+              if (json.details) serverDetails = String(json.details);
            }
        } catch (e) {
            // Keep original message
@@ -154,7 +160,7 @@ export const queryClient = new QueryClient({
          variant: "destructive",
          title: "Action Failed",
          description: displayMessage,
-         details: stack || String(error)
+         details: serverDetails || stack || String(error)
        });
 
        reportClientError({

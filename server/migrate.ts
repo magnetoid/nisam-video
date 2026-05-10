@@ -181,6 +181,10 @@ async function ensureSystemSettingsColumns() {
   await pool.query(`ALTER TABLE "system_settings" ADD COLUMN IF NOT EXISTS "custom_head_code" text;`);
   await pool.query(`ALTER TABLE "system_settings" ADD COLUMN IF NOT EXISTS "custom_body_start_code" text;`);
   await pool.query(`ALTER TABLE "system_settings" ADD COLUMN IF NOT EXISTS "custom_body_end_code" text;`);
+  await pool.query(`ALTER TABLE "system_settings" ADD COLUMN IF NOT EXISTS "youtube_api_key" text;`);
+  await pool.query(`ALTER TABLE "system_settings" ADD COLUMN IF NOT EXISTS "turnstile_enabled" integer DEFAULT 0 NOT NULL;`);
+  await pool.query(`ALTER TABLE "system_settings" ADD COLUMN IF NOT EXISTS "turnstile_site_key" text;`);
+  await pool.query(`ALTER TABLE "system_settings" ADD COLUMN IF NOT EXISTS "turnstile_secret_key" text;`);
 }
 
 async function ensureVideosColumns() {
