@@ -47,7 +47,8 @@ router.patch("/settings", requireAuth, async (req, res) => {
     res.json(updated);
   } catch (error) {
     console.error("Error updating system settings:", error);
-    res.status(500).json({ error: "Failed to update system settings" });
+    const message = error instanceof Error ? error.message : String(error);
+    res.status(500).json({ error: "Failed to update system settings", details: message });
   }
 });
 
