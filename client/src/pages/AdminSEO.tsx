@@ -707,6 +707,35 @@ export default function AdminSEO() {
                               </FormItem>
                             )}
                           />
+                          <FormField
+                            control={form.control}
+                            name="businessEmail"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>{t("admin.businessEmail", "Security Contact Email")}</FormLabel>
+                                <FormControl>
+                                  <Input {...field} value={field.value || ""} type="email" placeholder="security@example.com" />
+                                </FormControl>
+                                <FormDescription>
+                                  {t("admin.businessEmailDesc", "Used for /.well-known/security.txt (RFC 9116) so security researchers can report vulnerabilities.")}
+                                </FormDescription>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="businessName"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>{t("admin.businessName", "Business / Organization Name")}</FormLabel>
+                                <FormControl>
+                                  <Input {...field} value={field.value || ""} placeholder="optional" />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
                         </div>
                         <Button type="submit" disabled={updateSettingsMutation.isPending}>
                           {updateSettingsMutation.isPending ? t("common.saving", "Saving…") : t("common.save", "Save")}
@@ -954,8 +983,11 @@ export default function AdminSEO() {
               <Card>
                 <CardHeader>
                   <CardTitle className="text-base">{t("admin.quickLinks", "Quick Links")}</CardTitle>
+                  <CardDescription>
+                    {t("admin.quickLinksDesc", "Open the dynamically generated SEO endpoints in a new tab.")}
+                  </CardDescription>
                 </CardHeader>
-                <CardContent className="flex flex-col sm:flex-row gap-2">
+                <CardContent className="flex flex-wrap gap-2">
                   <a href="/sitemap.xml" target="_blank" rel="noreferrer" className="inline-flex">
                     <Button variant="outline" className="gap-2" type="button">
                       <ArrowUpRight className="h-4 w-4" />
@@ -968,10 +1000,73 @@ export default function AdminSEO() {
                       {t("admin.openRobotsTxt", "Open `/robots.txt`")}
                     </Button>
                   </a>
+                  <a href="/llms.txt" target="_blank" rel="noreferrer" className="inline-flex">
+                    <Button variant="outline" className="gap-2" type="button">
+                      <ArrowUpRight className="h-4 w-4" />
+                      {t("admin.openLlmsTxt", "Open `/llms.txt`")}
+                    </Button>
+                  </a>
+                  <a href="/.well-known/security.txt" target="_blank" rel="noreferrer" className="inline-flex">
+                    <Button variant="outline" className="gap-2" type="button">
+                      <ArrowUpRight className="h-4 w-4" />
+                      {t("admin.openSecurityTxt", "Open `/.well-known/security.txt`")}
+                    </Button>
+                  </a>
                 </CardContent>
               </Card>
+              <LlmsTxtPreviewCard />
+
             </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+function LlmsTxtPreviewCard() {
+  const { t } = useTranslation();
+  const [content, setContent] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadPreview = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/llms.txt", { cache: "no-store" });
+      if (!res.ok) {
+        setError(`HTTP ${res.status}`);
+        setContent(null);
+      } else {
+        setContent(await res.text());
+      }
+    } catch (e: any) {
+      setError(e?.message || "Failed to fetch");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">{t("admin.llmsTxtPreview", "llms.txt preview")}</CardTitle>
+        <CardDescription>
+          {t("admin.llmsTxtPreviewDesc", "Markdown index for AI crawlers (Claude, Perplexity, ChatGPT). Built dynamically from your real categories, channels, and recent videos. Updates take up to 1 hour to reflect.")}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <Button type="button" variant="outline" onClick={loadPreview} disabled={loading}>
+          {loading ? t("common.loading", "Loading…") : t("admin.refreshPreview", "Refresh preview")}
+        </Button>
+        {error && (
+          <div className="text-sm text-destructive">{error}</div>
+        )}
+        {content !== null && (
+          <pre className="text-xs bg-muted/50 p-3 rounded border max-h-80 overflow-auto whitespace-pre-wrap font-mono">
+            {content}
+          </pre>
+        )}
+      </CardContent>
+    </Card>
   );
 }
