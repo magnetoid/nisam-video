@@ -219,15 +219,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
-      xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:video="http://www.google.com/schemas/sitemap-video/1.1" xmlns:xhtml="http://www.w3.org/1999/xhtml">\n';
+      xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:video="http://www.google.com/schemas/sitemap-video/1.1" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1" xmlns:xhtml="http://www.w3.org/1999/xhtml">\n';
 
-      const addUrl = (loc: string, opts?: { changefreq?: string; priority?: string; lastmod?: string; video?: any }) => {
+      const addUrl = (loc: string, opts?: { changefreq?: string; priority?: string; lastmod?: string; video?: any; images?: { loc: string; title?: string; caption?: string }[] }) => {
         xml += "  <url>\n";
         xml += `    <loc>${escapeXml(loc)}</loc>\n`;
         xml += buildAlternates(loc);
         if (opts?.lastmod) xml += `    <lastmod>${opts.lastmod}</lastmod>\n`;
         if (opts?.changefreq) xml += `    <changefreq>${opts.changefreq}</changefreq>\n`;
         if (opts?.priority) xml += `    <priority>${opts.priority}</priority>\n`;
+        if (opts?.images) {
+          for (const img of opts.images) {
+            if (!img.loc) continue;
+            xml += "    <image:image>\n";
+            xml += `      <image:loc>${escapeXml(img.loc)}</image:loc>\n`;
+            if (img.title) xml += `      <image:title>${escapeXml(img.title)}</image:title>\n`;
+            if (img.caption) xml += `      <image:caption>${escapeXml(img.caption.substring(0, 500))}</image:caption>\n`;
+            xml += "    </image:image>\n";
+          }
+        }
         if (opts?.video) {
           const v = opts.video;
           xml += "    <video:video>\n";
@@ -318,10 +328,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const lastmod = (video as any).updatedAt
               ? new Date((video as any).updatedAt).toISOString().split("T")[0]
               : publicationDate?.split("T")[0];
+            const images = video.thumbnailUrl
+              ? [{ loc: video.thumbnailUrl, title: video.title || undefined, caption: video.description || undefined }]
+              : undefined;
             addUrl(`${baseUrl}/video/${video.slug || video.id}`, {
               changefreq: "monthly",
               priority: "0.6",
               lastmod,
+              images,
               video: {
                 thumbnailUrl: video.thumbnailUrl,
                 title: video.title,
@@ -356,27 +370,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.get("/robots.txt", async (req, res) => {
-    // Use the custom domain if available, otherwise fall back to host header
-    const baseUrl = "https://nisam.video";
+    const forwardedProto = String(req.headers["x-forwarded-proto"] || "").split(",")[0].trim();
+    const proto = forwardedProto || req.protocol;
+    const host = req.get("host") || "";
+    const baseUrl = process.env.PUBLIC_BASE_URL || (host ? `${proto}://${host}` : "");
 
-    let robotsTxt = `# Robots.txt for nisam.video
-User-agent: *
-Allow: /
-Disallow: /admin/
-Disallow: /api/
-
-# Sitemap
-Sitemap: ${baseUrl}/sitemap.xml
-
-# Crawl delay (be nice to servers)
-Crawl-delay: 1
-`;
-
+    let siteName = "";
+    let dbRobots: string | null = null;
     if (isDbReady()) {
       try {
         const settings = await db.select().from(seoSettings).limit(1);
-        if (settings.length > 0 && settings[0].robotsTxt) {
-          robotsTxt = settings[0].robotsTxt;
+        if (settings.length > 0) {
+          siteName = settings[0].siteName || "";
+          if (settings[0].robotsTxt) dbRobots = settings[0].robotsTxt;
         }
       } catch (error: any) {
         if (error?.code !== "42P01") {
@@ -385,10 +391,147 @@ Crawl-delay: 1
       }
     }
 
+    const robotsTxt = dbRobots || `# Robots.txt${siteName ? ` for ${siteName}` : ""}
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+
+${baseUrl ? `Sitemap: ${baseUrl}/sitemap.xml\n` : ""}
+# Crawl delay (be nice to servers)
+Crawl-delay: 1
+`;
+
     res.header("Content-Type", "text/plain");
     res.header("Cache-Control", "public, max-age=86400, s-maxage=86400");
     res.send(robotsTxt);
   });
+
+  // llms.txt — markdown index for AI/LLM crawlers (Claude, Perplexity, ChatGPT, etc.)
+  // Per the seo-llm-context skill: clean markdown summarizing site structure and key pages
+  app.get("/llms.txt", async (req, res) => {
+    try {
+      const forwardedProto = String(req.headers["x-forwarded-proto"] || "").split(",")[0].trim();
+      const proto = forwardedProto || req.protocol;
+      const host = req.get("host") || "";
+      const baseUrl = process.env.PUBLIC_BASE_URL || (host ? `${proto}://${host}` : "");
+
+      const cacheKey = `llms-txt:${baseUrl}`;
+      const cached = await getCache<string>(cacheKey).catch(() => null);
+      if (cached) {
+        res.header("Content-Type", "text/markdown; charset=utf-8");
+        res.header("Cache-Control", "public, max-age=3600, s-maxage=3600");
+        res.header("X-Cache", "HIT");
+        return res.send(cached);
+      }
+
+      let siteName = "";
+      let siteDescription = "";
+      if (isDbReady()) {
+        try {
+          const settings = await db.select().from(seoSettings).limit(1);
+          if (settings.length > 0) {
+            siteName = settings[0].siteName || "";
+            siteDescription = settings[0].siteDescription || "";
+          }
+        } catch {}
+      }
+
+      let md = `# ${siteName || host || "Site"}\n\n`;
+      if (siteDescription) md += `> ${siteDescription}\n\n`;
+
+      md += `## Main Pages\n`;
+      md += `- [Home](${baseUrl}/) — Homepage with curated video carousels\n`;
+      md += `- [Categories](${baseUrl}/categories) — Browse videos by AI-generated category\n`;
+      md += `- [Tags](${baseUrl}/tags) — Browse videos by tag\n`;
+      md += `- [Channels](${baseUrl}/channels) — Browse content sources\n`;
+      md += `- [About](${baseUrl}/about) — About the platform\n`;
+      md += `- [FAQ](${baseUrl}/faq) — Frequently asked questions\n\n`;
+
+      try {
+        const cats = await storage.getAllLocalizedCategories("en").catch(() => []);
+        const topCats = (cats || []).slice(0, 30);
+        if (topCats.length > 0) {
+          md += `## Categories\n`;
+          for (const c of topCats) {
+            const slug = (c as any).slug || generateSlug(c.name || String(c.id), 80);
+            md += `- [${c.name || slug}](${baseUrl}/category/${slug})\n`;
+          }
+          md += `\n`;
+        }
+
+        const channels = await storage.getAllChannels().catch(() => []);
+        const topChannels = (channels || []).slice(0, 30);
+        if (topChannels.length > 0) {
+          md += `## Channels\n`;
+          for (const ch of topChannels) {
+            const slug = `${generateSlug(ch.name, 80)}-${ch.id}`;
+            md += `- [${ch.name}](${baseUrl}/channels/${slug})\n`;
+          }
+          md += `\n`;
+        }
+
+        const recentVideos = await storage.getAllVideos({ lang: "en", limit: 50, offset: 0, sort: "createdAt" }).catch(() => []);
+        if (recentVideos.length > 0) {
+          md += `## Recent Videos\n`;
+          for (const v of recentVideos) {
+            md += `- [${v.title}](${baseUrl}/video/${v.slug || v.id})\n`;
+          }
+          md += `\n`;
+        }
+      } catch (e) {
+        console.warn("[llms.txt] failed to enumerate content:", e);
+      }
+
+      md += `## Crawler Notes\n`;
+      md += `- This file is intended for AI crawlers (Claude, Perplexity, ChatGPT, Google AI Overviews).\n`;
+      md += `- Sitemap: ${baseUrl}/sitemap.xml\n`;
+      md += `- Robots: ${baseUrl}/robots.txt\n`;
+
+      await setCache(cacheKey, md, 3600).catch(() => undefined);
+      res.header("Content-Type", "text/markdown; charset=utf-8");
+      res.header("Cache-Control", "public, max-age=3600, s-maxage=3600");
+      res.header("X-Cache", "MISS");
+      res.send(md);
+    } catch (error) {
+      console.error("llms.txt error:", error);
+      res.status(500).type("text/plain").send("# Error generating llms.txt\n");
+    }
+  });
+
+  // security.txt — RFC 9116 standard location for security disclosure contact
+  const securityTxtHandler = async (req: any, res: any) => {
+    let contactEmail = "";
+    let siteName = "";
+    if (isDbReady()) {
+      try {
+        const settings = await db.select().from(seoSettings).limit(1);
+        if (settings.length > 0) {
+          contactEmail = (settings[0] as any).businessEmail || "";
+          siteName = settings[0].siteName || "";
+        }
+      } catch {}
+    }
+
+    const forwardedProto = String(req.headers["x-forwarded-proto"] || "").split(",")[0].trim();
+    const proto = forwardedProto || req.protocol;
+    const host = req.get("host") || "";
+    const baseUrl = process.env.PUBLIC_BASE_URL || (host ? `${proto}://${host}` : "");
+
+    const expires = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
+    const lines: string[] = [];
+    if (contactEmail) lines.push(`Contact: mailto:${contactEmail}`);
+    lines.push(`Expires: ${expires}`);
+    lines.push(`Preferred-Languages: en`);
+    if (baseUrl) lines.push(`Canonical: ${baseUrl}/.well-known/security.txt`);
+    if (siteName) lines.push(`# Security disclosures for ${siteName}`);
+
+    res.header("Content-Type", "text/plain; charset=utf-8");
+    res.header("Cache-Control", "public, max-age=86400, s-maxage=86400");
+    res.send(lines.join("\n") + "\n");
+  };
+  app.get("/.well-known/security.txt", securityTxtHandler);
+  app.get("/security.txt", securityTxtHandler);
 
   app.get("/manifest.json", async (req, res) => {
     try {
