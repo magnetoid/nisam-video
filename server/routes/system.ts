@@ -1,17 +1,28 @@
 import { Router } from "express";
 import { storage } from "../storage/index.js";
-import { requireAuth } from "../middleware/auth.js";
+import { requireAuth, requireAdmin } from "../middleware/auth.js";
 
 const router = Router();
+
+function sanitizeSettings(settings: any, isAdmin: boolean) {
+  if (isAdmin) return settings;
+  const {
+    turnstileSecretKey,
+    youtubeApiKey,
+    ...safeSettings
+  } = settings || {};
+  return safeSettings;
+}
 
 // System settings routes
 router.get("/settings", async (req, res) => {
   try {
+    const isAdmin = !!(req.session?.isAuthenticated && req.session?.role === "admin");
     const settings = await storage.getSystemSettings();
-    if (settings) return res.json(settings);
+    if (settings) return res.json(sanitizeSettings(settings, isAdmin));
 
     const created = await storage.updateSystemSettings({});
-    return res.json(created);
+    return res.json(sanitizeSettings(created, isAdmin));
   } catch (error) {
     console.error("Error fetching system settings:", error);
     // Return default settings on error to prevent app breakage
@@ -41,7 +52,7 @@ router.get("/turnstile", async (req, res) => {
   }
 });
 
-router.patch("/settings", requireAuth, async (req, res) => {
+router.patch("/settings", requireAdmin, async (req, res) => {
   try {
     const updated = await storage.updateSystemSettings(req.body);
     res.json(updated);

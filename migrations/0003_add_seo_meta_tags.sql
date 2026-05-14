@@ -33,5 +33,6 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
-CREATE TRIGGER IF NOT EXISTS update_seo_meta_tags_updated_at BEFORE UPDATE
+DROP TRIGGER IF EXISTS update_seo_meta_tags_updated_at ON seo_meta_tags;
+CREATE TRIGGER update_seo_meta_tags_updated_at BEFORE UPDATE
   ON seo_meta_tags FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();

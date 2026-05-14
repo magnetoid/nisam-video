@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { requireAuth } from "../middleware/auth.js";
+import { requireAuth, requireAdmin } from "../middleware/auth.js";
 import { storage } from "../storage/index.js";
 import { db } from "../db.js";
 import { aiSettings, aiModels } from "../../shared/schema.js";
@@ -11,7 +11,7 @@ import { z } from "zod";
 const router = Router();
 
 // Get AI configuration
-router.get("/config", requireAuth, async (req, res) => {
+router.get("/config", requireAdmin, async (req, res) => {
   try {
     const settings = await db.select().from(aiSettings).limit(1);
     const config = settings[0] || {
@@ -50,7 +50,7 @@ router.get("/config", requireAuth, async (req, res) => {
 });
 
 // Update AI configuration
-router.patch("/config", requireAuth, async (req, res) => {
+router.patch("/config", requireAdmin, async (req, res) => {
   try {
     const schema = z.object({
       provider: z.enum(["openai", "ollama", "openrouter"]).optional(),
@@ -101,7 +101,7 @@ router.patch("/config", requireAuth, async (req, res) => {
 });
 
 // List AI models
-router.get("/models", requireAuth, async (req, res) => {
+router.get("/models", requireAdmin, async (req, res) => {
   try {
     const models = await db.select().from(aiModels).orderBy(desc(aiModels.lastSyncedAt));
     res.json(models);
@@ -117,7 +117,7 @@ router.get("/models", requireAuth, async (req, res) => {
 });
 
 // Sync Ollama models
-router.post("/ollama/sync", requireAuth, async (req, res) => {
+router.post("/ollama/sync", requireAdmin, async (req, res) => {
   try {
     // Get URL from config or body
     let url = req.body.url;
@@ -187,7 +187,7 @@ router.post("/ollama/sync", requireAuth, async (req, res) => {
 });
 
 // Toggle model status
-router.patch("/models/:id/toggle", requireAuth, async (req, res) => {
+router.patch("/models/:id/toggle", requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const { isActive } = req.body;
@@ -204,7 +204,7 @@ router.patch("/models/:id/toggle", requireAuth, async (req, res) => {
 });
 
 // Test connection
-router.post("/test", requireAuth, async (req, res) => {
+router.post("/test", requireAdmin, async (req, res) => {
   try {
     let { provider, url, apiKey } = req.body;
     

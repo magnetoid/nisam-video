@@ -1,7 +1,7 @@
 import { Router } from "express";
 import crypto from "crypto";
 import { storage } from "../storage/index.js";
-import { requireAuth } from "../middleware/auth.js";
+import { requireAdmin } from "../middleware/auth.js";
 import { insertSeoSettingsSchema } from "../../shared/schema.js";
 import { z } from "zod";
 import { seoSettings, seoRedirects, seoMetaTags, seoKeywords, seoAuditLogs, seoABTests, seoCompetitors, videos } from "../../shared/schema.js";
@@ -155,7 +155,7 @@ router.get("/settings", async (req, res) => {
   }
 });
 
-router.patch("/settings", requireAuth, async (req, res) => {
+router.patch("/settings", requireAdmin, async (req, res) => {
   try {
     // Validate request body
     const validatedData = insertSeoSettingsSchema.partial().parse(req.body);
@@ -176,6 +176,7 @@ router.patch("/settings", requireAuth, async (req, res) => {
 // Enhanced SEO settings routes
 router.get("/enhanced/settings", async (req, res) => {
   try {
+    const isAdmin = !!(req.session?.isAuthenticated && req.session?.role === "admin");
     const settings = await storage.getSeoSettings();
     
     // Get additional settings from enhanced table
@@ -185,8 +186,8 @@ router.get("/enhanced/settings", async (req, res) => {
       const enhanced = enhancedSettings[0];
       res.json({
         ...settings,
-        googleSearchConsoleApiKey: enhanced.googleSearchConsoleApiKey,
-        bingWebmasterApiKey: enhanced.bingWebmasterApiKey,
+        googleSearchConsoleApiKey: isAdmin ? enhanced.googleSearchConsoleApiKey : undefined,
+        bingWebmasterApiKey: isAdmin ? enhanced.bingWebmasterApiKey : undefined,
         enableAutoSitemapSubmission: enhanced.enableAutoSitemapSubmission,
         enableSchemaMarkup: enhanced.enableSchemaMarkup,
         enableHreflang: enhanced.enableHreflang,
@@ -221,7 +222,7 @@ router.get("/enhanced/settings", async (req, res) => {
   }
 });
 
-router.patch("/enhanced/settings", requireAuth, async (req, res) => {
+router.patch("/enhanced/settings", requireAdmin, async (req, res) => {
   try {
     const validatedData = seoSettingsSchema.parse(req.body);
     
@@ -327,7 +328,7 @@ router.get("/enhanced/meta-tags", async (req, res) => {
 });
 
 // Create meta tag
-router.post("/enhanced/meta-tags", requireAuth, async (req, res) => {
+router.post("/enhanced/meta-tags", requireAdmin, async (req, res) => {
   try {
     const validatedData = metaTagSchema.parse(req.body);
     
@@ -354,7 +355,7 @@ router.post("/enhanced/meta-tags", requireAuth, async (req, res) => {
 });
 
 // Update meta tag
-router.patch("/enhanced/meta-tags/:id", requireAuth, async (req, res) => {
+router.patch("/enhanced/meta-tags/:id", requireAdmin, async (req, res) => {
   try {
     if (!isDbReady()) return res.status(503).json({ error: "Database not ready" });
     const { id } = req.params;
@@ -390,7 +391,7 @@ router.patch("/enhanced/meta-tags/:id", requireAuth, async (req, res) => {
 });
 
 // Delete meta tag
-router.delete("/enhanced/meta-tags/:id", requireAuth, async (req, res) => {
+router.delete("/enhanced/meta-tags/:id", requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const success = await (storage as any).deleteSeoMetaTag(id);
@@ -403,7 +404,7 @@ router.delete("/enhanced/meta-tags/:id", requireAuth, async (req, res) => {
 });
 
 // Bulk update meta tags
-router.patch("/enhanced/meta-tags/bulk/update", requireAuth, async (req, res) => {
+router.patch("/enhanced/meta-tags/bulk/update", requireAdmin, async (req, res) => {
   try {
     const { ids, updates } = req.body;
     
@@ -447,7 +448,7 @@ router.patch("/enhanced/meta-tags/bulk/update", requireAuth, async (req, res) =>
 });
 
 // Generate AI SEO suggestions
-router.post("/enhanced/meta-tags/suggest", requireAuth, async (req, res) => {
+router.post("/enhanced/meta-tags/suggest", requireAdmin, async (req, res) => {
   try {
     const { url } = req.body;
     if (!url) return res.status(400).json({ error: "URL is required" });
@@ -542,7 +543,7 @@ router.get("/enhanced/redirects", async (req, res) => {
 });
 
 // Create redirect
-router.post("/enhanced/redirects", requireAuth, async (req, res) => {
+router.post("/enhanced/redirects", requireAdmin, async (req, res) => {
   try {
     const validatedData = redirectSchema.parse(req.body);
     
@@ -566,7 +567,7 @@ router.post("/enhanced/redirects", requireAuth, async (req, res) => {
 });
 
 // Update redirect
-router.patch("/enhanced/redirects/:id", requireAuth, async (req, res) => {
+router.patch("/enhanced/redirects/:id", requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const validatedData = redirectSchema.partial().parse(req.body);
@@ -592,7 +593,7 @@ router.patch("/enhanced/redirects/:id", requireAuth, async (req, res) => {
 });
 
 // Delete redirect
-router.delete("/enhanced/redirects/:id", requireAuth, async (req, res) => {
+router.delete("/enhanced/redirects/:id", requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     
@@ -662,7 +663,7 @@ router.get("/enhanced/keywords", async (req, res) => {
 });
 
 // Create keyword
-router.post("/enhanced/keywords", requireAuth, async (req, res) => {
+router.post("/enhanced/keywords", requireAdmin, async (req, res) => {
   try {
     const validatedData = keywordSchema.parse(req.body);
     
@@ -689,7 +690,7 @@ router.post("/enhanced/keywords", requireAuth, async (req, res) => {
 });
 
 // Update keyword
-router.patch("/enhanced/keywords/:id", requireAuth, async (req, res) => {
+router.patch("/enhanced/keywords/:id", requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const validatedData = keywordSchema.partial().parse(req.body);
@@ -715,7 +716,7 @@ router.patch("/enhanced/keywords/:id", requireAuth, async (req, res) => {
 });
 
 // Delete keyword
-router.delete("/enhanced/keywords/:id", requireAuth, async (req, res) => {
+router.delete("/enhanced/keywords/:id", requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     
@@ -772,7 +773,7 @@ router.get("/enhanced/audits", async (req, res) => {
 });
 
 // Create audit (run SEO audit)
-router.post("/enhanced/audits", requireAuth, async (req, res) => {
+router.post("/enhanced/audits", requireAdmin, async (req, res) => {
   try {
     const { pageUrl } = req.body;
     
@@ -840,7 +841,7 @@ router.get("/enhanced/ab-tests", async (req, res) => {
 });
 
 // Create A/B test
-router.post("/enhanced/ab-tests", requireAuth, async (req, res) => {
+router.post("/enhanced/ab-tests", requireAdmin, async (req, res) => {
   try {
     const validatedData = abTestSchema.parse(req.body);
     
@@ -909,7 +910,7 @@ router.get("/enhanced/competitors", async (req, res) => {
 });
 
 // Create competitor
-router.post("/enhanced/competitors", requireAuth, async (req, res) => {
+router.post("/enhanced/competitors", requireAdmin, async (req, res) => {
   try {
     const validatedData = competitorSchema.parse(req.body);
     
@@ -1044,7 +1045,7 @@ router.get("/enhanced/sitemap", async (req, res) => {
 });
 
 // Regenerate sitemap (clear cache)
-router.post("/enhanced/sitemap/regenerate", requireAuth, async (req, res) => {
+router.post("/enhanced/sitemap/regenerate", requireAdmin, async (req, res) => {
   try {
     await clearCache("sitemap:xml:*");
     res.json({ success: true, message: "Sitemap cache cleared successfully" });
@@ -1080,7 +1081,7 @@ router.get("/enhanced/robots-txt", async (req, res) => {
 });
 
 // Update robots.txt content
-router.patch("/enhanced/robots-txt", requireAuth, async (req, res) => {
+router.patch("/enhanced/robots-txt", requireAdmin, async (req, res) => {
   try {
     const { content } = req.body;
     
