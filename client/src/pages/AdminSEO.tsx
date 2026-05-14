@@ -144,6 +144,11 @@ const seoSettingsSchema = z.object({
   businessHours: z.string().optional(),
   latitude: z.preprocess((v) => (v === "" ? undefined : v), z.coerce.number().optional()),
   longitude: z.preprocess((v) => (v === "" ? undefined : v), z.coerce.number().optional()),
+  siteLogoUrl: optionalString(z.string().url()),
+  googleVerification: z.string().optional(),
+  bingVerification: z.string().optional(),
+  yandexVerification: z.string().optional(),
+  socialLinks: z.record(z.string(), z.string()).optional(),
 });
 
 type SeoSettingsFormValues = z.infer<typeof seoSettingsSchema>;
@@ -234,6 +239,11 @@ export default function AdminSEO() {
       businessEmail: settings.businessEmail || "",
       businessHours: settings.businessHours || "",
       defaultLanguage: settings.defaultLanguage || "en",
+      siteLogoUrl: (settings as any).siteLogoUrl || "",
+      googleVerification: (settings as any).googleVerification || "",
+      bingVerification: (settings as any).bingVerification || "",
+      yandexVerification: (settings as any).yandexVerification || "",
+      socialLinks: ((settings as any).socialLinks as Record<string, string>) || {},
     });
   }, [settings, form]);
 
@@ -626,6 +636,47 @@ export default function AdminSEO() {
                               </FormItem>
                             )}
                           />
+
+                          <FormField
+                            control={form.control}
+                            name="siteLogoUrl"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>{t("admin.siteLogoUrl", "Site Logo URL")}</FormLabel>
+                                <FormControl>
+                                  <Input {...field} value={field.value || ""} placeholder="https://example.com/logo.png" />
+                                </FormControl>
+                                <FormDescription>
+                                  {t("admin.siteLogoUrlDesc", "Used by Organization schema. Recommended: 512×512 PNG or SVG.")}
+                                </FormDescription>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <div className="space-y-2">
+                            <div className="text-sm font-medium">{t("admin.socialLinks", "Social Links")}</div>
+                            <p className="text-xs text-muted-foreground">
+                              {t("admin.socialLinksDesc", "Public profile URLs. Used in Organization schema (sameAs) and rendered in the footer.")}
+                            </p>
+                            {(["twitter", "facebook", "instagram", "youtube", "linkedin"] as const).map((key) => (
+                              <FormField
+                                key={key}
+                                control={form.control}
+                                name={`socialLinks.${key}` as any}
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel className="text-xs capitalize text-muted-foreground">{key}</FormLabel>
+                                    <FormControl>
+                                      <Input {...field} value={field.value || ""} placeholder={`https://${key}.com/yourhandle`} />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                            ))}
+                          </div>
+
                           <Button type="submit" disabled={updateSettingsMutation.isPending}>
                             {updateSettingsMutation.isPending ? t("common.saving", "Saving…") : t("common.save", "Save")}
                           </Button>
@@ -737,6 +788,57 @@ export default function AdminSEO() {
                             )}
                           />
                         </div>
+
+                        <div className="rounded-md border p-4 space-y-3">
+                          <div>
+                            <div className="text-sm font-medium">{t("admin.siteVerification", "Search Engine Verification")}</div>
+                            <p className="text-xs text-muted-foreground">
+                              {t("admin.siteVerificationDesc", "Paste the content value from each search console's HTML verification tag. They render automatically as meta tags on every page.")}
+                            </p>
+                          </div>
+                          <div className="grid gap-3 md:grid-cols-3">
+                            <FormField
+                              control={form.control}
+                              name="googleVerification"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel className="text-xs">Google</FormLabel>
+                                  <FormControl>
+                                    <Input {...field} value={field.value || ""} placeholder="abc123…" />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={form.control}
+                              name="bingVerification"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel className="text-xs">Bing (msvalidate.01)</FormLabel>
+                                  <FormControl>
+                                    <Input {...field} value={field.value || ""} placeholder="abc123…" />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={form.control}
+                              name="yandexVerification"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel className="text-xs">Yandex</FormLabel>
+                                  <FormControl>
+                                    <Input {...field} value={field.value || ""} placeholder="abc123…" />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                        </div>
+
                         <Button type="submit" disabled={updateSettingsMutation.isPending}>
                           {updateSettingsMutation.isPending ? t("common.saving", "Saving…") : t("common.save", "Save")}
                         </Button>

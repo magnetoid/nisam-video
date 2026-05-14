@@ -187,6 +187,12 @@ export default function VideoPage() {
       video.tags.length > 0 && {
         keywords: video.tags.map((tag) => tag.tagName).join(", "),
       }),
+    // Speakable schema — lets voice assistants (Google Assistant) read the
+    // title + description aloud. 2026 best practice for AI/voice search.
+    speakable: {
+      "@type": "SpeakableSpecification",
+      cssSelector: ["h1[data-testid=\"text-video-title\"]"],
+    },
   };
 
   // Breadcrumb structured data

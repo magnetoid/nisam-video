@@ -209,6 +209,12 @@ export function SEO({
       setOrCreateMeta("robots", "noindex, follow");
     }
 
+    // Search engine verification tokens (set by admin in SEO settings)
+    const s = settings as any;
+    if (s?.googleVerification) setOrCreateMeta("google-site-verification", s.googleVerification);
+    if (s?.bingVerification) setOrCreateMeta("msvalidate.01", s.bingVerification);
+    if (s?.yandexVerification) setOrCreateMeta("yandex-verification", s.yandexVerification);
+
     return () => {
       cleanupDynamicTags();
     };

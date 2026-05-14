@@ -35,7 +35,12 @@ export default function About() {
   const siteName = seoSettings?.siteName || "";
   const siteDescription = seoSettings?.siteDescription || "";
   const origin = typeof window !== "undefined" ? window.location.origin : "";
-  const logoUrl = settings?.pwaIcon512 ? `${origin}${settings.pwaIcon512}` : `${origin}/icon-512.png`;
+  const customLogo = (seoSettings as any)?.siteLogoUrl;
+  const logoUrl = customLogo
+    ? (customLogo.startsWith("http") ? customLogo : `${origin}${customLogo}`)
+    : (settings?.pwaIcon512 ? `${origin}${settings.pwaIcon512}` : `${origin}/icon-512.png`);
+  const socialLinksObj = ((seoSettings as any)?.socialLinks as Record<string, string> | undefined) || {};
+  const sameAs = Object.values(socialLinksObj).filter((url) => typeof url === "string" && url.trim().length > 0);
 
   const aboutStructuredData = {
     "@context": "https://schema.org",
@@ -52,7 +57,7 @@ export default function About() {
           height: 512,
         },
         description: siteDescription,
-        sameAs: [],
+        sameAs,
       },
       {
         "@type": "WebPage",
