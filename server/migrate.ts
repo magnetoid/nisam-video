@@ -255,6 +255,10 @@ async function ensureSeoSettingsColumns() {
   await pool.query(`ALTER TABLE "seo_settings" ADD COLUMN IF NOT EXISTS "business_hours" text;`);
   await pool.query(`ALTER TABLE "seo_settings" ADD COLUMN IF NOT EXISTS "latitude" double precision;`);
   await pool.query(`ALTER TABLE "seo_settings" ADD COLUMN IF NOT EXISTS "longitude" double precision;`);
+  await pool.query(`ALTER TABLE "seo_settings" ADD COLUMN IF NOT EXISTS "site_logo_url" text;`);
+  await pool.query(`ALTER TABLE "seo_settings" ADD COLUMN IF NOT EXISTS "google_verification" text;`);
+  await pool.query(`ALTER TABLE "seo_settings" ADD COLUMN IF NOT EXISTS "bing_verification" text;`);
+  await pool.query(`ALTER TABLE "seo_settings" ADD COLUMN IF NOT EXISTS "yandex_verification" text;`);
 }
 
 async function ensureChannelRecommendationsTable() {

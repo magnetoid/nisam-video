@@ -1151,6 +1151,10 @@ export class MemStorage implements IStorage {
             businessHours: null,
             latitude: null,
             longitude: null,
+            siteLogoUrl: null,
+            googleVerification: null,
+            bingVerification: null,
+            yandexVerification: null,
             updatedAt: new Date()
         };
     }

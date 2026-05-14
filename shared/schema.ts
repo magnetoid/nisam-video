@@ -337,6 +337,12 @@ export const seoSettings = pgTable("seo_settings", {
   businessHours: text("business_hours"),
   latitude: doublePrecision("latitude"),
   longitude: doublePrecision("longitude"),
+  // Site logo for Organization schema (separate from PWA icon)
+  siteLogoUrl: text("site_logo_url"),
+  // Search engine verification tokens — auto-injected as <meta name="..." content="...">
+  googleVerification: text("google_verification"),
+  bingVerification: text("bing_verification"),
+  yandexVerification: text("yandex_verification"),
   updatedAt: timestamp("updated_at")
     .notNull()
     .default(sql`now()`),

@@ -58,6 +58,8 @@ const seoSettingsSchema = z.object({
   siteName: z.string().min(1).max(60).optional(),
   siteDescription: z.string().min(50).max(160).optional(),
   ogImage: z.string().url().optional(),
+  twitterHandle: z.string().optional(),
+  socialLinks: z.record(z.string(), z.string()).optional(),
   metaKeywords: z.string().optional(),
   googleSearchConsoleApiKey: z.string().optional(),
   bingWebmasterApiKey: z.string().optional(),
@@ -77,6 +79,10 @@ const seoSettingsSchema = z.object({
   businessHours: z.string().optional(),
   latitude: z.number().optional(),
   longitude: z.number().optional(),
+  siteLogoUrl: z.string().url().optional().or(z.literal("")),
+  googleVerification: z.string().optional(),
+  bingVerification: z.string().optional(),
+  yandexVerification: z.string().optional(),
 });
 
 // Meta tag schema
@@ -197,6 +203,10 @@ router.get("/enhanced/settings", async (req, res) => {
         businessHours: enhanced.businessHours,
         latitude: enhanced.latitude,
         longitude: enhanced.longitude,
+        siteLogoUrl: (enhanced as any).siteLogoUrl,
+        googleVerification: (enhanced as any).googleVerification,
+        bingVerification: (enhanced as any).bingVerification,
+        yandexVerification: (enhanced as any).yandexVerification,
       });
     } else {
       res.json(settings);
