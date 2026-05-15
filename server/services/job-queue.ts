@@ -60,22 +60,23 @@ export class JobQueue {
       let processedCount = 0;
 
       while (processedCount < MAX_BATCH_SIZE) {
-        // Find next pending job
-        // Note: Drizzle ORM doesn't easily support SKIP LOCKED yet without raw SQL
-        // so we'll just pick one and try to lock it by setting status to running immediately
-        const jobs = await db.select()
-          .from(scrapeJobs)
-          .where(eq(scrapeJobs.status, "pending"))
-          .orderBy(scrapeJobs.startedAt)
-          .limit(1);
+        // Atomic claim: update pending job to running and return it, skipping locked rows
+        const rawRes = await db.execute(sql`
+          UPDATE scrape_jobs
+          SET status = 'running', transitioning = true
+          WHERE id = (
+            SELECT id FROM scrape_jobs
+            WHERE status = 'pending'
+            ORDER BY started_at ASC
+            LIMIT 1
+            FOR UPDATE SKIP LOCKED
+          )
+          RETURNING *;
+        `);
 
-        if (jobs.length === 0) break;
-
-        const job = jobs[0];
+        if (!rawRes || rawRes.length === 0) break;
+        const job = rawRes[0] as ScrapeJob;
         
-        // Optimistic locking: try to set status to running
-        // If another instance picked it up, this update might fail or return 0 rows if we added version checking
-        // But for now, simple status update is "good enough" for low scale
         try {
             await this.runJob(job);
         } catch (error) {

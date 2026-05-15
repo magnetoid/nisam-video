@@ -16,12 +16,13 @@ export function getCorsConfig(): CorsConfig {
   const allOrigins = [
     baseUrl,
     ...allowedOrigins,
-    "http://localhost:3000",
-    "http://localhost:5173",
-    "http://localhost:5001",
-    "https://*.pages.dev",
-    "https://*.vercel.app",
-    "https://*.coolify.io",
+    ...(process.env.NODE_ENV === "development" 
+      ? [
+          "http://localhost:3000",
+          "http://localhost:5173",
+          "http://localhost:5001"
+        ]
+      : [])
   ].filter(Boolean);
 
   return {

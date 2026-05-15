@@ -189,37 +189,29 @@ export async function clearCache(pattern: string): Promise<void> {
   if (!redis) return;
 
   try {
-    const keys = await pRetry(
-      async () => {
-        if (redis.status !== "ready") {
-          throw new Error(`Redis not ready (status=${redis.status})`);
-        }
-        return await redis.keys(pattern);
-      },
-      {
-        retries: 3,
-        factor: 2,
-        minTimeout: 200,
-        maxTimeout: 2000,
-        onFailedAttempt: () => {},
-      },
-    ).catch(() => [] as string[]);
-    if (keys.length > 0) {
-      await pRetry(
-        async () => {
-          if (redis.status !== "ready") {
-            throw new Error(`Redis not ready (status=${redis.status})`);
-          }
-          await redis.del(keys);
-        },
-        {
-          retries: 3,
-          factor: 2,
-          minTimeout: 200,
-          maxTimeout: 2000,
-          onFailedAttempt: () => {},
-        },
-      ).catch(() => {});
+    if (redis.status !== "ready") {
+      throw new Error(`Redis not ready (status=${redis.status})`);
+    }
+
+    // Use SCAN to avoid blocking Redis on large keyspaces
+    let cursor = "0";
+    const keysToDelete: string[] = [];
+    
+    do {
+      const result = await redis.scan(cursor, "MATCH", pattern, "COUNT", 100);
+      cursor = result[0];
+      const keys = result[1];
+      if (keys.length > 0) {
+        keysToDelete.push(...keys);
+      }
+    } while (cursor !== "0");
+
+    if (keysToDelete.length > 0) {
+      // Delete in batches of 500 to avoid large payload limits
+      for (let i = 0; i < keysToDelete.length; i += 500) {
+        const batch = keysToDelete.slice(i, i + 500);
+        await redis.del(batch);
+      }
     }
   } catch (error) {
     console.error(`[Redis] Clear error for pattern ${pattern}:`, error);

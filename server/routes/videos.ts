@@ -4,7 +4,7 @@ import { generateSlug } from "../utils.js";
 import { db } from "../db.js";
 import { videos, videoLikes, videoViews, tags, videoCategories } from "../../shared/schema.js";
 import { categorizeVideo } from "../ai-service.js";
-import { requireAuth } from "../middleware/auth.js";
+import { requireAuth, requireAdmin } from "../middleware/auth.js";
 import { kvService } from "../kv-service.js";
 import { eq, and, sql as sqlOp, inArray, isNull } from "drizzle-orm";
 import { getUserIdentifier } from "../utils.js";
@@ -786,11 +786,21 @@ router.post("/batch/like-status", async (req, res) => {
   }
 });
 
-router.post("/scrape", requireAuth, async (req, res) => {
+router.post("/scrape", requireAdmin, async (req, res) => {
   try {
     const { url } = req.body;
     if (!url) {
       return res.status(400).json({ error: "URL is required" });
+    }
+
+    try {
+      const parsedUrl = new URL(url);
+      const allowedHosts = ["youtube.com", "www.youtube.com", "youtu.be", "tiktok.com", "www.tiktok.com", "vimeo.com", "www.vimeo.com"];
+      if (!allowedHosts.includes(parsedUrl.hostname)) {
+        return res.status(403).json({ error: "Host not allowed for scraping" });
+      }
+    } catch {
+      return res.status(400).json({ error: "Invalid URL format" });
     }
 
     const { scrapeYouTubeVideoPage } = await import("../video-scraper.js");
@@ -874,9 +884,24 @@ router.post("/scrape", requireAuth, async (req, res) => {
   }
 });
 
-router.post("/scrape-batch", requireAuth, async (req, res) => {
+router.post("/scrape-batch", requireAdmin, async (req, res) => {
   try {
     const { urls } = req.body;
+    if (!urls || !Array.isArray(urls)) {
+      return res.status(400).json({ error: "URLs array is required" });
+    }
+
+    const allowedHosts = ["youtube.com", "www.youtube.com", "youtu.be", "tiktok.com", "www.tiktok.com", "vimeo.com", "www.vimeo.com"];
+    for (const url of urls) {
+      try {
+        const parsedUrl = new URL(url);
+        if (!allowedHosts.includes(parsedUrl.hostname)) {
+          return res.status(403).json({ error: `Host not allowed for scraping: ${parsedUrl.hostname}` });
+        }
+      } catch {
+        return res.status(400).json({ error: `Invalid URL format: ${url}` });
+      }
+    }
     if (!Array.isArray(urls) || urls.length === 0) {
       return res.status(400).json({ error: "URLs array is required" });
     }

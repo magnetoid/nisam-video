@@ -1,8 +1,8 @@
 import { Router } from "express";
 import { storage } from "../storage/index.js";
 import { db } from "../db.js";
-import { tags, tagTranslations } from "../../shared/schema.js";
-import { eq } from "drizzle-orm";
+import { tags, tagTranslations, channels as channelsTable, videos as videosTable } from "../../shared/schema.js";
+import { eq, sql } from "drizzle-orm";
 
 const router = Router();
 
@@ -36,119 +36,114 @@ router.get("/", async (req, res) => {
     const daysFilterRaw = typeof days === "string" ? parseInt(days, 10) : undefined;
     const daysFilter = typeof daysFilterRaw === "number" && !isNaN(daysFilterRaw) ? daysFilterRaw : undefined;
 
-    // Get total counts
-    const channels = await storage.getAllChannels();
-    const allVideos = await storage.getAllVideos();
-    const allTags = await db
-      .select({ videoId: tags.videoId, tagName: tagTranslations.tagName })
-      .from(tags)
-      .innerJoin(tagTranslations, eq(tags.id, tagTranslations.tagId))
-      .where(eq(tagTranslations.languageCode, "en"));
+    const [channelCountResult, videoCountResult] = await Promise.all([
+      db.select({ count: sql`count(*)` }).from(channelsTable),
+      db.select({ count: sql`count(*)` }).from(videosTable)
+    ]);
+    const channelCount = Number(channelCountResult[0]?.count || 0);
+    const totalVideosCount = Number(videoCountResult[0]?.count || 0);
 
-    // Filter by date if specified
-    let filteredVideos = allVideos;
+    // If we have a days filter, get the count of videos in that range
+    let filteredVideoCount = totalVideosCount;
     if (daysFilter) {
       const cutoffDate = new Date();
       cutoffDate.setDate(cutoffDate.getDate() - daysFilter);
-      filteredVideos = allVideos.filter((v) => {
-        const publishDate = safeParseDate(v.publishDate);
-        const createdAt = safeParseDate((v as any).createdAt);
-        const effective = publishDate || createdAt;
-        if (!effective) return false;
-        return effective >= cutoffDate;
-      });
+      const filteredResult = await db.select({ count: sql`count(*)` })
+        .from(videosTable)
+        .where(sql`COALESCE(${videosTable.publishDate}, ${videosTable.createdAt}) >= ${cutoffDate}`);
+      filteredVideoCount = Number(filteredResult[0]?.count || 0);
     }
-
-    // Get filtered video IDs for tag filtering
-    const filteredVideoIds = new Set(filteredVideos.map((v) => v.id));
 
     // Top categories by video count
-    const categoryVideoCount = new Map<
-      string,
-      { name: string; count: number }
-    >();
-    for (const video of filteredVideos) {
-      if (video.categories && video.categories.length > 0) {
-        for (const cat of video.categories) {
-          const existing = categoryVideoCount.get(cat.id);
-          if (existing) {
-            existing.count++;
-          } else {
-            categoryVideoCount.set(cat.id, { name: cat.name || "Unknown", count: 1 });
-          }
-        }
-      }
-    }
-    const topCategories = Array.from(categoryVideoCount.values())
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 5);
+    const topCategoriesQuery = await db.execute(sql`
+      SELECT t.name, COUNT(vc.video_id) as count
+      FROM video_categories vc
+      JOIN category_translations t ON vc.category_id = t.category_id
+      JOIN videos v ON vc.video_id = v.id
+      WHERE t.language_code = 'en'
+      ${daysFilter ? sql`AND COALESCE(v.publish_date, v.created_at) >= NOW() - INTERVAL '${sql.raw(daysFilter.toString())} days'` : sql``}
+      GROUP BY t.name
+      ORDER BY count DESC
+      LIMIT 5
+    `);
+    const topCategories = topCategoriesQuery.map((row: any) => ({ name: row.name, count: Number(row.count) }));
 
     // Channel performance (videos per channel)
-    const channelPerformance = channels.map((channel) => ({
-      name: channel.name,
-      videoCount: filteredVideos.filter((v) => v.channelId === channel.id)
-        .length,
-    }));
+    const channelPerformanceQuery = await db.execute(sql`
+      SELECT c.name, COUNT(v.id) as count
+      FROM channels c
+      LEFT JOIN videos v ON c.id = v.channel_id
+      ${daysFilter ? sql`AND COALESCE(v.publish_date, v.created_at) >= NOW() - INTERVAL '${sql.raw(daysFilter.toString())} days'` : sql``}
+      GROUP BY c.name
+      ORDER BY count DESC
+      LIMIT 10
+    `);
+    const channelPerformance = channelPerformanceQuery.map((row: any) => ({ name: row.name, videoCount: Number(row.count) }));
 
-    // Tag frequency (only from filtered videos)
-    const tagFrequency = new Map<string, number>();
-    for (const tag of allTags) {
-      if (!tag.tagName) continue;
-      if (filteredVideoIds.has(tag.videoId)) {
-        const count = tagFrequency.get(tag.tagName) || 0;
-        tagFrequency.set(tag.tagName, count + 1);
-      }
-    }
-    const topTags = Array.from(tagFrequency.entries())
-      .map(([name, count]) => ({ name, count }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 20);
+    // Tag frequency
+    const tagFrequencyQuery = await db.execute(sql`
+      SELECT tt.tag_name, COUNT(t.video_id) as count
+      FROM tags t
+      JOIN tag_translations tt ON t.id = tt.tag_id
+      JOIN videos v ON t.video_id = v.id
+      WHERE tt.language_code = 'en'
+      ${daysFilter ? sql`AND COALESCE(v.publish_date, v.created_at) >= NOW() - INTERVAL '${sql.raw(daysFilter.toString())} days'` : sql``}
+      GROUP BY tt.tag_name
+      ORDER BY count DESC
+      LIMIT 20
+    `);
+    const topTags = tagFrequencyQuery.map((row: any) => ({ name: row.tag_name, count: Number(row.count) }));
 
     // Category distribution
-    const categoryDistribution = Array.from(categoryVideoCount.values()).sort(
-      (a, b) => b.count - a.count,
-    );
+    const categoryDistributionQuery = await db.execute(sql`
+      SELECT t.name, COUNT(vc.video_id) as count
+      FROM video_categories vc
+      JOIN category_translations t ON vc.category_id = t.category_id
+      JOIN videos v ON vc.video_id = v.id
+      WHERE t.language_code = 'en'
+      ${daysFilter ? sql`AND COALESCE(v.publish_date, v.created_at) >= NOW() - INTERVAL '${sql.raw(daysFilter.toString())} days'` : sql``}
+      GROUP BY t.name
+      ORDER BY count DESC
+    `);
+    const categoryDistribution = categoryDistributionQuery.map((row: any) => ({ name: row.name, count: Number(row.count) }));
 
     // Videos per day
-    const videosPerDay = new Map<string, number>();
-    for (const video of filteredVideos) {
-      const publishDate = safeParseDate(video.publishDate);
-      const createdAt = safeParseDate((video as any).createdAt);
-      const effective = publishDate || createdAt;
-      if (!effective) continue;
-      const date = effective.toISOString().split("T")[0];
-      videosPerDay.set(date, (videosPerDay.get(date) || 0) + 1);
-    }
-    const dailyGrowth = Array.from(videosPerDay.entries())
-      .map(([date, count]) => ({ date, count }))
-      .sort((a, b) => a.date.localeCompare(b.date));
+    const dailyGrowthQuery = await db.execute(sql`
+      SELECT DATE(COALESCE(publish_date, created_at)) as date, COUNT(id) as count
+      FROM videos
+      ${daysFilter ? sql`WHERE COALESCE(publish_date, created_at) >= NOW() - INTERVAL '${sql.raw(daysFilter.toString())} days'` : sql``}
+      GROUP BY DATE(COALESCE(publish_date, created_at))
+      ORDER BY date ASC
+    `);
+    const dailyGrowth = dailyGrowthQuery.map((row: any) => ({ 
+      date: new Date(row.date).toISOString().split("T")[0], 
+      count: Number(row.count) 
+    }));
 
     // Calculate filtered totals
-    const uniqueChannelIds = new Set(filteredVideos.map((v) => v.channelId));
-    const uniqueCategoryIds = new Set<string>();
-    for (const video of filteredVideos) {
-      if (video.categories) {
-        for (const cat of video.categories) {
-          uniqueCategoryIds.add(cat.id);
-        }
-      }
-    }
-    const filteredTagCount = Array.from(tagFrequency.values()).reduce(
-      (sum, count) => sum + count,
-      0,
-    );
+    const uniqueChannelsResult = await db.execute(sql`
+      SELECT COUNT(DISTINCT channel_id) as count FROM videos
+      ${daysFilter ? sql`WHERE COALESCE(publish_date, created_at) >= NOW() - INTERVAL '${sql.raw(daysFilter.toString())} days'` : sql``}
+    `);
+    
+    const uniqueCategoriesResult = await db.execute(sql`
+      SELECT COUNT(DISTINCT vc.category_id) as count 
+      FROM video_categories vc
+      JOIN videos v ON vc.video_id = v.id
+      ${daysFilter ? sql`WHERE COALESCE(v.publish_date, v.created_at) >= NOW() - INTERVAL '${sql.raw(daysFilter.toString())} days'` : sql``}
+    `);
 
     res.json({
       totals: {
-        channels: uniqueChannelIds.size,
-        videos: filteredVideos.length,
-        categories: uniqueCategoryIds.size,
-        tags: filteredTagCount,
-        allTimeVideos: allVideos.length,
+        channels: Number(uniqueChannelsResult[0]?.count || 0),
+        videos: filteredVideoCount,
+        categories: Number(uniqueCategoriesResult[0]?.count || 0),
+        tags: topTags.reduce((sum: number, t: any) => sum + t.count, 0),
+        allTimeVideos: totalVideosCount,
       },
       topCategories,
       channelPerformance: channelPerformance.sort(
-        (a, b) => b.videoCount - a.videoCount,
+        (a: any, b: any) => b.videoCount - a.videoCount,
       ),
       categoryDistribution,
       topTags,

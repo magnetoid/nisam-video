@@ -785,11 +785,27 @@ export class DatabaseStorage implements IStorage {
 
       const categoryIdSet = new Set(allVideoCats.map((vc) => vc.categoryId));
 
-      // Get localized categories
-      const allCategories = categoryIdSet.size > 0
-        ? await Promise.all(Array.from(categoryIdSet).map(cid => this.getLocalizedCategory(cid, lang)))
-        : [];
-      const categoryMap = new Map(allCategories.filter((c): c is LocalizedCategory => !!c).map(c => [c.id, c]));
+      // Get localized categories in bulk to avoid N+1
+      let allCategories: LocalizedCategory[] = [];
+      if (categoryIdSet.size > 0) {
+        const catIds = Array.from(categoryIdSet);
+        const baseCategories = await db.select().from(categories).where(inArray(categories.id, catIds));
+        
+        const [langTrans, enTrans] = await Promise.all([
+          db.select().from(categoryTranslations).where(and(inArray(categoryTranslations.categoryId, catIds), eq(categoryTranslations.languageCode, lang))),
+          db.select().from(categoryTranslations).where(and(inArray(categoryTranslations.categoryId, catIds), eq(categoryTranslations.languageCode, 'en')))
+        ]);
+
+        type CatTransRow = (typeof langTrans)[number];
+        const langMap = new Map<string, CatTransRow>(langTrans.map(t => [t.categoryId, t]));
+        const enMap = new Map<string, CatTransRow>(enTrans.map(t => [t.categoryId, t]));
+
+        allCategories = baseCategories.map(base => {
+          const trans = langMap.get(base.id) || enMap.get(base.id);
+          return trans ? { ...base, translations: [trans], name: trans.name, slug: trans.slug } : { ...base, translations: [], name: "", slug: null };
+        });
+      }
+      const categoryMap = new Map(allCategories.map(c => [c.id, c]));
 
       // Group categories by video ID
       const categoriesByVideoId = new Map<string, LocalizedCategory[]>();
