@@ -6,10 +6,11 @@
 //   1. https://cdn.syndication.twimg.com/tweet-result  (powers X's embed widget)
 //      → JSON with mediaDetails[], author, created_at, video_info.variants[]
 //   2. https://publish.twitter.com/oembed              (official, documented)
-//      → fallback HTML embed when (1) fails or returns no media
+//      → embed HTML; called in parallel with (1) on the happy path.
 //
-// Posts that do not contain a native video (photo-only, text-only) are rejected
-// — this module's contract is "video posts only".
+// Posts that do not contain a native video (photo-only, text-only, or video
+// with no mp4 variant) are rejected — this module's contract is
+// "playable video posts only".
 
 import { recordError } from "./error-log-service.js";
 
@@ -18,11 +19,11 @@ export interface ResolvedXVideo {
   videoId: string;
   /** Canonical tweet URL on x.com */
   permanentUrl: string;
-  /** Tweet text used as the title (truncated to first line). */
+  /** Tweet text used as the title (truncated to first line, grapheme-safe). */
   title: string;
   /** Full tweet text used as description. */
   description: string;
-  /** Direct mp4 URL of the highest-bitrate variant. May be empty if only HLS was returned. */
+  /** Direct mp4 URL of the highest-bitrate variant. Guaranteed non-empty. */
   videoUrl: string;
   /** Thumbnail (poster) image URL. */
   thumbnailUrl: string;
@@ -38,10 +39,19 @@ export interface ResolvedXVideo {
   authorName?: string;
 }
 
-const TWEET_URL_RE = /^https?:\/\/(?:www\.|mobile\.)?(?:x|twitter)\.com\/[A-Za-z0-9_]{1,20}\/status(?:es)?\/(\d{1,32})(?:\/|\?|#|$)/i;
+const TWEET_URL_RE = /^https?:\/\/(?:www\.|mobile\.)?(?:x|twitter)\.com\/([A-Za-z0-9_]{1,20})\/status(?:es)?\/(\d{1,32})(?:\/|\?|#|$)/i;
 const DEFAULT_TIMEOUT_MS = 8000;
+// Defensive cap on upstream response body. The real responses are <50KB; this
+// stops a compromised/misconfigured CDN from filling memory.
+const MAX_RESPONSE_BYTES = 5 * 1024 * 1024;
 
 export function extractTweetId(url: string): string | null {
+  const trimmed = url.trim();
+  const m = TWEET_URL_RE.exec(trimmed);
+  return m ? m[2] : null;
+}
+
+function extractHandleFromUrl(url: string): string | null {
   const trimmed = url.trim();
   const m = TWEET_URL_RE.exec(trimmed);
   return m ? m[1] : null;
@@ -49,12 +59,11 @@ export function extractTweetId(url: string): string | null {
 
 // Token generation used by X's embed widget — derived from the tweet ID.
 // Reverse-engineered from publish.twitter.com's widget bundle (same approach
-// used by vercel/react-tweet). Token is required by the syndication endpoint.
+// used by vercel/react-tweet). Token is an anti-abuse signal, not a per-tweet
+// identifier — the syndication endpoint resolves by the `id=` param.
 export function syndicationToken(tweetId: string): string {
   const n = Number(tweetId);
   if (!Number.isFinite(n) || n <= 0) {
-    // Fallback to a static-ish token; the endpoint accepts any non-empty string
-    // for some tweets but the derived form is what the embed widget uses.
     return "1";
   }
   return ((n / 1e15) * Math.PI).toString(6 ** 2).replace(/(0+|\.)/g, "");
@@ -72,9 +81,14 @@ async function fetchJson<T>(url: string, init?: RequestInit): Promise<T | null> 
       },
     });
     if (!res.ok) return null;
+    const declared = parseInt(res.headers.get("content-length") || "0", 10);
+    if (Number.isFinite(declared) && declared > MAX_RESPONSE_BYTES) {
+      return null;
+    }
     const text = await res.text();
     // Syndication endpoint sometimes returns a 200 with an empty body.
     if (!text) return null;
+    if (text.length > MAX_RESPONSE_BYTES) return null;
     try {
       return JSON.parse(text) as T;
     } catch {
@@ -110,7 +124,6 @@ interface SyndicationTweet {
     screen_name?: string;
   };
   mediaDetails?: SyndicationMediaDetail[];
-  // Newer responses sometimes nest under "tweet" / "data"
   __typename?: string;
 }
 
@@ -122,9 +135,14 @@ function pickBestMp4(variants: SyndicationVariant[] | undefined): string {
   return mp4s[0]?.url ?? "";
 }
 
+// Grapheme-safe first-line truncation. JS string.length counts UTF-16 code
+// units, so slicing at `max` can split a surrogate pair (emoji) or a CJK
+// composed character. Spreading into an array yields code points instead.
 function firstLine(text: string, max = 120): string {
   const first = text.split(/\r?\n/, 1)[0] ?? "";
-  return first.length <= max ? first : first.slice(0, max - 1) + "…";
+  const chars = Array.from(first);
+  if (chars.length <= max) return first;
+  return chars.slice(0, max - 1).join("") + "…";
 }
 
 function toIsoDate(twitterDate: string | undefined): string | undefined {
@@ -150,9 +168,21 @@ async function fetchOEmbed(tweetUrl: string): Promise<OEmbedResponse | null> {
   return fetchJson<OEmbedResponse>(`https://publish.twitter.com/oembed?${params.toString()}`);
 }
 
+function sanitizeUrlForLog(url: string): string {
+  try {
+    const u = new URL(url);
+    u.search = "";
+    u.hash = "";
+    return u.toString();
+  } catch {
+    return "<unparseable>";
+  }
+}
+
 /**
  * Resolve a single X tweet URL into normalized video metadata.
- * Throws if the URL is not a valid X post or if the post contains no video.
+ * Throws if the URL is not a valid X post, the post contains no video,
+ * or the only video variants are HLS/m3u8 (no playable mp4).
  */
 export async function resolveXVideo(url: string): Promise<ResolvedXVideo> {
   const tweetId = extractTweetId(url);
@@ -165,31 +195,42 @@ export async function resolveXVideo(url: string): Promise<ResolvedXVideo> {
     `https://cdn.syndication.twimg.com/tweet-result?id=${encodeURIComponent(tweetId)}` +
     `&token=${encodeURIComponent(token)}&lang=en`;
 
-  const tweet = await fetchJson<SyndicationTweet>(syndicationUrl);
+  // Best-effort canonical URL from the source URL itself — lets us fire
+  // oEmbed in parallel with the syndication call. We replace it with the
+  // post-response canonical (preferring the upstream-reported handle) if we
+  // get one back.
+  const handleFromUrl = extractHandleFromUrl(url) ?? "i";
+  const preliminaryCanonical = `https://x.com/${handleFromUrl}/status/${tweetId}`;
 
-  // Run oEmbed in parallel-ish — fire only if we still need embed HTML below.
-  let oEmbed: OEmbedResponse | null = null;
+  const [tweet, oEmbedInitial] = await Promise.all([
+    fetchJson<SyndicationTweet>(syndicationUrl),
+    fetchOEmbed(preliminaryCanonical),
+  ]);
 
   if (!tweet || !tweet.mediaDetails) {
-    // Try one more time with a freshly generated token (the endpoint is flaky).
+    // Retry once with cache-bust — the endpoint occasionally returns 200 with
+    // an empty body. Sequential here is intentional (already paid one RTT).
     const retry = await fetchJson<SyndicationTweet>(
       `${syndicationUrl}&_=${Date.now()}`,
     );
     if (retry && retry.mediaDetails) {
-      return finalize(retry, tweetId, await fetchOEmbed(canonicalTweetUrl(tweetId, retry)));
+      const correctedCanonical = canonicalTweetUrl(tweetId, retry);
+      const oEmbed = correctedCanonical === preliminaryCanonical
+        ? oEmbedInitial
+        : await fetchOEmbed(correctedCanonical);
+      return finalize(retry, tweetId, oEmbed);
     }
     await recordError({
       level: "warn",
       type: "x_resolver_syndication_empty",
       message: "Syndication endpoint returned no media for tweet",
       module: "x-resolver",
-      url,
+      url: sanitizeUrlForLog(url),
     });
     throw new Error("Could not load tweet data from X. The post may be private, deleted, or temporarily unavailable.");
   }
 
-  oEmbed = await fetchOEmbed(canonicalTweetUrl(tweetId, tweet));
-  return finalize(tweet, tweetId, oEmbed);
+  return finalize(tweet, tweetId, oEmbedInitial);
 }
 
 function canonicalTweetUrl(tweetId: string, tweet: SyndicationTweet): string {
@@ -204,14 +245,21 @@ function finalize(
 ): ResolvedXVideo {
   const videoMedia = (tweet.mediaDetails ?? []).find((m) => m.type === "video");
   if (!videoMedia) {
-    // Photo-only or text-only posts are rejected by contract.
+    // Photo-only, GIF-only, or text-only posts are rejected by contract.
     throw new Error("This X post does not contain a video. Only video posts are supported.");
+  }
+
+  const videoUrl = pickBestMp4(videoMedia.video_info?.variants);
+  if (!videoUrl) {
+    // Some video posts only expose HLS/m3u8 variants — we can't store those
+    // as a directly-embeddable mp4. Reject so the admin gets a clear message
+    // instead of a broken player downstream.
+    throw new Error("This X post's video is HLS-only or unsupported; no playable mp4 variant found.");
   }
 
   const text = tweet.full_text ?? tweet.text ?? "";
   const title = firstLine(text) || `X video ${tweetId}`;
   const description = text;
-  const videoUrl = pickBestMp4(videoMedia.video_info?.variants);
   const thumbnailUrl = videoMedia.media_url_https;
   const durationMs = videoMedia.video_info?.duration_millis;
   const durationSeconds = durationMs ? Math.max(1, Math.round(durationMs / 1000)) : undefined;

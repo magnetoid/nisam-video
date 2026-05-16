@@ -23,15 +23,12 @@ import {
 } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { Loader2, ExternalLink, Sparkles } from "lucide-react";
 import {
-  Youtube,
-  Twitter,
-  Instagram,
-  Loader2,
-  ExternalLink,
-  Sparkles,
-} from "lucide-react";
-import { SiTiktok } from "react-icons/si";
+  PLATFORM_CONFIG,
+  PLATFORM_ORDER,
+  type PlatformKey,
+} from "@/lib/platform-config";
 
 interface SourceStat {
   platform: string;
@@ -39,31 +36,31 @@ interface SourceStat {
   videoCount: number;
 }
 
-type PlatformTab = "youtube" | "x" | "tiktok" | "instagram";
-
-const PLATFORM_LABEL: Record<PlatformTab, string> = {
-  youtube: "YouTube",
-  x: "X",
-  tiktok: "TikTok",
-  instagram: "Instagram",
-};
-
-const PLATFORM_ICON: Record<PlatformTab, React.ComponentType<{ className?: string }>> = {
-  youtube: Youtube,
-  x: Twitter, // lucide doesn't have an X-brand icon; Twitter is the closest semantic match
-  tiktok: SiTiktok as any,
-  instagram: Instagram,
-};
+interface XVideoPreview {
+  ok: boolean;
+  tweetId: string;
+  permanentUrl: string;
+  title: string;
+  description: string;
+  thumbnailUrl: string;
+  videoUrl: string | null;
+  durationSeconds: number | null;
+  publishDate: string | null;
+  author: {
+    screenName: string | null;
+    name: string | null;
+  };
+}
 
 export default function AdminSources() {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState<PlatformTab>("youtube");
+  const [activeTab, setActiveTab] = useState<PlatformKey>("youtube");
 
   const { data: statsResp } = useQuery<{ stats: SourceStat[] }>({
     queryKey: ["/api/admin/sources/stats"],
   });
   const stats = statsResp?.stats ?? [];
-  const statFor = (p: PlatformTab) =>
+  const statFor = (p: PlatformKey): SourceStat =>
     stats.find((s) => s.platform === p) ?? { platform: p, channelCount: 0, videoCount: 0 };
 
   return (
@@ -81,15 +78,15 @@ export default function AdminSources() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {(Object.keys(PLATFORM_LABEL) as PlatformTab[]).map((p) => {
-          const Icon = PLATFORM_ICON[p];
+        {PLATFORM_ORDER.map((p) => {
+          const { label, icon: Icon } = PLATFORM_CONFIG[p];
           const s = statFor(p);
           return (
             <Card key={p} decoration="top" decorationColor={p === activeTab ? "indigo" : "gray"}>
               <Flex justifyContent="start" className="space-x-3">
                 <Icon className="w-6 h-6 text-muted-foreground" />
                 <div>
-                  <Text>{PLATFORM_LABEL[p]}</Text>
+                  <Text>{label}</Text>
                   <Metric className="text-2xl">{s.videoCount}</Metric>
                   <Text className="text-xs">{s.channelCount} channels</Text>
                 </div>
@@ -99,14 +96,14 @@ export default function AdminSources() {
         })}
       </div>
 
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as PlatformTab)}>
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as PlatformKey)}>
         <TabsList className="grid w-full grid-cols-4">
-          {(Object.keys(PLATFORM_LABEL) as PlatformTab[]).map((p) => {
-            const Icon = PLATFORM_ICON[p];
+          {PLATFORM_ORDER.map((p) => {
+            const { label, icon: Icon } = PLATFORM_CONFIG[p];
             return (
               <TabsTrigger key={p} value={p} data-testid={`tab-source-${p}`}>
                 <Icon className="w-4 h-4 mr-2" />
-                {PLATFORM_LABEL[p]}
+                {label}
               </TabsTrigger>
             );
           })}
@@ -131,11 +128,12 @@ export default function AdminSources() {
 
 function PlatformChannels({ platform }: { platform: "youtube" | "tiktok" }) {
   const { t } = useTranslation();
+  // Per-platform query — server-side filter avoids pulling the full channel
+  // list into the client just to filter it back down.
   const { data: channels = [], isLoading } = useQuery<Channel[]>({
-    queryKey: ["/api/channels"],
+    queryKey: ["/api/channels", { platform }],
   });
 
-  const filtered = channels.filter((c) => c.platform === platform);
   const adminPath = platform === "tiktok" ? "/admin/tiktok" : "/admin/channels";
 
   return (
@@ -143,7 +141,7 @@ function PlatformChannels({ platform }: { platform: "youtube" | "tiktok" }) {
       <Flex justifyContent="between" alignItems="center">
         <div>
           <Text>{t("admin.sources.channelsCount", "Channels")}</Text>
-          <Metric>{filtered.length}</Metric>
+          <Metric>{channels.length}</Metric>
         </div>
         <Link href={adminPath}>
           <Button variant="outline" size="sm" data-testid={`button-manage-${platform}`}>
@@ -157,7 +155,7 @@ function PlatformChannels({ platform }: { platform: "youtube" | "tiktok" }) {
         <div className="py-12 flex justify-center">
           <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
         </div>
-      ) : filtered.length === 0 ? (
+      ) : channels.length === 0 ? (
         <div className="py-12 text-center text-muted-foreground">
           {t(
             "admin.sources.empty",
@@ -165,33 +163,44 @@ function PlatformChannels({ platform }: { platform: "youtube" | "tiktok" }) {
           )}
         </div>
       ) : (
-        <Table className="mt-4">
-          <TableHeader>
-            <TableRow>
-              <TableHead>{t("admin.sources.name", "Name")}</TableHead>
-              <TableHead>{t("admin.sources.url", "URL")}</TableHead>
-              <TableHead className="text-right">{t("admin.sources.videos", "Videos")}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filtered.slice(0, 50).map((c) => (
-              <TableRow key={c.id}>
-                <TableCell className="font-medium">{c.name}</TableCell>
-                <TableCell className="text-muted-foreground truncate max-w-[280px]">
-                  <a
-                    href={c.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="hover:underline"
-                  >
-                    {c.url}
-                  </a>
-                </TableCell>
-                <TableCell className="text-right">{c.videoCount}</TableCell>
+        <>
+          <Table className="mt-4">
+            <TableHeader>
+              <TableRow>
+                <TableHead>{t("admin.sources.name", "Name")}</TableHead>
+                <TableHead>{t("admin.sources.url", "URL")}</TableHead>
+                <TableHead className="text-right">{t("admin.sources.videos", "Videos")}</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {channels.slice(0, 50).map((c) => (
+                <TableRow key={c.id}>
+                  <TableCell className="font-medium">{c.name}</TableCell>
+                  <TableCell className="text-muted-foreground truncate max-w-[280px]">
+                    <a
+                      href={c.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:underline"
+                    >
+                      {c.url}
+                    </a>
+                  </TableCell>
+                  <TableCell className="text-right">{c.videoCount}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+          {channels.length > 50 && (
+            <Text className="mt-3 text-xs text-muted-foreground">
+              {t(
+                "admin.sources.truncated",
+                "Showing first 50 of {{count}} — use Manage for the full list.",
+                { count: channels.length },
+              )}
+            </Text>
+          )}
+        </>
       )}
     </Card>
   );
@@ -201,10 +210,10 @@ function XSourceTab() {
   const { t } = useTranslation();
   const { toast } = useToast();
   const [url, setUrl] = useState("");
-  const [preview, setPreview] = useState<any | null>(null);
+  const [preview, setPreview] = useState<XVideoPreview | null>(null);
 
   const previewMutation = useMutation({
-    mutationFn: async (tweetUrl: string) => {
+    mutationFn: async (tweetUrl: string): Promise<XVideoPreview> => {
       const res = await apiRequest("POST", "/api/admin/x/preview", { url: tweetUrl });
       return res.json();
     },
@@ -249,13 +258,20 @@ function XSourceTab() {
     },
   });
 
+  const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setUrl(e.target.value);
+    // Clear the preview when the URL changes so we never show a preview that
+    // doesn't match what "Add" will import.
+    if (preview) setPreview(null);
+  };
+
   const handlePreview = () => {
     if (!url.trim()) return;
     previewMutation.mutate(url.trim());
   };
 
   const handleAdd = () => {
-    if (!url.trim()) return;
+    if (!preview || !url.trim()) return;
     createMutation.mutate(url.trim());
   };
 
@@ -283,7 +299,7 @@ function XSourceTab() {
             id="x-url"
             placeholder="https://x.com/username/status/1234567890"
             value={url}
-            onChange={(e) => setUrl(e.target.value)}
+            onChange={handleUrlChange}
             data-testid="input-x-tweet-url"
           />
           <Button
@@ -308,6 +324,7 @@ function XSourceTab() {
               <img
                 src={preview.thumbnailUrl}
                 alt=""
+                referrerPolicy="no-referrer"
                 className="w-32 h-32 object-cover rounded"
               />
             )}
@@ -315,10 +332,10 @@ function XSourceTab() {
               <Text className="font-medium truncate">{preview.title}</Text>
               <Text className="text-xs text-muted-foreground">
                 {preview.author?.name
-                  ? `${preview.author.name} (@${preview.author.screenName})`
+                  ? `${preview.author.name} (@${preview.author.screenName ?? "?"})`
                   : `@${preview.author?.screenName ?? "?"}`}
               </Text>
-              {preview.durationSeconds && (
+              {preview.durationSeconds !== null && (
                 <Text className="text-xs text-muted-foreground">
                   {Math.round(preview.durationSeconds)}s
                 </Text>
@@ -346,10 +363,12 @@ function XSourceTab() {
 
 function ComingSoonTab({ platform }: { platform: "instagram" }) {
   const { t } = useTranslation();
+  const cfg = PLATFORM_CONFIG[platform];
+  const Icon = cfg.icon;
   return (
     <Card className="mt-4 py-16 text-center">
-      <Instagram className="w-10 h-10 mx-auto text-muted-foreground mb-3" />
-      <Metric>{PLATFORM_LABEL[platform]}</Metric>
+      <Icon className="w-10 h-10 mx-auto text-muted-foreground mb-3" />
+      <Metric>{cfg.label}</Metric>
       <Text className="mt-2 text-muted-foreground">
         {t(
           "admin.sources.comingSoon",

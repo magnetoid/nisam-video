@@ -180,12 +180,15 @@ describe("x-resolver: resolveXVideo", () => {
       ],
     };
 
+    // Calls now fire in parallel: [syndication, oEmbed] on the first try,
+    // then a single sequential retry on the syndication endpoint when the
+    // first one returns an empty body.
     vi.stubGlobal(
       "fetch",
       makeFetchStub([
-        () => new Response("", { status: 200 }), // first call: empty body
-        () => jsonResponse(success), // retry: success
-        () => jsonResponse({ html: "<blockquote/>" }), // oEmbed
+        () => new Response("", { status: 200 }), // syndication (parallel call 1): empty
+        () => jsonResponse({ html: "<blockquote/>" }), // oEmbed (parallel call 2)
+        () => jsonResponse(success), // syndication retry: success
       ]),
     );
 
@@ -205,5 +208,112 @@ describe("x-resolver: resolveXVideo", () => {
     await expect(
       resolveXVideo("https://x.com/u/status/3"),
     ).rejects.toThrow(/Could not load tweet data/i);
+  });
+
+  it("rejects a tombstoned tweet (response with no mediaDetails field at all)", async () => {
+    // Deleted/suspended tweets often return a tombstone shape with user info
+    // but no mediaDetails array. We currently surface this as the generic
+    // "could not load tweet" error which is acceptable for v1.
+    vi.stubGlobal(
+      "fetch",
+      makeFetchStub([
+        () => jsonResponse({ id_str: "5", text: "gone", user: { screen_name: "u" } }),
+        () => jsonResponse({}),
+        () => jsonResponse({ id_str: "5", text: "gone", user: { screen_name: "u" } }),
+      ]),
+    );
+    await expect(
+      resolveXVideo("https://x.com/u/status/5"),
+    ).rejects.toThrow(/Could not load tweet data/i);
+  });
+
+  it("rejects an animated_gif-only post (gifs are not playable mp4 videos)", async () => {
+    vi.stubGlobal(
+      "fetch",
+      makeFetchStub([
+        () =>
+          jsonResponse({
+            id_str: "6",
+            text: "gif",
+            user: { screen_name: "u" },
+            mediaDetails: [{ type: "animated_gif", media_url_https: "https://pbs.twimg.com/gif.jpg" }],
+          }),
+        () => jsonResponse({}),
+      ]),
+    );
+    await expect(
+      resolveXVideo("https://x.com/u/status/6"),
+    ).rejects.toThrow(/does not contain a video/i);
+  });
+
+  it("rejects HLS-only videos with a clear, distinct error message", async () => {
+    vi.stubGlobal(
+      "fetch",
+      makeFetchStub([
+        () =>
+          jsonResponse({
+            id_str: "7",
+            text: "hls",
+            user: { screen_name: "u" },
+            mediaDetails: [
+              {
+                type: "video",
+                media_url_https: "https://pbs.twimg.com/p.jpg",
+                video_info: {
+                  duration_millis: 1000,
+                  variants: [
+                    { content_type: "application/x-mpegURL", url: "https://video.twimg.com/x.m3u8" },
+                  ],
+                },
+              },
+            ],
+          }),
+        () => jsonResponse({}),
+      ]),
+    );
+    await expect(
+      resolveXVideo("https://x.com/u/status/7"),
+    ).rejects.toThrow(/HLS-only|unsupported/i);
+  });
+
+  it("truncates titles on a grapheme boundary so emoji are not split", async () => {
+    // Build a string whose 120th code unit lands inside a surrogate pair.
+    // 60 emoji × 2 code units = 120 code units. firstLine(max=120) used to
+    // slice on the unit boundary; the grapheme-safe version must not.
+    const emoji = "🎥";
+    const text = emoji.repeat(60) + " trailing text";
+    vi.stubGlobal(
+      "fetch",
+      makeFetchStub([
+        () =>
+          jsonResponse({
+            id_str: "8",
+            text,
+            user: { screen_name: "u" },
+            mediaDetails: [
+              {
+                type: "video",
+                media_url_https: "https://pbs.twimg.com/p.jpg",
+                video_info: {
+                  duration_millis: 1000,
+                  variants: [
+                    { content_type: "video/mp4", bitrate: 1000, url: "https://video.twimg.com/v.mp4" },
+                  ],
+                },
+              },
+            ],
+          }),
+        () => jsonResponse({}),
+      ]),
+    );
+    const result = await resolveXVideo("https://x.com/u/status/8");
+    // Title is either the full string (if ≤120 graphemes) or ends in "…".
+    // Crucially it must NOT contain the U+FFFD replacement character that
+    // appears when UTF-16 is sliced mid-surrogate.
+    expect(result.title).not.toContain("�");
+    // And the truncated form must not contain a half-emoji.
+    if (result.title.endsWith("…")) {
+      expect([...result.title].every((c) => c !== "\uD83C" && c !== "\uD83D" && c !== "\uD83E")).toBe(true);
+    }
   });
 });

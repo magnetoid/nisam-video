@@ -1,10 +1,10 @@
 // Admin source-platform aggregation routes.
-// Mounted at /api/admin/sources — gated by requireAuth.
+// Mounted at /api/admin/sources — gated by requireAdmin.
 
 import { Router } from "express";
 import { sql } from "drizzle-orm";
 import { db } from "../db.js";
-import { requireAuth } from "../middleware/auth.js";
+import { requireAdmin } from "../middleware/auth.js";
 import { SUPPORTED_PLATFORMS } from "../../shared/schema.js";
 
 const router = Router();
@@ -15,12 +15,14 @@ interface SourceStatRow {
   videoCount: number;
 }
 
-router.get("/stats", requireAuth, async (_req, res) => {
+router.get("/stats", requireAdmin, async (_req, res) => {
   try {
+    // COUNT(c.id) (not DISTINCT) is enough — rows are already grouped by
+    // platform, and each channel id is unique by definition.
     const rows = await db.execute(sql`
       SELECT
         c.platform AS platform,
-        COUNT(DISTINCT c.id)::int AS channel_count,
+        COUNT(c.id)::int AS channel_count,
         COUNT(v.id)::int AS video_count
       FROM channels c
       LEFT JOIN videos v ON v.channel_id = c.id

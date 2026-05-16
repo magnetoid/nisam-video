@@ -3,7 +3,7 @@ import { requireAuth } from "../middleware/auth.js";
 import { storage } from "../storage.js";
 import { scrapeYouTubeChannel, scrapeYouTubeChannelAbout } from "../youtube-scraper.js";
 import { categorizeVideo } from "../ai-service.js";
-import { insertChannelSchema, videos } from "../../shared/schema.js";
+import { insertChannelSchema, videos, SUPPORTED_PLATFORMS } from "../../shared/schema.js";
 import { generateSlug } from "../utils.js";
 import { db } from "../db.js";
 import { eq } from "drizzle-orm";
@@ -78,8 +78,16 @@ router.post("/", requireAuth, async (req, res) => {
 
 router.get("/", async (req, res) => {
   try {
-    const channels = await storage.getAllChannels();
-    const base = channels.map((c) => ({
+    const rawPlatform = typeof req.query.platform === "string" ? req.query.platform : undefined;
+    const platformFilter = rawPlatform && (SUPPORTED_PLATFORMS as readonly string[]).includes(rawPlatform)
+      ? rawPlatform
+      : undefined;
+
+    const allChannels = await storage.getAllChannels();
+    const filtered = platformFilter
+      ? allChannels.filter((c) => c.platform === platformFilter)
+      : allChannels;
+    const base = filtered.map((c) => ({
       ...c,
       slug: `${generateSlug(c.name, 80)}-${c.id}`,
     }));
