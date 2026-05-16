@@ -46,7 +46,7 @@ export const channels = pgTable("channels", {
   thumbnailUrl: text("thumbnail_url"),
   bannerUrl: text("banner_url"), // Added for storing channel banner/header image
   videoCount: integer("video_count").notNull().default(0),
-  platform: text("platform").notNull().default("youtube"), // "youtube" or "tiktok"
+  platform: text("platform").notNull().default("youtube"), // see SUPPORTED_PLATFORMS
   lastScraped: timestamp("last_scraped"),
   createdAt: timestamp("created_at")
     .notNull()
@@ -119,7 +119,7 @@ export const videos = pgTable("videos", {
   likesCount: integer("likes_count").notNull().default(0), // Internal likes count
   internalViewsCount: integer("internal_views_count").notNull().default(0), // Internal views count
   publishDate: text("publish_date"),
-  videoType: text("video_type").notNull().default("regular"), // "regular", "youtube_short", "tiktok"
+  videoType: text("video_type").notNull().default("regular"), // see SUPPORTED_VIDEO_TYPES
   embedUrl: text("embed_url"), // TikTok embed URL (optional, for TikTok videos)
   createdAt: timestamp("created_at")
     .notNull()
@@ -694,13 +694,18 @@ export const insertUserSchema = createInsertSchemaAny(users).omit({
   createdAt: true,
 });
 
+// Centralized list of supported video sources. Keep in sync with both
+// channel.platform (where a video came from) and video.videoType (how to render it).
+export const SUPPORTED_PLATFORMS = ["youtube", "tiktok", "x", "instagram"] as const;
+export type SupportedPlatform = (typeof SUPPORTED_PLATFORMS)[number];
+
 export const insertChannelSchema = createInsertSchemaAny(channels).omit({
   id: true,
   createdAt: true,
   videoCount: true,
   lastScraped: true,
 }).extend({
-  platform: z.enum(["youtube", "tiktok"]).optional().default("youtube"),
+  platform: z.enum(SUPPORTED_PLATFORMS).optional().default("youtube"),
 });
 
 export const insertChannelRecommendationSchema = createInsertSchemaAny(
@@ -714,7 +719,7 @@ export const insertChannelRecommendationSchema = createInsertSchemaAny(
   rejectionReason: true,
   createdAt: true,
 }).extend({
-  platform: z.enum(["youtube"]).optional().default("youtube"),
+  platform: z.enum(SUPPORTED_PLATFORMS).optional().default("youtube"),
   url: z.string().min(1),
   description: z.string().max(2000).optional(),
 });
@@ -726,11 +731,15 @@ export const insertEmailSettingsSchema = createInsertSchemaAny(emailSettings).om
   mode: z.enum(["smtp", "imap"]).optional().default("smtp"),
 });
 
+// videoType is broader than platform: YouTube has both "regular" and "youtube_short"
+export const SUPPORTED_VIDEO_TYPES = ["regular", "youtube_short", "tiktok", "x", "instagram_reel"] as const;
+export type SupportedVideoType = (typeof SUPPORTED_VIDEO_TYPES)[number];
+
 export const insertVideoSchema = createInsertSchemaAny(videos).omit({
   id: true,
   createdAt: true,
 }).extend({
-  videoType: z.enum(["regular", "youtube_short", "tiktok"]).optional().default("regular"),
+  videoType: z.enum(SUPPORTED_VIDEO_TYPES).optional().default("regular"),
 });
 
 // Base insert for categories (no name/slug/desc)

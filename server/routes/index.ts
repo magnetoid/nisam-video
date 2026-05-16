@@ -2,6 +2,7 @@ import { Express } from "express";
 import authRouter from "./auth.js";
 import channelsRouter from "./channels.js";
 import tiktokRouter from "./tiktok.js";
+import xRouter from "./x.js";
 import adminRouter from "./admin.js";
 import videosRouter from "./videos.js";
 import categoriesRouter from "./categories.js";
@@ -42,6 +43,7 @@ export function registerFeatureRoutes(app: Express): void {
   app.use("/api/channels", channelsRouter);
   app.use("/api", channelRecommendationsRouter);
   app.use("/api/tiktok-profiles", tiktokRouter);
+  app.use("/api/admin/x", sensitiveAction, xRouter);
   app.use("/api/admin/email-settings", emailSettingsRouter);
   app.use("/api/admin", adminChannelRecommendationsRouter);
   
