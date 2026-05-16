@@ -1,4 +1,5 @@
 import { Router } from "express";
+import crypto from "crypto";
 import { db } from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
 import { getUserIdentifier } from "../utils.js";
@@ -6,6 +7,13 @@ import { insertErrorEventSchema } from "../../shared/schema.js";
 import { recordError } from "../error-log-service.js";
 import { listErrorEvents } from "../error-log-service.js";
 import { z } from "zod";
+
+function safeTokenEquals(a: string, b: string): boolean {
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
+  if (bufA.length !== bufB.length) return false;
+  return crypto.timingSafeEqual(bufA, bufB);
+}
 
 const router = Router();
 
@@ -42,7 +50,7 @@ router.get("/public/error-logs", async (req, res) => {
   const token = process.env.PUBLIC_ERROR_LOGS_TOKEN;
   const requestToken = typeof req.query.token === "string" ? req.query.token : "";
   const isAdmin = req.session?.isAuthenticated && req.session?.role === "admin";
-  const hasValidToken = token && token.length >= 32 && requestToken === token;
+  const hasValidToken = !!token && token.length >= 32 && requestToken.length === token.length && safeTokenEquals(requestToken, token);
 
   if (!isAdmin && !hasValidToken) {
     return res.status(404).send("Not Found");

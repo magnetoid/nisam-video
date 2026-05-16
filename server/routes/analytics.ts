@@ -34,7 +34,14 @@ router.get("/", async (req, res) => {
   try {
     const { days } = req.query;
     const daysFilterRaw = typeof days === "string" ? parseInt(days, 10) : undefined;
-    const daysFilter = typeof daysFilterRaw === "number" && !isNaN(daysFilterRaw) ? daysFilterRaw : undefined;
+    // Clamp to a sensible range [1, 365] so callers can't pass absurd or negative values
+    const daysFilter =
+      typeof daysFilterRaw === "number" && Number.isFinite(daysFilterRaw) && daysFilterRaw > 0
+        ? Math.min(daysFilterRaw, 365)
+        : undefined;
+    const cutoffDate = daysFilter
+      ? new Date(Date.now() - daysFilter * 24 * 60 * 60 * 1000)
+      : null;
 
     const [channelCountResult, videoCountResult] = await Promise.all([
       db.select({ count: sql`count(*)` }).from(channelsTable),
@@ -45,9 +52,7 @@ router.get("/", async (req, res) => {
 
     // If we have a days filter, get the count of videos in that range
     let filteredVideoCount = totalVideosCount;
-    if (daysFilter) {
-      const cutoffDate = new Date();
-      cutoffDate.setDate(cutoffDate.getDate() - daysFilter);
+    if (cutoffDate) {
       const filteredResult = await db.select({ count: sql`count(*)` })
         .from(videosTable)
         .where(sql`COALESCE(${videosTable.publishDate}, ${videosTable.createdAt}) >= ${cutoffDate}`);
@@ -61,7 +66,7 @@ router.get("/", async (req, res) => {
       JOIN category_translations t ON vc.category_id = t.category_id
       JOIN videos v ON vc.video_id = v.id
       WHERE t.language_code = 'en'
-      ${daysFilter ? sql`AND COALESCE(v.publish_date, v.created_at) >= NOW() - INTERVAL '${sql.raw(daysFilter.toString())} days'` : sql``}
+      ${cutoffDate ? sql`AND COALESCE(v.publish_date, v.created_at) >= ${cutoffDate}` : sql``}
       GROUP BY t.name
       ORDER BY count DESC
       LIMIT 5
@@ -73,7 +78,7 @@ router.get("/", async (req, res) => {
       SELECT c.name, COUNT(v.id) as count
       FROM channels c
       LEFT JOIN videos v ON c.id = v.channel_id
-      ${daysFilter ? sql`AND COALESCE(v.publish_date, v.created_at) >= NOW() - INTERVAL '${sql.raw(daysFilter.toString())} days'` : sql``}
+      ${cutoffDate ? sql`AND COALESCE(v.publish_date, v.created_at) >= ${cutoffDate}` : sql``}
       GROUP BY c.name
       ORDER BY count DESC
       LIMIT 10
@@ -87,7 +92,7 @@ router.get("/", async (req, res) => {
       JOIN tag_translations tt ON t.id = tt.tag_id
       JOIN videos v ON t.video_id = v.id
       WHERE tt.language_code = 'en'
-      ${daysFilter ? sql`AND COALESCE(v.publish_date, v.created_at) >= NOW() - INTERVAL '${sql.raw(daysFilter.toString())} days'` : sql``}
+      ${cutoffDate ? sql`AND COALESCE(v.publish_date, v.created_at) >= ${cutoffDate}` : sql``}
       GROUP BY tt.tag_name
       ORDER BY count DESC
       LIMIT 20
@@ -101,7 +106,7 @@ router.get("/", async (req, res) => {
       JOIN category_translations t ON vc.category_id = t.category_id
       JOIN videos v ON vc.video_id = v.id
       WHERE t.language_code = 'en'
-      ${daysFilter ? sql`AND COALESCE(v.publish_date, v.created_at) >= NOW() - INTERVAL '${sql.raw(daysFilter.toString())} days'` : sql``}
+      ${cutoffDate ? sql`AND COALESCE(v.publish_date, v.created_at) >= ${cutoffDate}` : sql``}
       GROUP BY t.name
       ORDER BY count DESC
     `);
@@ -111,26 +116,26 @@ router.get("/", async (req, res) => {
     const dailyGrowthQuery = await db.execute(sql`
       SELECT DATE(COALESCE(publish_date, created_at)) as date, COUNT(id) as count
       FROM videos
-      ${daysFilter ? sql`WHERE COALESCE(publish_date, created_at) >= NOW() - INTERVAL '${sql.raw(daysFilter.toString())} days'` : sql``}
+      ${cutoffDate ? sql`WHERE COALESCE(publish_date, created_at) >= ${cutoffDate}` : sql``}
       GROUP BY DATE(COALESCE(publish_date, created_at))
       ORDER BY date ASC
     `);
-    const dailyGrowth = dailyGrowthQuery.map((row: any) => ({ 
-      date: new Date(row.date).toISOString().split("T")[0], 
-      count: Number(row.count) 
+    const dailyGrowth = dailyGrowthQuery.map((row: any) => ({
+      date: new Date(row.date).toISOString().split("T")[0],
+      count: Number(row.count)
     }));
 
     // Calculate filtered totals
     const uniqueChannelsResult = await db.execute(sql`
       SELECT COUNT(DISTINCT channel_id) as count FROM videos
-      ${daysFilter ? sql`WHERE COALESCE(publish_date, created_at) >= NOW() - INTERVAL '${sql.raw(daysFilter.toString())} days'` : sql``}
+      ${cutoffDate ? sql`WHERE COALESCE(publish_date, created_at) >= ${cutoffDate}` : sql``}
     `);
-    
+
     const uniqueCategoriesResult = await db.execute(sql`
-      SELECT COUNT(DISTINCT vc.category_id) as count 
+      SELECT COUNT(DISTINCT vc.category_id) as count
       FROM video_categories vc
       JOIN videos v ON vc.video_id = v.id
-      ${daysFilter ? sql`WHERE COALESCE(v.publish_date, v.created_at) >= NOW() - INTERVAL '${sql.raw(daysFilter.toString())} days'` : sql``}
+      ${cutoffDate ? sql`WHERE COALESCE(v.publish_date, v.created_at) >= ${cutoffDate}` : sql``}
     `);
 
     res.json({

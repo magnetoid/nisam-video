@@ -943,7 +943,9 @@ router.get("/enhanced/sitemap", async (req, res) => {
     const includeTags = String(req.query.includeTags ?? "1") !== "0";
     const includeChannels = String(req.query.includeChannels ?? "1") !== "0";
     const maxVideosRaw = typeof req.query.maxVideos === "string" ? req.query.maxVideos : "";
-    const maxVideos = Number.isFinite(parseInt(maxVideosRaw || "", 10)) ? Math.max(0, parseInt(maxVideosRaw, 10)) : 0;
+    const parsedMaxVideos = parseInt(maxVideosRaw, 10);
+    // 0 or missing → no limit (include all videos); positive → cap to that count
+    const maxVideos = Number.isFinite(parsedMaxVideos) && parsedMaxVideos > 0 ? parsedMaxVideos : 0;
 
     const cacheKey = `sitemap:xml:enhanced:${lang}:${includeVideos}:${includeCategories}:${includeTags}:${includeChannels}:${maxVideos}`;
     const cachedXml = await getCache<string>(cacheKey);
@@ -953,7 +955,7 @@ router.get("/enhanced/sitemap", async (req, res) => {
     }
 
     const [videos, categories, tags, channels] = await Promise.all([
-      includeVideos && maxVideos !== 0
+      includeVideos
         ? storage.getAllVideos({
             lang,
             limit: maxVideos > 0 ? maxVideos : undefined,

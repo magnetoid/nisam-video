@@ -1,4 +1,5 @@
 import { Router } from "express";
+import crypto from "crypto";
 import { scheduler } from "../scheduler.js";
 
 const router = Router();
@@ -10,6 +11,13 @@ function isVercelCronRequest(req: any) {
   return ua.includes("vercel");
 }
 
+function safeTokenEquals(a: string, b: string): boolean {
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
+  if (bufA.length !== bufB.length) return false;
+  return crypto.timingSafeEqual(bufA, bufB);
+}
+
 router.get("/scrape", async (req, res) => {
   try {
     const secret = process.env.CRON_SECRET;
@@ -17,7 +25,7 @@ router.get("/scrape", async (req, res) => {
       const token =
         String(req.headers["authorization"] || "").replace(/^bearer\s+/i, "") ||
         String(req.query.secret || "");
-      if (token !== secret) {
+      if (!safeTokenEquals(token, secret)) {
         return res.status(401).json({ error: "Unauthorized" });
       }
     } else if (process.env.VERCEL === "1") {

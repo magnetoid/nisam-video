@@ -7,6 +7,7 @@ const { mockStorage } = vi.hoisted(() => {
   return {
     mockStorage: {
       getAllVideos: vi.fn(),
+      getAllChannels: vi.fn(),
       getAllLocalizedCategories: vi.fn(),
       getAllLocalizedTags: vi.fn(),
       getSeoSettings: vi.fn(),
@@ -38,14 +39,15 @@ vi.mock("../server/db.js", () => ({
 
 // Mock auth middleware
 vi.mock("../server/middleware/auth.js", () => ({
-  requireAuth: (req, res, next) => next(),
+  requireAuth: (_req: any, _res: any, next: any) => next(),
+  requireAdmin: (_req: any, _res: any, next: any) => next(),
 }));
 
 // Import router POSLE mockova
-import seoEnhancedRouter from "../server/routes/seo-enhanced";
+import seoRouter from "../server/routes/seo";
 
 const app = express();
-app.use("/api", seoEnhancedRouter);
+app.use("/api/seo", seoRouter);
 
 describe("Sitemap Generation", () => {
   beforeEach(() => {
@@ -71,14 +73,15 @@ describe("Sitemap Generation", () => {
     ];
 
     const mockTags = [
-      { id: "tag1", name: "Tag 1", slug: "tag-1" },
+      { id: "tag1", tagName: "tag-1", slug: "tag-1" },
     ];
 
     mockStorage.getAllVideos.mockResolvedValue(mockVideos);
+    mockStorage.getAllChannels.mockResolvedValue([]);
     mockStorage.getAllLocalizedCategories.mockResolvedValue(mockCategories);
     mockStorage.getAllLocalizedTags.mockResolvedValue(mockTags);
 
-    const response = await request(app).get("/api/enhanced/sitemap");
+    const response = await request(app).get("/api/seo/enhanced/sitemap");
 
     expect(response.status).toBe(200);
     expect(response.header["content-type"]).toContain("application/xml");
@@ -120,10 +123,11 @@ describe("Sitemap Generation", () => {
     ];
 
     mockStorage.getAllVideos.mockResolvedValue(mockVideos);
+    mockStorage.getAllChannels.mockResolvedValue([]);
     mockStorage.getAllLocalizedCategories.mockResolvedValue([]);
     mockStorage.getAllLocalizedTags.mockResolvedValue([]);
 
-    const response = await request(app).get("/api/enhanced/sitemap");
+    const response = await request(app).get("/api/seo/enhanced/sitemap");
     
     expect(response.status).toBe(200);
     const xml = response.text;

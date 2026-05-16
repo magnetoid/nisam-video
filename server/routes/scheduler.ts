@@ -16,7 +16,7 @@ router.get("/jobs", requireAuth, async (req, res) => {
   }
 });
 
-router.get("/", async (req, res) => {
+router.get("/", requireAuth, async (req, res) => {
   try {
     const settings = await scheduler.getSettings();
     const status = scheduler.getStatus();

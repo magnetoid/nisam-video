@@ -34,8 +34,10 @@ router.post("/jobs/start", requireAuth, async (req, res) => {
 // Get recent jobs status
 router.get("/jobs", requireAuth, async (req, res) => {
   try {
-    const limit = parseInt(req.query.limit as string) || 20;
-    const offset = parseInt(req.query.offset as string) || 0;
+    const rawLimit = parseInt(String(req.query.limit ?? ""), 10);
+    const rawOffset = parseInt(String(req.query.offset ?? ""), 10);
+    const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(rawLimit, 200) : 20;
+    const offset = Number.isFinite(rawOffset) && rawOffset >= 0 ? rawOffset : 0;
     const search = (req.query.search as string)?.trim() || '';
     const status = req.query.status as string || '';
     const dateFrom = req.query.dateFrom as string || '';
@@ -350,8 +352,10 @@ router.get("/stats", requireAuth, async (req, res) => {
 // Get activity logs
 router.get("/activity", requireAuth, async (req, res) => {
   try {
-    const limit = parseInt(req.query.limit as string) || 10;
-    const offset = parseInt(req.query.offset as string) || 0;
+    const rawLimit = parseInt(String(req.query.limit ?? ""), 10);
+    const rawOffset = parseInt(String(req.query.offset ?? ""), 10);
+    const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(rawLimit, 200) : 10;
+    const offset = Number.isFinite(rawOffset) && rawOffset >= 0 ? rawOffset : 0;
     // This is a simplified version - in a real implementation, you'd want to store
     // actual activity logs in a database table
     const recentVideos = await storage.getAllVideos();
@@ -573,7 +577,8 @@ router.post("/jobs/:id/retry", requireAuth, async (req, res) => {
 // Analytics endpoint
 router.get("/analytics", requireAuth, async (req, res) => {
   try {
-    const periodDays = parseInt(req.query.period as string) || 7;
+    const rawPeriod = parseInt(String(req.query.period ?? ""), 10);
+    const periodDays = Number.isFinite(rawPeriod) && rawPeriod > 0 ? Math.min(rawPeriod, 365) : 7;
     const thirtyDaysAgo = new Date(Date.now() - periodDays * 24 * 60 * 60 * 1000);
 
     const analytics = await db.execute(sql`

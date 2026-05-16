@@ -79,8 +79,10 @@ describe('API Endpoints', () => {
 
   it('GET /api/public/error-logs should return JSON with valid token', async () => {
     const prev = process.env.PUBLIC_ERROR_LOGS_TOKEN;
-    process.env.PUBLIC_ERROR_LOGS_TOKEN = 'test-token';
-    const res = await request(app).get('/api/public/error-logs?token=test-token');
+    // Route enforces token length >= 32 for security (server/routes/logs.ts)
+    const token = 'a'.repeat(32);
+    process.env.PUBLIC_ERROR_LOGS_TOKEN = token;
+    const res = await request(app).get(`/api/public/error-logs?token=${token}`);
     expect(res.status).toBe(200);
     expect(res.headers['content-type']).toContain('application/json');
     expect(res.body).toHaveProperty('items');
