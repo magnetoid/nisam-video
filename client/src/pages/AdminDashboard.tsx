@@ -7,6 +7,8 @@ import {
   Title,
   Subtitle,
   AreaChart,
+  DonutChart,
+  Legend,
   Flex,
   Grid,
   Col,
@@ -49,6 +51,13 @@ export default function AdminDashboard() {
   const { data: recentJobs = [], isLoading: jobsLoading } = useQuery<any[]>({
     queryKey: ["/api/scheduler/jobs"],
     refetchInterval: 5000,
+  });
+
+  // Fetch per-source breakdown (YouTube / X / TikTok / Instagram).
+  const { data: sourcesStats } = useQuery<{
+    stats: Array<{ platform: string; channelCount: number; videoCount: number }>;
+  }>({
+    queryKey: ["/api/admin/sources/stats"],
   });
 
   // Scheduler Mutations
@@ -168,6 +177,94 @@ export default function AdminDashboard() {
           <Text className="mt-4 text-xs">
             {t("admin.nextRun", "Next run")}: {scheduler?.nextRun ? formatDistanceToNow(new Date(scheduler.nextRun), { addSuffix: true }) : 'N/A'}
           </Text>
+        </Card>
+      </Grid>
+
+      <Grid numItems={1} numItemsLg={2} className="gap-6 mt-6">
+        <Card>
+          <Title>{t("admin.videosBySource", "Videos by source")}</Title>
+          <Subtitle>
+            {t("admin.videosBySourceDesc", "Distribution across YouTube, X, TikTok, and Instagram")}
+          </Subtitle>
+          {(() => {
+            const data = (sourcesStats?.stats ?? [])
+              .filter((s) => s.videoCount > 0)
+              .map((s) => ({
+                name:
+                  s.platform === "youtube"
+                    ? "YouTube"
+                    : s.platform === "x"
+                      ? "X"
+                      : s.platform === "tiktok"
+                        ? "TikTok"
+                        : s.platform === "instagram"
+                          ? "Instagram"
+                          : s.platform,
+                count: s.videoCount,
+              }));
+            if (data.length === 0) {
+              return (
+                <div className="flex items-center justify-center h-56 text-tremor-content">
+                  {t("common.noData", "No data available")}
+                </div>
+              );
+            }
+            return (
+              <>
+                <DonutChart
+                  className="h-56 mt-4"
+                  data={data}
+                  category="count"
+                  index="name"
+                  colors={["red", "sky", "pink", "fuchsia"]}
+                  valueFormatter={(n) => Intl.NumberFormat("us").format(n).toString()}
+                  showAnimation
+                />
+                <Legend
+                  className="mt-3"
+                  categories={data.map((d) => d.name)}
+                  colors={["red", "sky", "pink", "fuchsia"]}
+                />
+              </>
+            );
+          })()}
+        </Card>
+
+        <Card>
+          <Title>{t("admin.channelsBySource", "Channels by source")}</Title>
+          <Subtitle>{t("admin.channelsBySourceDesc", "Number of sources connected per platform")}</Subtitle>
+          <div className="mt-4 space-y-3">
+            {(sourcesStats?.stats ?? []).map((s) => {
+              const label =
+                s.platform === "youtube"
+                  ? "YouTube"
+                  : s.platform === "x"
+                    ? "X"
+                    : s.platform === "tiktok"
+                      ? "TikTok"
+                      : s.platform === "instagram"
+                        ? "Instagram"
+                        : s.platform;
+              const totalChannels = sourcesStats?.stats.reduce((sum, r) => sum + r.channelCount, 0) || 0;
+              const pct = totalChannels > 0 ? (s.channelCount / totalChannels) * 100 : 0;
+              return (
+                <div key={s.platform}>
+                  <Flex>
+                    <Text>{label}</Text>
+                    <Text>
+                      {s.channelCount} ({s.videoCount} videos)
+                    </Text>
+                  </Flex>
+                  <ProgressBar value={pct} color="indigo" className="mt-1" />
+                </div>
+              );
+            })}
+            <Link href="/admin/sources">
+              <a className="text-xs text-indigo-500 hover:underline mt-3 inline-block">
+                {t("admin.manageSources", "Manage sources")} &rarr;
+              </a>
+            </Link>
+          </div>
         </Card>
       </Grid>
 

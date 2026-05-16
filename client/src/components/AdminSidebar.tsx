@@ -24,7 +24,8 @@ import {
   Bot,
   Users,
   Globe,
-  Inbox
+  Inbox,
+  Layers,
 } from "lucide-react";
 import { SiTiktok } from "react-icons/si";
 import { useTranslation } from "react-i18next";
@@ -122,6 +123,12 @@ export function AdminSidebar({ open = false, onClose, className }: AdminSidebarP
     {
       title: t("admin.content", "Content"),
       items: [
+        {
+          icon: Layers,
+          label: t("admin.sources", "Sources"),
+          path: "/admin/sources",
+          testId: "link-sources",
+        },
         {
           icon: Youtube,
           label: t("admin.channels", "Channels"),
